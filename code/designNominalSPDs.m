@@ -49,43 +49,60 @@ whichPrimaries = 'monitor';
 curDir = pwd;
 
 % Obtain SPDs of the primaries
-spdTablePath = fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','Prizmatix.csv');
+spdTablePath = fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','PrizmatixLEDSet.csv');
 spdTable = readtable(spdTablePath);
+
+% Derive the primaries from the SPD table
 wavelengthSupport = spdTable.Wavelength;
 S = [wavelengthSupport(1), wavelengthSupport(2)-wavelengthSupport(1), length(wavelengthSupport)];
 B_primary = table2array(spdTable(:,2:end));
+
+% I don't yet have the absolute power measurements of the primaries, and
+% some are more normalized than others, so set all to have unit amplitude
+% here.
+B_primary = B_primary./max(B_primary);
+
+figure; plot(wavelengthSupport,B_primary');
+
+nPrimaries = size(B_primary,2);
 ambientSpd = zeros(S(3),1);
 
-% Set background to the monitor midpoint
-backgroundPrimary = repmat(0.5,8,1);
-
+% Set background to the half-on
+backgroundPrimary = repmat(0.5,nPrimaries,1);
 
 
 %% Get sensitivities and set other relvant parameters
-% The routines that do these computations are in the
-% ContrastSplatter directory of the SilentSubstitutionToolbox. They
-% provide pre-defined receptor types and compute spectral
-% sensitivities using the routines provided in the Psychtoolbox.
-% The routines here, however, also allow computation of fraction
-% cone bleached, which may be used to adjust pigment peak optical
-% density.  They can also compute photopigment variants corrected
-% for filtering by blood vessels.
-
-% Prompt user for key parameters that affect the spectral
-% sensitivities.
-%
-% Note that we don't typically vary or pass the blood vessel
-% parameters but rather simply accept the defaults used by
-% GetHumanPhotoreceptorSS.  It's mainly for fun that we show
-% how to do this here.
+% The routines that do these computations are in the ContrastSplatter
+% directory of the SilentSubstitutionToolbox. They provide pre-defined
+% receptor types and compute spectral sensitivities using the routines
+% provided in the Psychtoolbox. The routines here, however, also allow
+% computation of fraction cone bleached, which may be used to adjust
+% pigment peak optical density.  They can also compute photopigment
+% variants corrected for filtering by blood vessels.
 
 
 % Define photoreceptor classes that we'll consider.
 % ReceptorIsolate has a few more built-ins than these.
-photoreceptorClasses = {'LConeTabulatedAbsorbance', 'MConeTabulatedAbsorbance', 'SConeTabulatedAbsorbance', 'Melanopsin', 'Rods', ...
-    'LConeTabulatedAbsorbancePenumbral', 'MConeTabulatedAbsorbancePenumbral', 'SConeTabulatedAbsorbancePenumbral'};
+photoreceptorClasses = {...
+    'LConeTabulatedAbsorbance2Deg', 'MConeTabulatedAbsorbance2Deg', 'SConeTabulatedAbsorbance2Deg',...
+    'LConeTabulatedAbsorbance10Deg', 'MConeTabulatedAbsorbance10Deg', 'SConeTabulatedAbsorbance10Deg',...
+    'Melanopsin'};
 
-resultSet.photoreceptorClasses = {'L','M','S','Mel','Rod','Lp','Mp','Sp'};
+resultSet.photoreceptorClasses = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel'};
+
+% set the receptor sets to isolate
+% whichDirectionSet = {'LMS','LminusM','S','Mel'};
+% whichReceptorsToTargetSet = {[1:6],[1 2 4 5],[3 6],[7]};
+% whichReceptorsToIgnoreSet = {[],[7],[7],[]};
+% whichReceptorsToMinimizeSet = {[],[],[],[]}; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
+% desiredContrastSet = {[0.45 0.45 0.45 0.45 0.45 0.45 ],[0.10 -0.10 0.10 -0.10],[0.7 0.7],[0.5]};
+
+whichDirectionSet = {'Spatial'};
+whichReceptorsToTargetSet = {[1 2 4 5]};
+whichReceptorsToIgnoreSet = {[3 6 7]};
+whichReceptorsToMinimizeSet = {[]}; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
+desiredContrastSet = {[-0.1 0.1 0.1 -0.1]};
+
 
 % Make sensitivities.  The wrapper routine is GetHumanPhotoreceptorSS,
 % which is in the ContrastSplatter directory.  Each row of the matrix
@@ -99,6 +116,9 @@ vesselThickness = [];
 fractionBleached = [];
 T_receptors = GetHumanPhotoreceptorSS(S, photoreceptorClasses, p.Results.fieldSizeDegrees, p.Results.observerAgeInYears, p.Results.pupilDiameterMm, [], fractionBleached, oxygenationFraction, vesselThickness);
 
+
+figure; plot(wavelengthSupport,T_receptors);
+
 % Obtain the isomerization rate for the receptors by the background
 backgroundReceptors = T_receptors*(B_primary*backgroundPrimary + ambientSpd);
 
@@ -106,13 +126,6 @@ backgroundReceptors = T_receptors*(B_primary*backgroundPrimary + ambientSpd);
 resultSet.background.primary = backgroundPrimary;
 resultSet.background.spd = B_primary*backgroundPrimary;
 resultSet.background.wavelengthsNm = SToWls(S);
-
-% set the receptor sets to isolate
-whichDirectionSet = {'S','LMinusM','Mel'};
-whichReceptorsToTargetSet = {[3],[1 2],[4]};
-whichReceptorsToIgnoreSet = {[5 6 7 8],[5 6 7 8],[5 6 7 8]};
-whichReceptorsToMinimizeSet = {[],[],[]}; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-desiredContrastSet = {[1],[0.125 -0.125],[1]};
 
 % Loop over the set of directions for which we will generate modulations
 for ss = 1:length(whichDirectionSet)
@@ -130,7 +143,7 @@ for ss = 1:length(whichDirectionSet)
     % No smoothness constraint enforced for the monitor primaries
     maxPowerDiff = 10000;
     
-    % Obtain the primary settins for the isolating modulation
+    % Obtain the primary settings for the isolating modulation
     modulationPrimary = ReceptorIsolate(T_receptors,whichReceptorsToTarget, whichReceptorsToIgnore, whichReceptorsToMinimize, ...
         B_primary, backgroundPrimary, backgroundPrimary, whichPrimariesToPin,...
         p.Results.primaryHeadRoom, maxPowerDiff, desiredContrast, ambientSpd);
@@ -160,23 +173,22 @@ for ss = 1:length(whichDirectionSet)
         cd(p.Results.saveDir);
        
         % Create a figure with an appropriate title
-        fighandle = figure('Name',whichDirection);
+        fighandle = figure('Name',sprintf([whichDirection ': contrast = %2.2f'],resultSet.(whichDirection).positiveReceptorContrast(whichReceptorsToTargetSet{ss}(1))));
                
         % Modulation spectra
-        subplot(2,3,[1 4])
+        subplot(1,2,1)
         hold on
         plot(resultSet.(whichDirection).wavelengthsNm,resultSet.(whichDirection).positiveModulationSPD,'k','LineWidth',2);
         plot(resultSet.(whichDirection).wavelengthsNm,resultSet.(whichDirection).negativeModulationSPD,'r','LineWidth',2);
         plot(resultSet.background.wavelengthsNm,resultSet.background.spd,'Color',[0.5 0.5 0.5],'LineWidth',2);
         title('Modulation spectra');
         xlim([300 800]);
-%        ylim([0 0.01]);
         xlabel('Wavelength');
         ylabel('Power');
         legend({'Positive', 'Negative', 'Background'},'Location','NorthEast');
         
         % Primaries
-        subplot(2,3,[2 5])
+        subplot(1,2,2)
         c = categorical(spdTable.Properties.VariableNames(2:end));
         hold on
         plot(c,modulationPrimary,'*k');
@@ -186,18 +198,6 @@ for ss = 1:length(whichDirectionSet)
         ylim([0 1]);
         xlabel('Primary');
         ylabel('Setting');
-%         
-%         % Patch
-%         subplot(2,3,3)
-%         rectangle('Position',[2 4 2 2],'Curvature',[1 1],'FaceColor',modulationPrimary)
-%         axis square
-%         axis off
-%         title('+');
-%         subplot(2,3,6)
-%         rectangle('Position',[2 4 2 2],'Curvature',[1 1],'FaceColor',backgroundPrimary+(-(modulationPrimary-backgroundPrimary)))
-%         axis square
-%         axis off
-%         title('-');
         
         % Save the figure
         saveas(fighandle,sprintf('%s_%s_%s_PrimariesAndSPD.pdf',whichModel,whichPrimaries,whichDirection),'pdf');
