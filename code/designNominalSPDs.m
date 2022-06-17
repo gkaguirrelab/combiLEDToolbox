@@ -107,7 +107,7 @@ whichDirectionSet = {'LMS','LminusM','S','Mel'};
 whichReceptorsToTargetSet = {[4 5 6],[1 2 4 5],[3 6],[7]};
 whichReceptorsToIgnoreSet = {[1 2 3],[7],[7],[1 2 3]};
 whichReceptorsToMinimizeSet = {[],[],[],[]}; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-desiredContrastSet = {[ repmat(0.45,1,3) ],[0.14 -0.14 0.14 -0.14],[0.8 0.8],[0.8]};
+desiredContrastSet = {[ repmat(0.45,1,3) ],[0.14 -0.14 0.14 -0.14],[0.8 0.8],[0.6]};
 minAcceptableContrastSets = {...
     {[1,2,3]},...
     {[1,2],[3,4]},...
@@ -246,7 +246,10 @@ if ~isempty(p.Results.saveDir)
         mkdir(p.Results.saveDir);
     end
 end
+
+% Save the results file
 cd(p.Results.saveDir);
+save('resultSet.mat','resultSet');
 
 % Loop through the directions and save figures
 for ss = 1:length(whichDirectionSet)
@@ -264,7 +267,7 @@ for ss = 1:length(whichDirectionSet)
     plot(resultSet.(whichDirection).wavelengthsNm,resultSet.(whichDirection).positiveModulationSPD,'k','LineWidth',2);
     plot(resultSet.(whichDirection).wavelengthsNm,resultSet.(whichDirection).negativeModulationSPD,'r','LineWidth',2);
     plot(resultSet.background.wavelengthsNm,resultSet.background.spd,'Color',[0.5 0.5 0.5],'LineWidth',2);
-    title('Modulation spectra');
+    title(sprintf('Modulation spectra [%2.2f]',resultSet.(whichDirection).positiveReceptorContrast(whichReceptorsToTargetSet{ss}(1))));
     xlim([300 800]);
     xlabel('Wavelength');
     ylabel('Power');
