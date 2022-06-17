@@ -107,7 +107,7 @@ whichDirectionSet = {'LMS','LminusM','S','Mel'};
 whichReceptorsToTargetSet = {[4 5 6],[1 2 4 5],[3 6],[7]};
 whichReceptorsToIgnoreSet = {[1 2 3],[7],[7],[1 2 3]};
 whichReceptorsToMinimizeSet = {[],[],[],[]}; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-desiredContrastSet = {[ repmat(0.45,1,3) ],[0.14 -0.14 0.14 -0.14],[0.8 0.8],[0.6]};
+desiredContrastSet = {repmat(0.45,1,3),[0.125 -0.125 0.125 -0.125],[0.8 0.8],0.55};
 minAcceptableContrastSets = {...
     {[1,2,3]},...
     {[1,2],[3,4]},...
@@ -222,22 +222,16 @@ for dd = 1:p.Results.nTests
 end
 
 % Obtain the set of contrasts for the modulations
-for ss=1:4
+for ss=1:length(whichDirectionSet)
     whichDirection = whichDirectionSet{ss};
     contrasts(ss,:) = cellfun(@(x) x.(whichDirection).positiveReceptorContrast(whichReceptorsToTargetSet{ss}(1)), outcomes);
 end
 
-% Obtain maximum differential contrast
-for ss=1:4
-    whichDirection = whichDirectionSet{ss};
-    diffContrasts(ss,:) = cellfun(@(x) range(abs(x.(whichDirection).positiveReceptorContrast(whichReceptorsToTargetSet{ss}))), outcomes);
-end
-
 % Normalize each contrast vector by the desired target contrast
-contrasts = contrasts./cellfun(@(x) x(1),desiredContrastSet(1:4))';
+contrasts = contrasts./cellfun(@(x) x(1),desiredContrastSet)';
 
 % Find the best outcome
-[~,idxBestOutcome]=max(vecnorm(contrasts));
+[~,idxBestOutcome]=min(sum((1-contrasts).^2));
 resultSet = outcomes{idxBestOutcome};
 
 % Create the save dir
@@ -259,7 +253,6 @@ for ss = 1:length(whichDirectionSet)
 
     % Create a figure with an appropriate title
     fighandle = figure('Name',sprintf([whichDirection ': contrast = %2.2f'],resultSet.(whichDirection).positiveReceptorContrast(whichReceptorsToTargetSet{ss}(1))));
-    set(fighandle,'defaultTextInterpreter','none')
 
     % Modulation spectra
     subplot(1,2,1)
@@ -275,11 +268,12 @@ for ss = 1:length(whichDirectionSet)
 
     % Primaries
     subplot(1,2,2)
-    c = categorical(spdTable.Properties.VariableNames(2:end));
+    c = categorical(resultSet.primariesToKeepNames);
     hold on
     plot(c,resultSet.(whichDirection).modulationPrimary,'*k');
     plot(c,backgroundPrimary+(-(resultSet.(whichDirection).modulationPrimary-backgroundPrimary)),'*r');
     plot(c,backgroundPrimary,'-*','Color',[0.5 0.5 0.5]);
+    set(gca,'TickLabelInterpreter','none');
     title('Primary settings');
     ylim([0 1]);
     xlabel('Primary');
