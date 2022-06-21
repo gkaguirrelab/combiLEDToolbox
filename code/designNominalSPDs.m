@@ -40,9 +40,9 @@ p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
 p.addParameter('nLEDsToKeep',8,@isscalar)
-p.addParameter('nTests',10,@isscalar)
+p.addParameter('nTests',Inf,@isscalar)
 p.addParameter('stepSizeDiffContrastSearch',0.025,@isscalar)
-p.addParameter('verbose',false,@islogical)
+p.addParameter('verbose',true,@islogical)
 p.parse(varargin{:});
 
 % Set some constants
@@ -119,7 +119,25 @@ backgroundSearchFlag = [true,false,false,true];
 
 %% Loop over random samples of LEDs
 partitionSets = nchoosek(1:totalLEDs,p.Results.nLEDsToKeep);
-for dd = 1:min([p.Results.nTests,size(partitionSets,1)])
+partitionSets = partitionSets(randperm(size(partitionSets,1)),:);
+nTests = min([p.Results.nTests,size(partitionSets,1)]);
+
+% Alert the user
+if p.Results.verbose
+    tic
+    fprintf(['Searching over LED partitions. Started ' char(datetime('now')) '\n']);
+    fprintf('| 0                      50                   100%% |\n');
+    fprintf('.\n');
+end
+
+parfor dd = 1:nTests
+
+    % Update progress
+    if p.Results.verbose
+        if mod(dd,round(nTests/50))==0
+            fprintf('\b.\n');
+        end
+    end
 
     % Clear the resultSet variable and store a few of the variables used in
     % the computation
@@ -213,6 +231,12 @@ for dd = 1:min([p.Results.nTests,size(partitionSets,1)])
     % Place the resultSet in the outcomes cell array
     outcomes{dd} = resultSet;
 
+end
+
+% alert the user that we are done with the search loop
+if p.Results.verbose
+    toc
+    fprintf('\n');
 end
 
 % Obtain the set of contrasts for the modulations

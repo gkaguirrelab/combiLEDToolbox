@@ -1,6 +1,8 @@
 
 function modulationPrimary = modPrimarySearch(B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToTarget, whichReceptorsToIgnore, whichReceptorsToMinimize,whichPrimariesToPin,primaryHeadRoom, maxPowerDiff, desiredContrast,minAcceptableContrast,minAcceptableContrastDiff,verbose,stepSizeDiffContrastSearch)
 
+shrinkFactorThresh = 0.7;
+
 % Obtain the isomerization rate for the receptors by the background
 backgroundReceptors = T_receptors*(B_primary*backgroundPrimary + ambientSpd);
 
@@ -27,15 +29,15 @@ while stillSearching
     contrastDiffs = cellfun(@(x) range(abs(contrastReceptors(whichReceptorsToTarget(x)))),minAcceptableContrast);
 
     % Report the results of this iteration
-    if verbose
-        fprintf('shrink %2.1f, contrast %2.2f, diff %2.2f, criterion %2.2f \n',shrinkFactor,contrastVal,max(contrastDiffs),minAcceptableContrastDiff)
-    end
+%    if verbose
+%        fprintf('shrink %2.1f, contrast %2.2f, diff %2.2f, criterion %2.2f \n',shrinkFactor,contrastVal,max(contrastDiffs),minAcceptableContrastDiff)
+%    end
 
     % Check if we are done
     if all(contrastDiffs < minAcceptableContrastDiff)
         stillSearching = false;
     else
-        if shrinkFactor < 0.8
+        if shrinkFactor < shrinkFactorThresh
             % We have failed to find a good solution. Return a vector of
             % zeros for the modulation primary
             modulationPrimary = backgroundPrimary;
