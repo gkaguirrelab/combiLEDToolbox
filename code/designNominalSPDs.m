@@ -40,7 +40,8 @@ p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
 p.addParameter('nLEDsToKeep',8,@isscalar)
-p.addParameter('nTests',Inf,@isscalar)
+p.addParameter('primariesToKeepBest',[2, 3, 4, 7, 10, 11, 12, 15],@isvector)
+p.addParameter('nTests',1000,@isscalar)
 p.addParameter('stepSizeDiffContrastSearch',0.025,@isscalar)
 p.addParameter('verbose',true,@islogical)
 p.parse(varargin{:});
@@ -90,7 +91,7 @@ T_receptors = GetHumanPhotoreceptorSS(S, photoreceptorClasses, p.Results.fieldSi
 %% Define the receptor sets to isolate
 % I consider the following modulations:
 %   LMS -   Equal contrast on the peripheral cones, silencing Mel, as
-%           this modulation would mostly be used to in conjunction with
+%           this modulation would mostly be used in conjunction with
 %           light flux and mel stimuli
 %   LminusM - An L-M modulation that has equal contrast with eccentricity.
 %           Ignore mel.
@@ -100,27 +101,33 @@ T_receptors = GetHumanPhotoreceptorSS(S, photoreceptorClasses, p.Results.fieldSi
 %           very hard to get any contrast on Mel while silencing both
 %           central and peripheral cones. This stimulus would be used in
 %           concert with occlusion of the macular region of the stimulus.
-%   spatial - Ignore mel, try to create differential foveal and
-%           peripheral cone contrast.
-%
-whichDirectionSet = {'LMS','LminusM','S','Mel'};
-whichReceptorsToTargetSet = {[4 5 6],[1 2 4 5],[3 6],[7]};
-whichReceptorsToIgnoreSet = {[1 2 3],[7],[7],[1 2 3]};
-whichReceptorsToMinimizeSet = {[],[],[],[]}; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-desiredContrastSet = {repmat(0.65,1,3),[0.125 -0.125 0.125 -0.125],[0.8 0.8],0.75};
+%   SnoMel- S modulation in the periphery that silences melanopsin.
+
+whichDirectionSet = {'LMS','LminusM','S','Mel','SnoMel'};
+whichReceptorsToTargetSet = {[4 5 6],[1 2 4 5],[3 6],[7],[6]};
+whichReceptorsToIgnoreSet = {[1 2 3],[7],[7],[1 2 3],[1 2 3]};
+whichReceptorsToMinimizeSet = {[],[],[],[],[]}; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
+desiredContrastSet = {repmat(0.7,1,3),[0.125 -0.125 0.125 -0.125],[0.8 0.8],0.75,[0.5]};
 minAcceptableContrastSets = {...
     {[1,2,3]},...
     {[1,2],[3,4]},...
     {[1,2]},...
     {},...
+    {},...
     };
-minAcceptableContrastDiffSet = [0.01,0.005,0.025,0];
-backgroundSearchFlag = [true,false,false,true];
+minAcceptableContrastDiffSet = [0.01,0.005,0.025,0,0];
+backgroundSearchFlag = [true,false,false,true,true];
+
 
 %% Loop over random samples of LEDs
-partitionSets = nchoosek(1:totalLEDs,p.Results.nLEDsToKeep);
-partitionSets = partitionSets(randperm(size(partitionSets,1)),:);
-nTests = min([p.Results.nTests,size(partitionSets,1)]);
+if p.Results.nTests == 1
+    nTests = 1;
+    partitionSets = p.Results.primariesToKeepBest;
+else
+    partitionSets = nchoosek(1:totalLEDs,p.Results.nLEDsToKeep);
+    partitionSets = partitionSets(randperm(size(partitionSets,1)),:);
+    nTests = min([p.Results.nTests,size(partitionSets,1)]);
+end
 
 % Alert the user
 if p.Results.verbose
