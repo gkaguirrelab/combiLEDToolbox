@@ -41,7 +41,7 @@ p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
 p.addParameter('nLEDsToKeep',8,@isscalar)
 p.addParameter('primariesToKeepBest',[2, 3, 4, 7, 10, 11, 12, 15],@isvector)
-p.addParameter('nTests',1000,@isscalar)
+p.addParameter('nTests',inf,@isscalar)
 p.addParameter('stepSizeDiffContrastSearch',0.025,@isscalar)
 p.addParameter('verbose',true,@islogical)
 p.parse(varargin{:});
@@ -261,7 +261,7 @@ resultSet = outcomes{idxBestOutcome};
 
 % Create the save dir
 if ~isempty(p.Results.saveDir)
-    if ~isdir(p.Results.saveDir)
+    if ~isfolder(p.Results.saveDir)
         mkdir(p.Results.saveDir);
     end
 end
