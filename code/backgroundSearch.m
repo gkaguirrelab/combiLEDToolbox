@@ -59,7 +59,6 @@ whichDirectionSet = resultSet.whichDirectionSet;
 whichReceptorsToTargetSet = resultSet.whichReceptorsToTargetSet;
 whichReceptorsToIgnoreSet = resultSet.whichReceptorsToIgnoreSet;
 whichReceptorsToMinimizeSet = resultSet.whichReceptorsToMinimizeSet;
-desiredContrastSet = resultSet.desiredContrastSet;
 minAcceptableContrastSets = resultSet.minAcceptableContrastSets;
 minAcceptableContrastDiffSet = resultSet.minAcceptableContrastDiffSet;
 backgroundSearchFlag = resultSet.backgroundSearchFlag;
