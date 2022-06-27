@@ -35,13 +35,15 @@ function resultSet = designNominalSPDs(varargin)
 %% Parse input
 p = inputParser;
 p.addParameter('saveDir','~/Desktop/nominalSPDs',@ischar);
+p.addParameter('ledSPDFileName','PrizmatixLEDFullSet.csv',@ischar);
 p.addParameter('primaryHeadRoom',0,@isscalar)
 p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
 p.addParameter('nLEDsToKeep',8,@isscalar)
-p.addParameter('primariesToKeepBest',[2, 3, 4, 7, 10, 11, 12, 13],@isvector)
-p.addParameter('nTests',1,@isscalar)
+p.addParameter('minLEDspacing',25,@isscalar)
+p.addParameter('primariesToKeepBest',[2, 4, 7, 9, 10, 11, 13, 15],@isvector)
+p.addParameter('nTests',Inf,@isscalar)
 p.addParameter('stepSizeDiffContrastSearch',0.025,@isscalar)
 p.addParameter('verbose',true,@islogical)
 p.parse(varargin{:});
@@ -53,7 +55,7 @@ maxPowerDiff = 10000; % No smoothness constraint enforced for the LED primaries
 curDir = pwd;
 
 % Load the table of LED primaries
-spdTablePath = fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','PrizmatixLEDSet.csv');
+spdTablePath = fullfile(fileparts(fileparts(mfilename('fullpath'))),'data',p.Results.ledSPDFileName);
 spdTableFull = readtable(spdTablePath);
 
 % Save the list of names of the LEDs
@@ -107,7 +109,7 @@ whichDirectionSet = {'LMS','LminusM','S','Mel','SnoMel'};
 whichReceptorsToTargetSet = {[4 5 6],[1 2 4 5],[3 6],[7],[6]};
 whichReceptorsToIgnoreSet = {[1 2 3],[7],[7],[1 2 3],[1 2 3]};
 whichReceptorsToMinimizeSet = {[],[],[],[],[]}; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-desiredContrastSet = {repmat(0.7,1,3),[0.125 -0.125 0.125 -0.125],[0.8 0.8],0.75,[0.5]};
+desiredContrastSet = {repmat(0.6,1,3),[0.125 -0.125 0.125 -0.125],[0.7 0.7],0.7,0.7};
 minAcceptableContrastSets = {...
     {[1,2,3]},...
     {[1,2],[3,4]},...
@@ -125,6 +127,16 @@ if p.Results.nTests == 1
     partitionSets = p.Results.primariesToKeepBest;
 else
     partitionSets = nchoosek(1:totalLEDs,p.Results.nLEDsToKeep);
+    % Filter the partition sets to remove those that have LEDs that are too
+    % close together
+    for ii=1:size(partitionSets,1)
+        if min(diff(cellfun(@(x) str2double(x(7:9)),LEDnames(squeeze(partitionSets(ii,:)))))) <= p.Results.minLEDspacing
+            partitionSets(ii,:) = nan;
+        end
+    end
+    partitionSets = partitionSets(~any(isnan(partitionSets'))',:);
+
+    % Randomize the order of the sets to search
     partitionSets = partitionSets(randperm(size(partitionSets,1)),:);
     nTests = min([p.Results.nTests,size(partitionSets,1)]);
 end
@@ -146,9 +158,18 @@ parfor dd = 1:nTests
         end
     end
 
+    % Pick a random subset of the available LEDs to use as primaries
+    primariesToKeep = partitionSets(dd,:);
+    primariesToKeepNames = LEDnames(primariesToKeep);
+
+    % Keep this part of the SPD table
+    spdTable = spdTableFull(:,[1 primariesToKeep+1]);
+
     % Clear the resultSet variable and store a few of the variables used in
     % the computation
     resultSet = [];
+    resultSet.primariesToKeepIdx = primariesToKeep;
+    resultSet.primariesToKeepNames = primariesToKeepNames;
     resultSet.photoreceptorClassNames = photoreceptorClassNames;
     resultSet.T_receptors = T_receptors;
     resultSet.whichDirectionSet = whichDirectionSet;
@@ -159,12 +180,6 @@ parfor dd = 1:nTests
     resultSet.minAcceptableContrastSets = minAcceptableContrastSets;
     resultSet.minAcceptableContrastDiffSet = minAcceptableContrastDiffSet;
     resultSet.backgroundSearchFlag = backgroundSearchFlag;
-
-    % Pick a random subset of the available LEDs to use as primaries
-    primariesToKeep = partitionSets(dd,:);
-    spdTable = spdTableFull(:,[1 primariesToKeep+1]);
-    resultSet.primariesToKeepIdx = primariesToKeep;
-    resultSet.primariesToKeepNames = LEDnames(primariesToKeep);
 
     % Derive the primaries from the SPD table
     B_primary = table2array(spdTable(:,2:end));
