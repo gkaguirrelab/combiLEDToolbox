@@ -1,7 +1,7 @@
 
 function modulationPrimary = modPrimarySearch(B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToTarget, whichReceptorsToIgnore, whichReceptorsToMinimize,whichPrimariesToPin,primaryHeadRoom, maxPowerDiff, desiredContrast,minAcceptableContrast,minAcceptableContrastDiff,verbose,stepSizeDiffContrastSearch)
 
-shrinkFactorThresh = 0.7;
+shrinkFactorThresh = 0.5;
 
 % Obtain the isomerization rate for the receptors by the background
 backgroundReceptors = T_receptors*(B_primary*backgroundPrimary + ambientSpd);
