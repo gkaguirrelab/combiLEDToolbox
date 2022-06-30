@@ -40,6 +40,7 @@ p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
 p.addParameter('stepSizeDiffContrastSearch',0.025,@isscalar)
+p.addParameter('shrinkFactorThresh',0.7,@isscalar)
 p.addParameter('verbose',true,@islogical)
 p.parse(varargin{:});
 
@@ -101,7 +102,13 @@ for ss = 1:length(whichDirectionSet)
 
         % Anonymous function that perfoms a modPrimarySearch for a
         % particular background defined by backgroundPrimary
-        myModPrimary = @(xBackPrimary) modPrimarySearch(B_primary,xBackPrimary,ambientSpd,T_receptors,whichReceptorsToTarget,whichReceptorsToIgnore,whichReceptorsToMinimize,whichPrimariesToPin,p.Results.primaryHeadRoom,maxPowerDiff,desiredContrast,minAcceptableContrast,minAcceptableContrastDiff,p.Results.verbose,p.Results.stepSizeDiffContrastSearch);
+        myModPrimary = @(xBackPrimary) modPrimarySearch(...
+            B_primary,xBackPrimary,ambientSpd,T_receptors,...
+            whichReceptorsToTarget,whichReceptorsToIgnore,...
+            whichReceptorsToMinimize,whichPrimariesToPin,...
+            p.Results.primaryHeadRoom,maxPowerDiff,desiredContrast,...
+            minAcceptableContrast,minAcceptableContrastDiff,...
+            p.Results.verbose,p.Results.stepSizeDiffContrastSearch,p.Results.shrinkFactorThresh);
 
         % Objective function that returns the inverse of the contrast on
         % the targeted photoreceptor

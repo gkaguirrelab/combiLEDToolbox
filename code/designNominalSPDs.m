@@ -10,25 +10,66 @@ function resultSet = designNominalSPDs(varargin)
 %   post-receptoral mechanisms, while simultaneously constraining the
 %   differential contrast on jointly targeted mechanisms.
 %
+%   The particular application is selecting LEDs to be placed within a
+%   device manufactured by the company Prizmatix. The output of the various
+%   LEDs are combined by passing through dichroic mirrors. This has the
+%   effect of filtering the SPDs of LEDs that are adjacent in peak
+%   wavelength. This effect is modeled.
+%
 % Inputs:
 %	None
 %
 % Outputs:
-%	resultSet             - Cell array of structs. The primaries and SPDs.
+%	resultSet             - Struct. The primaries and SPDs.
 %
 % Optional key/value pairs:
 %  'saveDir'              - Char. Full path to the directory in which the
 %                           diagnostic plots will be saved. The directory
 %                           will be created if it does not exist.
+%  'ledSPDFileName'       - Char. Which table of LED primary SPDs to laod.
 %  'primaryHeadRoom'      - Scalar. We can enforce a constraint that we
 %                           don't go right to the edge of the gamut.  The
 %                           head room parameter is defined in the [0-1]
 %                           device primary space.  Using a little head room
 %                           keeps us a bit away from the hard edge of the
 %                           device.
-%  'observerAgeInYears'   - Scalar
 %  'fieldSizeDegrees'     - Scalar
 %  'pupilDiameterMm'      - Scalar
+%  'observerAgeInYears'   - Scalar
+%  'nLEDsToKeep'          - Scalar. The number of LEDs in the final device.
+%  'minLEDspacing'        - Scalar. When picking sets of LEDs to examine,
+%                           only use sets for which the peak wavelengths
+%                           between the LEDs are all separated by at least
+%                           this amount in nanometers.
+%  'filterAdjacentPrimariesFlag' - Logical. When set to true, a logistic 
+%                           transmitance filter is applied to the SPD of
+%                           adjacent LEDs to model the filtering effects
+%                           of the dichroic mirrors.
+%  'filterMaxSlopeParam'  - Scalar. The maximum slope of the logistic
+%                           function that models the dichroic mirrors, in
+%                           units of proportion filter / nm. The value of
+%                           0.2 is pretty close to what is on the website
+%                           for these filters.
+%  'primariesToKeepBest'  - Vector. A set of LEDs that have been found to
+%                           perform well in previous searches.
+%  'nTests'               - Scalar. The number of permutations of LED sets
+%                           to test for optimal performance. Set to inf to 
+%                           test all.
+%  'stepSizeDiffContrastSearch' - Scalar. In searching for a modulation,
+%                           routine attempts to maximize contrast on a
+%                           targeted set of photoreceptors, but also
+%                           attempts to minimize differential contrast on
+%                           these. The targeted contrast is iteratively
+%                           reduced until the differential contrast
+%                           constraint is satisfied. This parameter sets
+%                           how finely these iterative steps are taken.
+%  'shrinkFactorThresh'   - Scalar. For this search across reduced contrast
+%                           levels to minimize differential contrast, this
+%                           sets the threshold at which we abandon the 
+%                           search and move on to a different set of
+%                           primaries. If set to 0.7, for example, if the
+%                           reduction in the desired contrast hits 70% of
+%                           the original target, then we give up.
 %
 
 
@@ -47,6 +88,7 @@ p.addParameter('filterMaxSlopeParam',1/5,@isscalar)
 p.addParameter('primariesToKeepBest',[1 4 7 10 11 13 15 16],@isvector)
 p.addParameter('nTests',Inf,@isscalar)
 p.addParameter('stepSizeDiffContrastSearch',0.025,@isscalar)
+p.addParameter('shrinkFactorThresh',0.7,@isscalar)
 p.addParameter('verbose',true,@islogical)
 p.parse(varargin{:});
 
@@ -250,7 +292,13 @@ for dd = 1:nTests
 
         % Anonymous function that perfoms a modPrimarySearch for a
         % particular background defined by backgroundPrimary
-        myModPrimary = @(xBackPrimary) modPrimarySearch(B_primary,xBackPrimary,ambientSpd,T_receptors,whichReceptorsToTarget,whichReceptorsToIgnore,whichReceptorsToMinimize,whichPrimariesToPin,p.Results.primaryHeadRoom,maxPowerDiff,desiredContrast,minAcceptableContrast,minAcceptableContrastDiff,p.Results.verbose,p.Results.stepSizeDiffContrastSearch);
+        myModPrimary = @(xBackPrimary) modPrimarySearch(...
+            B_primary,xBackPrimary,ambientSpd,T_receptors,...
+            whichReceptorsToTarget,whichReceptorsToIgnore,...
+            whichReceptorsToMinimize,whichPrimariesToPin,...
+            p.Results.primaryHeadRoom,maxPowerDiff,desiredContrast,...
+            minAcceptableContrast,minAcceptableContrastDiff,...
+            p.Results.verbose,p.Results.stepSizeDiffContrastSearch,p.Results.shrinkFactorThresh);
 
         % Obtain the modulationPrimary for this background
         modulationPrimary = myModPrimary(backgroundPrimary);
