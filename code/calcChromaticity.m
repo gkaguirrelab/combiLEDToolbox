@@ -64,7 +64,7 @@ for ss = 1:length(whichDirectionSet)
     modNegSpd = resultSet.(whichDirection).negativeModulationSPD;
 
     bg_photopicLuminanceCdM2_Y = T_xyz(2,:)*bgSpd;
-    bg_chromaticity_xy = T_xyz(1:2,:)*bgSpd/sum(T_xyz*bgSpd);
+    bg_chromaticity_xy = T_xyz(1:2,:)*bgSpd/sum(T_xyz*bgSpd)
     modPos_chromaticity_xy = T_xyz(1:2,:)*modPosSpd/sum(T_xyz*modPosSpd);
     modNeg_chromaticity_xy = T_xyz(1:2,:)*modNegSpd/sum(T_xyz*modNegSpd);
 

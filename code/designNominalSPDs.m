@@ -42,7 +42,9 @@ p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
 p.addParameter('nLEDsToKeep',8,@isscalar)
 p.addParameter('minLEDspacing',25,@isscalar)
-p.addParameter('primariesToKeepBest',[2, 4, 7, 9, 10, 11, 13, 15],@isvector)
+p.addParameter('filterAdjacentPrimariesFlag',true,@islogical)
+p.addParameter('filterMaxSlopeParam',1/5,@isscalar)
+p.addParameter('primariesToKeepBest',[1 4 7 10 11 13 15 16],@isvector)
 p.addParameter('nTests',Inf,@isscalar)
 p.addParameter('stepSizeDiffContrastSearch',0.025,@isscalar)
 p.addParameter('verbose',true,@islogical)
@@ -121,6 +123,13 @@ minAcceptableContrastDiffSet = [0.01,0.005,0.025,0,0];
 backgroundSearchFlag = [true,false,false,true,true];
 
 
+%% Define the filter form
+% Adjacent LEDs are subject to filtering by dichroic mirrors that direct
+% the light. Generate here the form of that filter. The maximum slope of
+% the logit function is set in the varargin.
+logitFunc = @(x,x0) 1./(1+exp(-p.Results.filterMaxSlopeParam.*(x-x0)));
+
+
 %% Loop over random samples of LEDs
 if p.Results.nTests == 1
     nTests = 1;
@@ -149,7 +158,7 @@ if p.Results.verbose
     fprintf('.\n');
 end
 
-parfor dd = 1:nTests
+for dd = 1:nTests
 
     % Update progress
     if p.Results.verbose
@@ -189,6 +198,29 @@ parfor dd = 1:nTests
     % and some are more normalized than others, so set all to have unit
     % amplitude here.
     B_primary = B_primary./max(B_primary);
+
+    % The primaries are arranged in a device that channels the light with
+    % dichroic mirrors. This has the effect of filtering SPD of adjacent
+    % primaries. Apply this here if requested.
+    if p.Results.filterAdjacentPrimariesFlag
+        for ii=1:nPrimaries-1
+
+           % Find the midpoint wavelength between two adjacent LEDs
+           primaryDiff = B_primary(:,ii)-B_primary(:,ii+1);
+           [~,idx1]=max(primaryDiff);
+           [~,idx2]=min(primaryDiff);
+           [~,idx3]=min(abs(primaryDiff(idx1:idx2)));
+           filterCenterWavelength = idx1+idx3;
+
+           % Make the filter
+           filterTransmitance = logitFunc(1:length(wavelengthSupport),filterCenterWavelength);
+
+           % Apply the filter to the two primaries
+           B_primary(:,ii) = B_primary(:,ii) .* (1-filterTransmitance)';
+           B_primary(:,ii+1) = B_primary(:,ii+1) .* filterTransmitance';
+
+        end
+    end
 
     % Set up a zero ambient
     ambientSpd = zeros(S(3),1);
