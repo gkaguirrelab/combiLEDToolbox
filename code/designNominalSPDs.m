@@ -41,6 +41,9 @@ function resultSet = designNominalSPDs(varargin)
 %                           only use sets for which the peak wavelengths
 %                           between the LEDs are all separated by at least
 %                           this amount in nanometers.
+%  'weightedBackgroundPrimaries' - Logical. When set to true, the
+%                           background settings are inversely weighted by
+%                           the total power of each LED.
 %  'filterAdjacentPrimariesFlag' - Logical. When set to true, a logistic 
 %                           transmitance filter is applied to the SPD of
 %                           adjacent LEDs to model the filtering effects
@@ -76,19 +79,21 @@ function resultSet = designNominalSPDs(varargin)
 %% Parse input
 p = inputParser;
 p.addParameter('saveDir','~/Desktop/nominalSPDs',@ischar);
-p.addParameter('ledSPDFileName','PrizmatixLEDFullSet.csv',@ischar);
+p.addParameter('ledSPDFileName','PrizmatixLEDFullSet_B_SPDs.csv',@ischar);
+p.addParameter('ledTotalPowerFileName','PrizmatixLEDFullSet_B_totalPower.csv',@ischar);
 p.addParameter('primaryHeadRoom',0,@isscalar)
 p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
 p.addParameter('nLEDsToKeep',8,@isscalar)
-p.addParameter('minLEDspacing',25,@isscalar)
+p.addParameter('minLEDspacing',20,@isscalar)
+p.addParameter('weightedBackgroundPrimaries',false,@islogical)
 p.addParameter('filterAdjacentPrimariesFlag',true,@islogical)
 p.addParameter('filterMaxSlopeParam',1/5,@isscalar)
 p.addParameter('primariesToKeepBest',[1 4 7 10 11 13 15 16],@isvector)
-p.addParameter('nTests',Inf,@isscalar)
+p.addParameter('nTests',inf,@isscalar)
 p.addParameter('stepSizeDiffContrastSearch',0.025,@isscalar)
-p.addParameter('shrinkFactorThresh',0.7,@isscalar)
+p.addParameter('shrinkFactorThresh',0.8,@isscalar)
 p.addParameter('verbose',true,@islogical)
 p.parse(varargin{:});
 
@@ -102,6 +107,10 @@ curDir = pwd;
 spdTablePath = fullfile(fileparts(fileparts(mfilename('fullpath'))),'data',p.Results.ledSPDFileName);
 spdTableFull = readtable(spdTablePath);
 
+% Load the table of total power (in milliWatts) for each LED
+powerTablePath = fullfile(fileparts(fileparts(mfilename('fullpath'))),'data',p.Results.ledTotalPowerFileName);
+powerTableFull = readtable(powerTablePath);
+
 % Save the list of names of the LEDs
 totalLEDs = size(spdTableFull,2)-1;
 LEDnames = spdTableFull.Properties.VariableNames(2:end);
@@ -109,6 +118,21 @@ LEDnames = spdTableFull.Properties.VariableNames(2:end);
 % Derive the wavelength support
 wavelengthSupport = spdTableFull.Wavelength;
 S = [wavelengthSupport(1), wavelengthSupport(2)-wavelengthSupport(1), length(wavelengthSupport)];
+
+% Scale the SPDs to reflect absolute power, and record the peak wavelength
+% for each LED
+for ii=1:totalLEDs
+    thisSPD = cell2mat(table2cell(spdTableFull(:,ii+1)));
+    thisName = LEDnames(ii);
+    totalPowerMw = powerTableFull.(thisName{1});
+    thisSPD = thisSPD .* ( totalPowerMw / (S(2) * sum(thisSPD)) );
+    thisSPD(thisSPD<0)=0;
+    spdTableFull(:,ii+1) = table(thisSPD);
+    [~,idx]=max(thisSPD);
+    LEDpeakWavelength(ii) = wavelengthSupport(idx);
+end
+
+LEDpower = cell2mat(table2cell(powerTableFull));
 
 
 %% Get the photoreceptors
@@ -153,7 +177,7 @@ whichDirectionSet = {'LMS','LminusM','S','Mel','SnoMel'};
 whichReceptorsToTargetSet = {[4 5 6],[1 2 4 5],[3 6],[7],[6]};
 whichReceptorsToIgnoreSet = {[1 2 3],[7],[7],[1 2 3],[1 2 3]};
 whichReceptorsToMinimizeSet = {[],[],[],[],[]}; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-desiredContrastSet = {repmat(0.6,1,3),[0.125 -0.125 0.125 -0.125],[0.7 0.7],0.7,0.7};
+desiredContrastSet = {repmat(0.6,1,3),[0.12 -0.12 0.12 -0.12],[0.7 0.7],0.6,0.6};
 minAcceptableContrastSets = {...
     {[1,2,3]},...
     {[1,2],[3,4]},...
@@ -163,6 +187,7 @@ minAcceptableContrastSets = {...
     };
 minAcceptableContrastDiffSet = [0.01,0.005,0.025,0,0];
 backgroundSearchFlag = [true,false,false,true,true];
+whichDirectionsToScore = [1 4 5]; % Only these influence the metric
 
 
 %% Define the filter form
@@ -172,20 +197,25 @@ backgroundSearchFlag = [true,false,false,true,true];
 logitFunc = @(x,x0) 1./(1+exp(-p.Results.filterMaxSlopeParam.*(x-x0)));
 
 
-%% Loop over random samples of LEDs
+% Partition the LEDs into sets
 if p.Results.nTests == 1
     nTests = 1;
     partitionSets = p.Results.primariesToKeepBest;
 else
     partitionSets = nchoosek(1:totalLEDs,p.Results.nLEDsToKeep);
-    % Filter the partition sets to remove those that have LEDs that are too
-    % close together
+
+    % Loop through the partitions and mark the bad ones
+    goodPatitions = ones(size(partitionSets,1),1);
     for ii=1:size(partitionSets,1)
-        if min(diff(cellfun(@(x) str2double(x(7:9)),LEDnames(squeeze(partitionSets(ii,:)))))) <= p.Results.minLEDspacing
-            partitionSets(ii,:) = nan;
+        % Filter the partition sets to remove those that have LEDs that are
+        % too close together
+        if min(diff(LEDpeakWavelength(squeeze(partitionSets(ii,:))))) <= p.Results.minLEDspacing
+            goodPatitions(ii)=0;
         end
     end
-    partitionSets = partitionSets(~any(isnan(partitionSets'))',:);
+
+    % Remove the badness
+    partitionSets = partitionSets(find(goodPatitions),:);
 
     % Randomize the order of the sets to search
     partitionSets = partitionSets(randperm(size(partitionSets,1)),:);
@@ -195,12 +225,13 @@ end
 % Alert the user
 if p.Results.verbose
     tic
-    fprintf(['Searching over LED partitions. Started ' char(datetime('now')) '\n']);
+    fprintf(['Searching over %d LED partitions. Started ' char(datetime('now')) '\n'],nTests);
     fprintf('| 0                      50                   100%% |\n');
     fprintf('.\n');
 end
 
-for dd = 1:nTests
+% Loop over the tests
+parfor dd = 1:nTests
 
     % Update progress
     if p.Results.verbose
@@ -235,11 +266,6 @@ for dd = 1:nTests
     % Derive the primaries from the SPD table
     B_primary = table2array(spdTable(:,2:end));
     nPrimaries = size(B_primary,2);
-
-    % I don't yet have the absolute power measurements of the primaries,
-    % and some are more normalized than others, so set all to have unit
-    % amplitude here.
-    B_primary = B_primary./max(B_primary);
 
     % The primaries are arranged in a device that channels the light with
     % dichroic mirrors. This has the effect of filtering SPD of adjacent
@@ -287,8 +313,15 @@ for dd = 1:nTests
         % Don't pin any primaries.
         whichPrimariesToPin = [];
 
-        % Set background to the half-on
-        backgroundPrimary = repmat(0.5,nPrimaries,1);
+        % Set background
+        if p.Results.weightedBackgroundPrimaries
+            % Create a background that inversely weights the LEDs by their
+            % total power
+            j=LEDpower(primariesToKeep); j=j/max(j); j=j-mean(j); j=j/2;
+            backgroundPrimary = (0.5-j)';
+        else
+            backgroundPrimary = repmat(0.5,nPrimaries,1);
+        end
 
         % Anonymous function that perfoms a modPrimarySearch for a
         % particular background defined by backgroundPrimary
@@ -350,8 +383,11 @@ end
 % Normalize each contrast vector by the desired target contrast
 contrasts = contrasts./cellfun(@(x) x(1),desiredContrastSet)';
 
+% Only pay attention to those contrasts that we are asked to score
+contrasts = contrasts(whichDirectionsToScore,:);
+
 % Find the best outcome
-[~,idxBestOutcome]=min(sum((1-contrasts).^2));
+[~,idxBestOutcome]=min(max((1-contrasts)));
 resultSet = outcomes{idxBestOutcome};
 
 % Create the save dir
