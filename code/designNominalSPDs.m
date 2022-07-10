@@ -44,7 +44,7 @@ function resultSet = designNominalSPDs(varargin)
 %  'weightedBackgroundPrimaries' - Logical. When set to true, the
 %                           background settings are inversely weighted by
 %                           the total power of each LED.
-%  'filterAdjacentPrimariesFlag' - Logical. When set to true, a logistic 
+%  'filterAdjacentPrimariesFlag' - Logical. When set to true, a logistic
 %                           transmitance filter is applied to the SPD of
 %                           adjacent LEDs to model the filtering effects
 %                           of the dichroic mirrors.
@@ -56,7 +56,7 @@ function resultSet = designNominalSPDs(varargin)
 %  'primariesToKeepBest'  - Vector. A set of LEDs that have been found to
 %                           perform well in previous searches.
 %  'nTests'               - Scalar. The number of permutations of LED sets
-%                           to test for optimal performance. Set to inf to 
+%                           to test for optimal performance. Set to inf to
 %                           test all.
 %  'stepSizeDiffContrastSearch' - Scalar. In searching for a modulation,
 %                           routine attempts to maximize contrast on a
@@ -68,19 +68,22 @@ function resultSet = designNominalSPDs(varargin)
 %                           how finely these iterative steps are taken.
 %  'shrinkFactorThresh'   - Scalar. For this search across reduced contrast
 %                           levels to minimize differential contrast, this
-%                           sets the threshold at which we abandon the 
+%                           sets the threshold at which we abandon the
 %                           search and move on to a different set of
 %                           primaries. If set to 0.7, for example, if the
 %                           reduction in the desired contrast hits 70% of
 %                           the original target, then we give up.
 %
-
+%
+% Some good sets
+%   [1 4 9 12 13 16 18 19] - the set that I sent to Nathaniel to model
+%   [1 3 6 10 12 13 16 19] - best set for Mel, with LED area modeled
 
 %% Parse input
 p = inputParser;
 p.addParameter('saveDir','~/Desktop/nominalSPDs',@ischar);
-p.addParameter('ledSPDFileName','PrizmatixLEDFullSet_B_SPDs.csv',@ischar);
-p.addParameter('ledTotalPowerFileName','PrizmatixLEDFullSet_B_totalPower.csv',@ischar);
+p.addParameter('ledSPDFileName','PrizmatixLED_SetA_SPDs.csv',@ischar);
+p.addParameter('ledTotalPowerFileName','PrizmatixLED_SetA_totalPower.csv',@ischar);
 p.addParameter('primaryHeadRoom',0,@isscalar)
 p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
@@ -90,8 +93,9 @@ p.addParameter('minLEDspacing',20,@isscalar)
 p.addParameter('weightedBackgroundPrimaries',false,@islogical)
 p.addParameter('filterAdjacentPrimariesFlag',true,@islogical)
 p.addParameter('filterMaxSlopeParam',1/5,@isscalar)
-p.addParameter('primariesToKeepBest',[1 4 7 10 11 13 15 16],@isvector)
-p.addParameter('nTests',inf,@isscalar)
+p.addParameter('primariesToKeepBest',[1:8],@isvector)
+p.addParameter('filterCenterWavelengthsBest',[423 453 506 575 610 649 685],@isvector) %
+p.addParameter('nTests',1,@isscalar)
 p.addParameter('stepSizeDiffContrastSearch',0.025,@isscalar)
 p.addParameter('shrinkFactorThresh',0.8,@isscalar)
 p.addParameter('verbose',true,@islogical)
@@ -125,11 +129,28 @@ for ii=1:totalLEDs
     thisSPD = cell2mat(table2cell(spdTableFull(:,ii+1)));
     thisName = LEDnames(ii);
     totalPowerMw = powerTableFull.(thisName{1});
-    thisSPD = thisSPD .* ( totalPowerMw / (S(2) * sum(thisSPD)) );
+
+    % We have some knowledge of the area of the emitting surface of the
+    % LED. We get that number and adjust the power by the multiple of
+    % square mm.
+    switch thisName{1}(end-1:end)
+        case 'EP'
+            surfaceArea = 2*2;
+        case 'SR'
+            surfaceArea = 1.2*1.5;
+        case '21' % The "LA21"
+            surfaceArea = 2*1;
+        otherwise
+            error('Need the surface area for this LED')
+    end
+
+    % Apply the adjustment
+    thisSPD = thisSPD .* ( (totalPowerMw*surfaceArea ) / (S(2) * sum(thisSPD)) );
     thisSPD(thisSPD<0)=0;
     spdTableFull(:,ii+1) = table(thisSPD);
     [~,idx]=max(thisSPD);
     LEDpeakWavelength(ii) = wavelengthSupport(idx);
+
 end
 
 LEDpower = cell2mat(table2cell(powerTableFull));
@@ -189,6 +210,18 @@ minAcceptableContrastDiffSet = [0.015,0.005,0.025,0,0];
 backgroundSearchFlag = [true,false,false,true,true];
 whichDirectionsToScore = [1 4 5]; % Only these influence the metric
 
+% whichDirectionSet = {'Mel'};
+% whichReceptorsToTargetSet = {[7]};
+% whichReceptorsToIgnoreSet = {[1 2 3]};
+% whichReceptorsToMinimizeSet = {[]}; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
+% desiredContrastSet = {0.6};
+% minAcceptableContrastSets = {...
+%     {},...
+%     };
+% minAcceptableContrastDiffSet = [0];
+% backgroundSearchFlag = [true];
+% whichDirectionsToScore = [1]; % Only these influence the metric
+
 
 %% Define the filter form
 % Adjacent LEDs are subject to filtering by dichroic mirrors that direct
@@ -231,7 +264,7 @@ if p.Results.verbose
 end
 
 % Loop over the tests
-parfor dd = 1:nTests
+for dd = 1:nTests
 
     % Update progress
     if p.Results.verbose
@@ -267,28 +300,42 @@ parfor dd = 1:nTests
     B_primary = table2array(spdTable(:,2:end));
     nPrimaries = size(B_primary,2);
 
+    % Store the primaries before filtering by the dichroic mirrors
+    resultSet.B_primaryPreFilter = B_primary;
+
     % The primaries are arranged in a device that channels the light with
     % dichroic mirrors. This has the effect of filtering SPD of adjacent
     % primaries. Apply this here if requested.
     if p.Results.filterAdjacentPrimariesFlag
+        filterCenterWavelengths = zeros(nPrimaries-1,1);
         for ii=1:nPrimaries-1
 
-           % Find the midpoint wavelength between two adjacent LEDs
-           primaryDiff = B_primary(:,ii)-B_primary(:,ii+1);
-           [~,idx1]=max(primaryDiff);
-           [~,idx2]=min(primaryDiff);
-           [~,idx3]=min(abs(primaryDiff(idx1:idx2)));
-           filterCenterWavelength = idx1+idx3;
+            % Find the midpoint wavelength between two adjacent LEDs, or
+            % use the specified value in filterCentersNmBest
+            if ~isempty(p.Results.filterCenterWavelengthsBest)
+                filterCenterWavelengths(ii) = p.Results.filterCenterWavelengthsBest(ii);
+                [~, filterCenterIdx] = min(abs(wavelengthSupport-filterCenterWavelengths(ii)));
+            else
+                primaryDiff = B_primary(:,ii)-B_primary(:,ii+1);
+                [~,idx1]=max(primaryDiff);
+                [~,idx2]=min(primaryDiff);
+                [~,idx3]=min(abs(primaryDiff(idx1:idx2)));
+                filterCenterIdx = idx1+idx3;
+                filterCenterWavelengths(ii)=wavelengthSupport(filterCenterIdx);
+            end
 
-           % Make the filter
-           filterTransmitance = logitFunc(1:length(wavelengthSupport),filterCenterWavelength);
+            % Make the filter
+            filterTransmitance = logitFunc(1:length(wavelengthSupport),filterCenterIdx);
 
-           % Apply the filter to the two primaries
-           B_primary(:,ii) = B_primary(:,ii) .* (1-filterTransmitance)';
-           B_primary(:,ii+1) = B_primary(:,ii+1) .* filterTransmitance';
+            % Apply the filter to the two primaries
+            B_primary(:,ii) = B_primary(:,ii) .* (1-filterTransmitance)';
+            B_primary(:,ii+1) = B_primary(:,ii+1) .* filterTransmitance';
 
         end
     end
+
+    % Save the filter centers
+    resultSet.filterCenterWavelength = filterCenterWavelengths;
 
     % Set up a zero ambient
     ambientSpd = zeros(S(3),1);
