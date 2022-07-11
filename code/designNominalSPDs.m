@@ -99,8 +99,8 @@ function resultSet = designNominalSPDs(varargin)
         'primariesToKeepBest',primariesToKeepBest,'nTests',nTests,...
         'makePlots',false);
     figure
-    plot(resultSetTheirs.B_primary,'-','LineWidth',2); hold on
-    plot(resultSetOurs.B_primary,'--','LineWidth',2);
+    plot(resultSetTheirs.LMS.wavelengthsNm,resultSetTheirs.B_primary,'-','LineWidth',2); hold on
+    plot(resultSetTheirs.LMS.wavelengthsNm,resultSetOurs.B_primary,'--','LineWidth',2);
 %}
 
 % Some good sets
