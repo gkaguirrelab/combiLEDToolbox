@@ -126,7 +126,7 @@ p.addParameter('filterCenterWavelengthsBest',[],@isvector)
 p.addParameter('nTests',1,@isscalar)
 p.addParameter('stepSizeDiffContrastSearch',0.025,@isscalar)
 p.addParameter('shrinkFactorThresh',0.5,@isscalar)
-p.addParameter('x0PrimaryChoice','background',@isscalar)
+p.addParameter('x0PrimarySear',0.5,@isscalar)
 p.addParameter('verbose',true,@islogical)
 p.addParameter('makePlots',true,@islogical)
 p.parse(varargin{:});
@@ -402,18 +402,11 @@ for dd = 1:nTests
         end
 
         % Decide upon an x0Primary to start the search
-        switch p.Results.x0PrimaryChoice
-            case 'background'
-                x0Primary = backgroundPrimary;
-            case 'ones'
-                x0Primary = ones(size(backgroundPrimary));
-            case 'random'
-                x0Primary = rand(size(backgroundPrimary));
-        end
+        x0Primary = 
 
         % Anonymous function that perfoms a modPrimarySearch for a
         % particular background defined by backgroundPrimary and x0
-        myModPrimary = @(xBackPrimary) modPrimarySearch(...
+        myModPrimary = @(xBackPrimary, x0Primary) modPrimarySearch(...
             B_primary,xBackPrimary,x0Primary,ambientSpd,T_receptors,...
             whichReceptorsToTarget,whichReceptorsToIgnore,...
             whichReceptorsToMinimize,whichPrimariesToPin,...
