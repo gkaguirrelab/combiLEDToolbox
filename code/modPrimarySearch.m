@@ -1,5 +1,5 @@
 
-function modulationPrimary = modPrimarySearch(B_primary,backgroundPrimary,x0Primary,ambientSpd,T_receptors,whichReceptorsToTarget, whichReceptorsToIgnore, whichReceptorsToMinimize,whichPrimariesToPin,primaryHeadRoom, maxPowerDiff, desiredContrast,minAcceptableContrast,minAcceptableContrastDiff,verbose,stepSizeDiffContrastSearch,shrinkFactorThresh,minimumNonZeroSetting)
+function modulationPrimary = modPrimarySearch(B_primary,backgroundPrimary,x0Primary,ambientSpd,T_receptors,whichReceptorsToTarget, whichReceptorsToIgnore, whichReceptorsToMinimize,whichPrimariesToPin,primaryHeadRoom, maxPowerDiff, desiredContrast,minAcceptableContrast,minAcceptableContrastDiff,verbose,stepSizeDiffContrastSearch,shrinkFactorThresh)
 
 
 % Obtain the isomerization rate for the receptors by the background
@@ -18,7 +18,7 @@ while stillSearching
     % Perform the search for the modulation
     modulationPrimary = ReceptorIsolate(T_receptors,whichReceptorsToTarget, whichReceptorsToIgnore, whichReceptorsToMinimize, ...
         B_primary, backgroundPrimary, x0Primary, whichPrimariesToPin,...
-        primaryHeadRoom, maxPowerDiff, thisContrastTarget, ambientSpd, minimumNonZeroSetting);
+        primaryHeadRoom, maxPowerDiff, thisContrastTarget, ambientSpd);
 
     % Calculate the positive receptor contrast and the differences
     % between the targeted receptor sets

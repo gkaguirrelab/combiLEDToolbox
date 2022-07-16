@@ -112,7 +112,7 @@ p = inputParser;
 p.addParameter('saveDir','~/Desktop/nominalSPDs',@ischar);
 p.addParameter('ledSPDFileName','PrizmatixLED_FullSet_SPDs.csv',@ischar);
 p.addParameter('ledTotalPowerFileName','PrizmatixLED_FullSet_totalPower.csv',@ischar);
-p.addParameter('primaryHeadRoom',0,@isscalar)
+p.addParameter('primaryHeadRoom',0.05,@isscalar)
 p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
@@ -123,7 +123,7 @@ p.addParameter('filterAdjacentPrimariesFlag',true,@islogical)
 p.addParameter('filterMaxSlopeParam',1/5,@isscalar)
 p.addParameter('primariesToKeepBest',[1 3 7 10 12 13 17 18],@isvector)
 p.addParameter('filterCenterWavelengthsBest',[],@isvector) 
-p.addParameter('nTests',1,@isscalar)
+p.addParameter('nTests',inf,@isscalar)
 p.addParameter('stepSizeDiffContrastSearch',0.025,@isscalar)
 p.addParameter('shrinkFactorThresh',0.5,@isscalar)
 p.addParameter('x0PrimaryChoice','background',@isscalar)
@@ -136,7 +136,6 @@ whichModel = 'human';
 whichPrimaries = 'prizmatix';
 maxPowerDiff = 10000; % No smoothness constraint enforced for the LED primaries
 curDir = pwd;
-minimumNonZeroSetting = 0.15;
 
 % Load the table of LED primaries
 spdTablePath = fullfile(fileparts(fileparts(mfilename('fullpath'))),'data',p.Results.ledSPDFileName);
@@ -229,7 +228,7 @@ whichDirectionSet = {'LMS','LminusM','S','Mel','SnoMel'};
 whichReceptorsToTargetSet = {[4 5 6],[1 2 4 5],[3 6],[7],[6]};
 whichReceptorsToIgnoreSet = {[1 2 3],[7],[7],[1 2 3],[1 2 3]};
 whichReceptorsToMinimizeSet = {[],[],[],[],[]}; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-desiredContrastSet = {repmat(0.5,1,3),[0.12 -0.12 0.12 -0.12],[0.7 0.7],0.6,0.6};
+desiredContrastSet = {repmat(0.5,1,3),[0.12 -0.12 0.12 -0.12],[0.7 0.7],0.6,0.65};
 minAcceptableContrastSets = {...
     {[1,2,3]},...
     {[1,2],[3,4]},...
@@ -239,7 +238,7 @@ minAcceptableContrastSets = {...
     };
 minAcceptableContrastDiffSet = [0.015,0.005,0.025,0,0];
 backgroundSearchFlag = [true,false,false,true,true];
-whichDirectionsToScore = [1 4 5]; % Only these influence the metric
+whichDirectionsToScore = [1 4]; % Only these influence the metric
 
 % whichDirectionSet = {'Mel'};
 % whichReceptorsToTargetSet = {[7]};
@@ -295,7 +294,7 @@ if p.Results.verbose
 end
 
 % Loop over the tests
-for dd = 1:nTests
+parfor dd = 1:nTests
 
     % Update progress
     if p.Results.verbose
@@ -420,7 +419,7 @@ for dd = 1:nTests
             p.Results.primaryHeadRoom,maxPowerDiff,desiredContrast,...
             minAcceptableContrast,minAcceptableContrastDiff,...
             p.Results.verbose,p.Results.stepSizeDiffContrastSearch,...
-            p.Results.shrinkFactorThresh, minimumNonZeroSetting);
+            p.Results.shrinkFactorThresh);
 
         % Obtain the modulationPrimary for this background
         modulationPrimary = myModPrimary(backgroundPrimary);
