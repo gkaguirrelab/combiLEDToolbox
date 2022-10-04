@@ -114,7 +114,8 @@ function resultSet = designNominalSPDs(varargin)
         'makePlots',true);
 %}
 %{
-    % Sent to Nathaniel on 07-July-2022
+    % Design sent to Nathaniel Sperka on 26-July-2022. This is the set of
+    % LEDs and filters in device we have ordered.
     primariesToKeepBest = [1 3 6 10 12 13 17 18];
     filterCenterWavelengthsBest = [412 456 482 516 587 619 645];
     nTests = 1;
