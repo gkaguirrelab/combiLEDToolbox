@@ -124,6 +124,21 @@ function resultSet = designNominalSPDs(varargin)
         'primariesToKeepBest',primariesToKeepBest,'nTests',nTests,...
         'makePlots',true);
 %}
+%{
+    % 06-Oct-2022 measurement of output of prototype device. This prototype
+    % has insufficient Mel contrast. This appears to be caused by improper
+    % filtering of the "5th" LED (), which is in this prototype subjected
+    % to a filter positioned at ~570 nm, while the design calls for a
+    % filter at ~588.
+    ledSPDFileName = 'PrizmatixLED_SetB_postFilter_SPDs.csv';
+    primariesToKeepBest = 1:8; nTests = 1;
+    resultSetOurs = designNominalSPDs('ledSPDFileName',ledSPDFileName,...
+        'adjustPrimaryPower',false,...
+        'filterAdjacentPrimariesFlag',false,...
+        'primariesToKeepBest',primariesToKeepBest,'nTests',nTests,...
+        'makePlots',true);
+%}
+
 
 %% Parse input
 p = inputParser;
@@ -136,6 +151,7 @@ p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
 p.addParameter('nLEDsToKeep',8,@isscalar)
 p.addParameter('minLEDspacing',20,@isscalar)
+p.addParameter('adjustPrimaryPower',true,@islogical)
 p.addParameter('weightedBackgroundPrimaries',false,@islogical)
 p.addParameter('filterAdjacentPrimariesFlag',true,@islogical)
 p.addParameter('filterMaxSlopeParam',1/5,@isscalar)
@@ -159,10 +175,6 @@ curDir = pwd;
 spdTablePath = fullfile(fileparts(fileparts(mfilename('fullpath'))),'data',p.Results.ledSPDFileName);
 spdTableFull = readtable(spdTablePath);
 
-% Load the table of total power (in milliWatts) for each LED
-powerTablePath = fullfile(fileparts(fileparts(mfilename('fullpath'))),'data',p.Results.ledTotalPowerFileName);
-powerTableFull = readtable(powerTablePath);
-
 % Save the list of names of the LEDs
 totalLEDs = size(spdTableFull,2)-1;
 LEDnames = spdTableFull.Properties.VariableNames(2:end);
@@ -171,37 +183,63 @@ LEDnames = spdTableFull.Properties.VariableNames(2:end);
 wavelengthSupport = spdTableFull.Wavelength;
 S = [wavelengthSupport(1), wavelengthSupport(2)-wavelengthSupport(1), length(wavelengthSupport)];
 
-% Scale the SPDs to reflect absolute power, and record the peak wavelength
+% If requested scale the SPDs to reflect absolute power, and record the peak wavelength
 % for each LED
-for ii=1:totalLEDs
-    thisSPD = cell2mat(table2cell(spdTableFull(:,ii+1)));
-    thisName = LEDnames(ii);
-    totalPowerMw = powerTableFull.(thisName{1});
+if p.Results.adjustPrimaryPower
 
-    % We have some knowledge of the area of the emitting surface of the
-    % LED. We get that number and adjust the power by the multiple of
-    % square mm.
-    switch thisName{1}(end-1:end)
-        case 'EP'
-            surfaceArea = 2*2;
-        case 'SR'
-            surfaceArea = 1.2*1.5;
-        case '21' % The "LA21"
-            surfaceArea = 2*1;
-        otherwise
-            error('Need the surface area for this LED')
+    % Load the table of total power (in milliWatts) for each LED
+    powerTablePath = fullfile(fileparts(fileparts(mfilename('fullpath'))),'data',p.Results.ledTotalPowerFileName);
+    powerTableFull = readtable(powerTablePath);
+
+    % Apply the correction
+    for ii=1:totalLEDs
+        thisSPD = cell2mat(table2cell(spdTableFull(:,ii+1)));
+        thisName = LEDnames(ii);
+        totalPowerMw = powerTableFull.(thisName{1});
+
+        % We have some knowledge of the area of the emitting surface of the
+        % LED. We get that number and adjust the power by the multiple of
+        % square mm.
+        switch thisName{1}(end-1:end)
+            case 'EP'
+                surfaceArea = 2*2;
+            case 'SR'
+                surfaceArea = 1.2*1.5;
+            case '21' % The "LA21"
+                surfaceArea = 2*1;
+            otherwise
+                error('Need the surface area for this LED')
+        end
+
+        % Apply the adjustment
+        thisSPD = thisSPD .* ( (totalPowerMw*surfaceArea ) / (S(2) * sum(thisSPD)) );
+        thisSPD(thisSPD<0)=0;
+        spdTableFull(:,ii+1) = table(thisSPD);
+        [~,idx]=max(thisSPD);
+        LEDpeakWavelength(ii) = wavelengthSupport(idx);
+
     end
 
-    % Apply the adjustment
-    thisSPD = thisSPD .* ( (totalPowerMw*surfaceArea ) / (S(2) * sum(thisSPD)) );
-    thisSPD(thisSPD<0)=0;
-    spdTableFull(:,ii+1) = table(thisSPD);
-    [~,idx]=max(thisSPD);
-    LEDpeakWavelength(ii) = wavelengthSupport(idx);
+    LEDpower = cell2mat(table2cell(powerTableFull));
+    unitLabel = 'mW/nm';
+
+else
+
+    % We don't apply the power correction when the measurement itself
+    % is of the power output of the device.
+    for ii=1:totalLEDs
+        thisSPD = cell2mat(table2cell(spdTableFull(:,ii+1)));
+        thisSPD(thisSPD<0)=0;
+        spdTableFull(:,ii+1) = table(thisSPD);
+        [~,idx]=max(thisSPD);
+        LEDpeakWavelength(ii) = wavelengthSupport(idx);
+    end
+
+    LEDpower = nan(1,totalLEDs);
+    unitLabel = 'counts';
 
 end
-LEDpower = cell2mat(table2cell(powerTableFull));
-unitLabel = 'mW/nm';
+
 
 %% Get the photoreceptors
 % Define photoreceptor classes that we'll consider.
@@ -256,18 +294,6 @@ minAcceptableContrastSets = {...
 minAcceptableContrastDiffSet = [0.015,0.005,0.025,0,0];
 backgroundSearchFlag = [true,false,false,true,true];
 whichDirectionsToScore = [1 4]; % Only these influence the metric
-
-% whichDirectionSet = {'Mel'};
-% whichReceptorsToTargetSet = {[7]};
-% whichReceptorsToIgnoreSet = {[1 2 3]};
-% whichReceptorsToMinimizeSet = {[]}; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-% desiredContrastSet = {0.6};
-% minAcceptableContrastSets = {...
-%     {},...
-%     };
-% minAcceptableContrastDiffSet = [0];
-% backgroundSearchFlag = [true];
-% whichDirectionsToScore = [1]; % Only these influence the metric
 
 
 %% Define the filter form
@@ -353,8 +379,8 @@ parfor dd = 1:nTests
     % The primaries are arranged in a device that channels the light with
     % dichroic mirrors. This has the effect of filtering SPD of adjacent
     % primaries. Apply this here if requested.
+    filterCenterWavelengths = zeros(nPrimaries-1,1);
     if p.Results.filterAdjacentPrimariesFlag
-        filterCenterWavelengths = zeros(nPrimaries-1,1);
         for ii=1:nPrimaries-1
 
             % Find the midpoint wavelength between two adjacent LEDs, or
@@ -561,6 +587,8 @@ if p.Results.makePlots
         myPrimary = myPrimaries(:,ii);
         [~,idx] = max(myPrimary);
         myColorIdx = round(wavelengthSupport(idx)-minColorWavelength);
+        myColorIdx = max([1 myColorIdx]);
+        myColorIdx = min([size(myColorMap,1) myColorIdx]);
         myColor = myColorMap(myColorIdx,:);
         plot(wavelengthSupport,myPrimary,'-','Color',myColor,'LineWidth',2);
         if ii==1 
@@ -579,6 +607,8 @@ if p.Results.makePlots
         myPrimary = myPrimary./max(myPrimary);
         [~,idx] = max(myPrimary);
         myColorIdx = round(wavelengthSupport(idx)-minColorWavelength);
+        myColorIdx = max([1 myColorIdx]);
+        myColorIdx = min([size(myColorMap,1) myColorIdx]);
         myColor = myColorMap(myColorIdx,:);
         plot(wavelengthSupport,myPrimary,'-','Color',myColor,'LineWidth',2);
         if ii==1 
@@ -588,6 +618,8 @@ if p.Results.makePlots
             [~, filterCenterIdx] = min(abs(wavelengthSupport-filterCenterWavelength));
             filterTransmitance = logitFunc(1:length(wavelengthSupport),filterCenterIdx);
             myColorIdx = round(filterCenterWavelength-minColorWavelength);
+            myColorIdx = max([1 myColorIdx]);
+            myColorIdx = min([size(myColorMap,1) myColorIdx]);
             myColor = myColorMap(myColorIdx,:);
             plot(wavelengthSupport,filterTransmitance,'--','Color',myColor);
         end
@@ -603,6 +635,8 @@ if p.Results.makePlots
         myPrimary = myPrimaries(:,ii);
         [~,idx] = max(myPrimary);
         myColorIdx = round(wavelengthSupport(idx)-minColorWavelength);
+        myColorIdx = max([1 myColorIdx]);
+        myColorIdx = min([size(myColorMap,1) myColorIdx]);
         myColor = myColorMap(myColorIdx,:);
         plot(wavelengthSupport,myPrimary,'-','Color',myColor,'LineWidth',2);
         if ii==1 
@@ -610,6 +644,8 @@ if p.Results.makePlots
         else
             filterCenterWavelength = resultSet.filterCenterWavelength(ii-1);
             myColorIdx = round(filterCenterWavelength-minColorWavelength);
+            myColorIdx = max([1 myColorIdx]);
+            myColorIdx = min([size(myColorMap,1) myColorIdx]);
             myColor = myColorMap(myColorIdx,:);
             plot([filterCenterWavelength filterCenterWavelength],[0 max(myPrimaries(:))],'-','Color',myColor);
         end
@@ -618,13 +654,16 @@ if p.Results.makePlots
     xlabel('wavelength [nm]')
     ylabel(unitLabel);
 
-    % Relative SPDs of primaries at output, with dichroic center lines
-    subplot(2,2,4)
+   % Relative SPDs of primaries at output, with dichroic center lines
+   subplot(2,2,4)
+   myPrimaries = resultSet.B_primary;
     for ii=1:size(myPrimaries,2)
         myPrimary = myPrimaries(:,ii);
         myPrimary = myPrimary./max(myPrimary);
         [~,idx] = max(myPrimary);
         myColorIdx = round(wavelengthSupport(idx)-minColorWavelength);
+        myColorIdx = max([1 myColorIdx]);
+        myColorIdx = min([size(myColorMap,1) myColorIdx]);
         myColor = myColorMap(myColorIdx,:);
         plot(wavelengthSupport,myPrimary,'-','Color',myColor,'LineWidth',2);
         if ii==1 
@@ -632,6 +671,8 @@ if p.Results.makePlots
         else
             filterCenterWavelength = resultSet.filterCenterWavelength(ii-1);
             myColorIdx = round(filterCenterWavelength-minColorWavelength);
+            myColorIdx = max([1 myColorIdx]);
+            myColorIdx = min([size(myColorMap,1) myColorIdx]);
             myColor = myColorMap(myColorIdx,:);
             plot([filterCenterWavelength filterCenterWavelength],[0 1],'-','Color',myColor);
         end
