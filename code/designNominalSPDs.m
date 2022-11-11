@@ -138,6 +138,16 @@ function resultSet = designNominalSPDs(varargin)
         'primariesToKeepBest',primariesToKeepBest,'nTests',nTests,...
         'makePlots',true);
 %}
+%{
+    % 19-Oct-2022 measurement of output of prototype device. 
+    ledSPDFileName = 'PrizmatixLED_SetC_postFilter_SPDs.csv';
+    primariesToKeepBest = 1:8; nTests = 1;
+    resultSetOurs = designNominalSPDs('ledSPDFileName',ledSPDFileName,...
+        'adjustPrimaryPower',false,...
+        'filterAdjacentPrimariesFlag',false,...
+        'primariesToKeepBest',primariesToKeepBest,'nTests',nTests,...
+        'makePlots',true);
+%}
 
 
 %% Parse input
@@ -368,6 +378,7 @@ parfor dd = 1:nTests
     resultSet.minAcceptableContrastSets = minAcceptableContrastSets;
     resultSet.minAcceptableContrastDiffSet = minAcceptableContrastDiffSet;
     resultSet.backgroundSearchFlag = backgroundSearchFlag;
+    resultSet.wavelengthSupport = wavelengthSupport;
 
     % Derive the primaries from the SPD table
     B_primary = table2array(spdTable(:,2:end));
@@ -535,6 +546,10 @@ save('resultSet.mat','resultSet');
 % Save figures
 if p.Results.makePlots
 
+    minColorWavelength = 375;
+    maxColorWavelength = 675;
+    myColorMap = myRainbowColorMap((1+maxColorWavelength-minColorWavelength));
+
     % Loop through the directions
     for ss = 1:length(whichDirectionSet)
 
@@ -575,10 +590,7 @@ if p.Results.makePlots
     end
 
     % Plot the primary SPDs at source and output
-    minColorWavelength = 375;
-    maxColorWavelength = 675;
-    myColorMap = myRainbowColorMap((1+maxColorWavelength-minColorWavelength));
-    figure
+   figure
 
     % Absolute SPDs of primaries at source
     myPrimaries = resultSet.B_primaryPreFilter;
