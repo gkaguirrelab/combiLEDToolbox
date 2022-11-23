@@ -142,13 +142,25 @@ function resultSet = designNominalSPDs(varargin)
     % 19-Oct-2022 measurement of output of prototype device. 
     ledSPDFileName = 'PrizmatixLED_SetC_postFilter_SPDs.csv';
     primariesToKeepBest = 1:8; nTests = 1;
-    resultSetOurs = designNominalSPDs('ledSPDFileName',ledSPDFileName,...
+    resultSet = designNominalSPDs('ledSPDFileName',ledSPDFileName,...
         'adjustPrimaryPower',false,...
         'filterAdjacentPrimariesFlag',false,...
         'primariesToKeepBest',primariesToKeepBest,'nTests',nTests,...
         'makePlots',true);
 %}
-
+%{
+    % 23-Nov-2022 measurement of output of prototype device. Accepted this
+    % as the shipping version.
+    ledSPDFileName = 'PrizmatixLED_SetD_postFilter_SPDs.csv';
+    ledTotalPowerFileName = 'PrizmatixLED_SetD_totalPower.csv';
+    primariesToKeepBest = 1:8; nTests = 1;
+    resultSet = designNominalSPDs('ledSPDFileName',ledSPDFileName,...
+        'ledTotalPowerFileName', ledTotalPowerFileName, ...
+        'adjustPrimaryPower',true,...
+        'filterAdjacentPrimariesFlag',false,...
+        'primariesToKeepBest',primariesToKeepBest,'nTests',nTests,...
+        'makePlots',true);
+%}
 
 %% Parse input
 p = inputParser;
@@ -162,7 +174,7 @@ p.addParameter('pupilDiameterMm',2,@isscalar)
 p.addParameter('nLEDsToKeep',8,@isscalar)
 p.addParameter('minLEDspacing',20,@isscalar)
 p.addParameter('adjustPrimaryPower',true,@islogical)
-p.addParameter('weightedBackgroundPrimaries',false,@islogical)
+p.addParameter('searchOverBackgrounds',false,@islogical)
 p.addParameter('filterAdjacentPrimariesFlag',true,@islogical)
 p.addParameter('filterMaxSlopeParam',1/5,@isscalar)
 p.addParameter('primariesToKeepBest',[1 3 7 10 12 13 17 18],@isvector)
@@ -170,7 +182,6 @@ p.addParameter('filterCenterWavelengthsBest',[],@isvector)
 p.addParameter('nTests',inf,@isscalar)
 p.addParameter('stepSizeDiffContrastSearch',0.025,@isscalar)
 p.addParameter('shrinkFactorThresh',0.5,@isscalar)
-p.addParameter('x0PrimaryChoice','background',@isscalar)
 p.addParameter('verbose',true,@islogical)
 p.addParameter('makePlots',true,@islogical)
 p.parse(varargin{:});
@@ -178,7 +189,6 @@ p.parse(varargin{:});
 % Set some constants
 whichModel = 'human';
 whichPrimaries = 'prizmatix';
-maxPowerDiff = 10000; % No smoothness constraint enforced for the LED primaries
 curDir = pwd;
 
 % Load the table of LED primaries
@@ -347,7 +357,7 @@ if p.Results.verbose
 end
 
 % Loop over the tests
-parfor dd = 1:nTests
+for dd = 1:nTests
 
     % Update progress
     if p.Results.verbose
@@ -374,11 +384,14 @@ parfor dd = 1:nTests
     resultSet.whichReceptorsToTargetSet = whichReceptorsToTargetSet;
     resultSet.whichReceptorsToIgnoreSet = whichReceptorsToIgnoreSet;
     resultSet.whichReceptorsToMinimizeSet = whichReceptorsToMinimizeSet;
+    resultSet.whichDirectionsToScore = whichDirectionsToScore;
     resultSet.desiredContrastSet = desiredContrastSet;
     resultSet.minAcceptableContrastSets = minAcceptableContrastSets;
     resultSet.minAcceptableContrastDiffSet = minAcceptableContrastDiffSet;
     resultSet.backgroundSearchFlag = backgroundSearchFlag;
+    resultSet.Svals = S;
     resultSet.wavelengthSupport = wavelengthSupport;
+    resultSet.p.Results = p.Results;
 
     % Derive the primaries from the SPD table
     B_primary = table2array(spdTable(:,2:end));
@@ -428,82 +441,11 @@ parfor dd = 1:nTests
     resultSet.B_primary = B_primary;
     resultSet.ambientSpd = ambientSpd;
 
-    % Loop over the set of directions for which we will generate
-    % modulations
-    for ss = 1:length(whichDirectionSet)
+    % Perform the search with a mid-point background
+    backgroundPrimary = repmat(0.5,nPrimaries,1);
 
-        % Extract values from the cell arrays
-        whichDirection = whichDirectionSet{ss};
-        whichReceptorsToTarget = whichReceptorsToTargetSet{ss};
-        whichReceptorsToIgnore = whichReceptorsToIgnoreSet{ss};
-        whichReceptorsToMinimize = whichReceptorsToMinimizeSet{ss};
-        minAcceptableContrast = minAcceptableContrastSets{ss};
-        minAcceptableContrastDiff = minAcceptableContrastDiffSet(ss);
-        desiredContrast = desiredContrastSet{ss};
-
-        % Don't pin any primaries.
-        whichPrimariesToPin = [];
-
-        % Set background
-        if p.Results.weightedBackgroundPrimaries
-            % Create a background that inversely weights the LEDs by their
-            % total power
-            j=LEDpower(primariesToKeep); j=j/max(j); j=j-mean(j); j=j/2;
-            backgroundPrimary = (0.5-j)';
-        else
-            backgroundPrimary = repmat(0.5,nPrimaries,1);
-        end
-
-        % Decide upon an x0Primary to start the search
-        switch p.Results.x0PrimaryChoice
-            case 'background'
-                x0Primary = backgroundPrimary;
-            case 'ones'
-                x0Primary = ones(size(backgroundPrimary));
-            case 'random'
-                x0Primary = rand(size(backgroundPrimary));
-        end
-
-        % Anonymous function that perfoms a modPrimarySearch for a
-        % particular background defined by backgroundPrimary and x0
-        myModPrimary = @(xBackPrimary) modPrimarySearch(...
-            B_primary,xBackPrimary,x0Primary,ambientSpd,T_receptors,...
-            whichReceptorsToTarget,whichReceptorsToIgnore,...
-            whichReceptorsToMinimize,whichPrimariesToPin,...
-            p.Results.primaryHeadRoom,maxPowerDiff,desiredContrast,...
-            minAcceptableContrast,minAcceptableContrastDiff,...
-            p.Results.verbose,p.Results.stepSizeDiffContrastSearch,...
-            p.Results.shrinkFactorThresh);
-
-        % Obtain the modulationPrimary for this background
-        modulationPrimary = myModPrimary(backgroundPrimary);
-
-        % Obtain the isomerization rate for the receptors by the background
-        backgroundReceptors = T_receptors*(B_primary*backgroundPrimary + ambientSpd);
-
-        % Store the background properties
-        resultSet.(whichDirection).background.primary = backgroundPrimary;
-        resultSet.(whichDirection).background.spd = B_primary*backgroundPrimary;
-        resultSet.(whichDirection).background.wavelengthsNm = SToWls(S);
-
-        % Store the modulation primaries
-        resultSet.(whichDirection).modulationPrimary = modulationPrimary;
-
-        % Calculate and store the positive and negative receptor contrast
-        modulationReceptors = T_receptors*B_primary*(modulationPrimary - backgroundPrimary);
-        contrastReceptors = modulationReceptors ./ backgroundReceptors;
-        resultSet.(whichDirection).positiveReceptorContrast = contrastReceptors;
-
-        modulationReceptors = T_receptors*B_primary*(-(modulationPrimary - backgroundPrimary));
-        contrastReceptors = modulationReceptors ./ backgroundReceptors;
-        resultSet.(whichDirection).negativeReceptorContrast = contrastReceptors;
-
-        % Calculate and store the spectra
-        resultSet.(whichDirection).positiveModulationSPD = B_primary*modulationPrimary;
-        resultSet.(whichDirection).negativeModulationSPD = B_primary*(backgroundPrimary-(modulationPrimary - backgroundPrimary));
-        resultSet.(whichDirection).wavelengthsNm = SToWls(S);
-
-    end
+    % Perform the search
+    resultSet = searchThisBackground(backgroundPrimary,resultSet);
 
     % Place the resultSet in the outcomes cell array
     outcomes{dd} = resultSet;
@@ -707,3 +649,5 @@ CT0 = [0.1405 0.00719 0.2242;0.2134 0.02435 0.3071;0.2648 0.02239 0.3479;0.2939 
 na = size(CT0,1);
 CT = interp1(linspace(0,1,na),CT0,linspace(0,1,nColors));
 end
+
+
