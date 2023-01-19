@@ -16,10 +16,9 @@ void loop() {
       case 'v':  
         inputString = "";
         stringComplete = false;
-        listen();
-        if (stringComplete) {
-          Serial.println(inputString); 
-        }
+        waitForNewString();
+        Serial.println(inputString);
+        break;
     }        
     inputString = "";
     stringComplete = false; 
@@ -37,5 +36,23 @@ void listen() {
     if (inChar == '\n') {
       stringComplete = true;
     }
+  }
+}
+
+void waitForNewString() {
+  bool stillWaiting = true;
+  while (stillWaiting) {
+    while (Serial.available()) {
+      // get the new byte:
+      char inChar = (char)Serial.read();
+      // add it to the inputString:
+      inputString += inChar;
+      // if the incoming character is a newline, set a flag so the main loop can
+      // do something about it:
+      if (inChar == '\n') {
+        stringComplete = true;
+        stillWaiting = false;
+    }
+  }
   }
 }
