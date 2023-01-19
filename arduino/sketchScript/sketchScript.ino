@@ -52,7 +52,7 @@ void waitForNewString() {
       if (inChar == '\n') {
         stringComplete = true;
         stillWaiting = false;
+      }
     }
-  }
   }
 }
