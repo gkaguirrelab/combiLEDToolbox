@@ -7,17 +7,46 @@ void setup() {
 }
 
 void loop() {
-  listen();
+  // Listen for a serial input and if a serial string is complete, go into a switch case.
+  listen();                                      
   if (stringComplete) {
-    switch (inputString[0]) {      // just get the first letter of the string for now 
-      case 'g':
+    switch (inputString[0]) {      
+      // This case just prints a line currently               
+      case 'g':  
         Serial.println("Continuing");
         break;
+      // This case listens for a second input and saves it into a vector
       case 'v':  
         inputString = "";
         stringComplete = false;
         waitForNewString();
-        Serial.println(inputString);
+        
+        // This next section converts the second input into a vector
+        // Uses comma delimeters to parse
+        inputString += ',';                                 // Add a comma at the end of the input string to make life easier      
+        String vectorString = "";                           // Set a vector string which will be appended with chars 
+        int numberOfCommas = -1;                            // Comma counter, zero indexed language, so start from -1
+        int vector[30];                                     // We set a vector which can hold 30 bytes
+        
+        // Loop through input string. if not comma, append to vectorString
+        // If comma, assign the completed vectorString to a vector index.
+        for(int i =0; i < inputString.length(); i++ ) {
+          char c = inputString[i];
+          if (c != ',') {
+            vectorString += c;
+          }
+          else {
+            numberOfCommas += 1;
+            vector[numberOfCommas] = vectorString.toInt();
+            vectorString = "";            
+          }
+        }
+
+        // Print each items of the complete vector
+        for(int i = 0; i < numberOfCommas+1; i++)
+        {
+          Serial.println(vector[i]);
+        }
         break;
     }        
     inputString = "";
