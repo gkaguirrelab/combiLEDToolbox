@@ -12,34 +12,42 @@
 //                          sinusoidal transition between settings.
 //
 //
+
+// package to write to the LEDs
+#include <Wire.h>
+
+// Explicit definition of constants that define array sizes
+const int nLEDs = 8;    // number of LEDs defining the number of rows of the settings matrix.
+const int nLevels = 2;  // the number of modulation levels that are specified for each LED
+
+// Global variables
+int maxVal = 4095;              // maximum setting value for the prizmatix LEDs
 String inputString = "";        // a String to hold incoming data
 bool stringComplete = false;    // whether the string is complete
 bool configMode = true;         // stay in setup mode until commanded otherwise
 bool simulatePrizmatix = true;  // Simulate the prizmatix LEDs
 bool modulationState = false;   // When we are running, are we modulating?
 
-const int nLEDs = 8;      // number of LEDs defining the number of rows of the settings matrix.
-const int maxVal = 4095;       // maximum setting value for the prizmatix LEDs
-const int nLevels = 2;  // the number of discrete settings
-
 // Define default waveform and settings
-int cycleIndex = 0;
-int nCycleSteps = 100;
-int waveform[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1,  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 int settings[nLEDs][nLevels] = {
-  { 0, maxVal },  //LED1
-  { 0, maxVal },  //LED1
-  { 0, maxVal },  //LED1
-  { 0, maxVal },  //LED1
-  { 0, maxVal },  //LED1
-  { 0, maxVal },  //LED1
-  { 0, maxVal },  //LED1
-  { 0, maxVal },  //LED1
+  { maxVal, 0 },  //LED0
+  { 0, 0 },       //LED1
+  { 0, 0 },       //LED2
+  { 0, 0 },       //LED3
+  { 0, 0 },       //LED4
+  { 0, 0 },       //LED5
+  { 0, 0 },       //LED6
+  { 0, 0 },       //LED7
 };
+int nCycleSteps = 100;
+int waveform[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+int background[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+bool ledIsActive[] = { true, false, false, false, false, false, false, false };
 
-// Default values for the timing
-unsigned long stepTime =  1e6 / nCycleSteps;   // initialize at 1 Hz
+// timing variables
 unsigned long lastTime = micros();
+unsigned long stepTime = 1e6 / (3*nCycleSteps);  // initialize at 3 Hz
+int cycleIndex = 0;
 
 // setup
 void setup() {
@@ -50,11 +58,14 @@ void setup() {
   // Initialize the built-in LED
   pinMode(LED_BUILTIN, OUTPUT);
 
-  // Set the LED to off
+  // Set the LEDs to background
   digitalWrite(LED_BUILTIN, LOW);
-  
-  // update lastTime
-  double lastTime = micros();
+
+  // Check which LEDs are "active"
+  checkLEDActive();
+
+  // Set the device to background
+  setToBackground();
 
   // Announce we are starting
   Serial.println("== entering setup mode ==");
@@ -71,19 +82,20 @@ void loop() {
   // We are in run mode. Poll the serial port, and cycle the LED settings
   pollSerialPort();
   if (stringComplete) {
-    Serial.println(inputString);
     stringComplete = false;
     if (inputString.indexOf("config") >= 0) {
-      Serial.println("== entering setup mode ==");
+      Serial.println("== config mode");
       modulationState = false;
       configMode = true;
     }
     if (inputString.indexOf("go") >= 0) {
-      Serial.println("= modulation go =");
+      Serial.println("go");
       modulationState = true;
+      cycleIndex = 0;
     }
     if (inputString.indexOf("stop") >= 0) {
-      Serial.println("= modulation stop =");
+      setToBackground();
+      Serial.println("stop");
       modulationState = false;
     }
     inputString = "";
@@ -94,35 +106,40 @@ void loop() {
     unsigned long currentTime = micros();
     if ((currentTime - lastTime) > stepTime) {
       lastTime = currentTime;
-      if (simulatePrizmatix) {
-        int led1Setting = settings[0][waveform[cycleIndex]];
-        if (led1Setting > (maxVal / 2)) {
-          digitalWrite(LED_BUILTIN, HIGH);
-        } else {
-          digitalWrite(LED_BUILTIN, LOW);
-        }
-        cycleIndex++;
-        if (cycleIndex >= nCycleSteps) cycleIndex = 0;
-      }
+      // loop through the LEDs
+      updateLEDs(cycleIndex);
+      // advance the cycleIndex
+      cycleIndex++;
+      if (cycleIndex >= nCycleSteps) cycleIndex = 0;
     }
   }
 }
 
 void getConfig() {
-    Serial.println("at getConfig");
   waitForNewString();
-    Serial.println(inputString);
   stringComplete = false;
   if (inputString.indexOf("run") >= 0) {
-    Serial.println("== entering run mode ==");
+    Serial.println("== run mode");
     configMode = false;
     modulationState = false;
   }
   if (inputString.indexOf("freq") >= 0) {
     inputString = "";
-    Serial.println("frequency in Hz: ");
+    Serial.print("frequency in Hz: ");
     waitForNewString();
+    Serial.print(inputString);
     stepTime = 1e6 / (nCycleSteps * inputString.toFloat());
+  }
+  if (inputString.indexOf("led") >= 0) {
+    String ledString = inputString.substring(inputString.length() - 2);
+    inputString = "";
+    int ledIndex = ledString.toInt();
+    Serial.print("Settings for LED");
+    Serial.print(ledIndex);
+    Serial.print(":");
+    waitForNewString();
+    updateSettingsMatrix(settings, ledIndex, inputString);
+    checkLEDActive();
   }
   if (inputString.indexOf("print") >= 0) {
     printCurrentSettings();
@@ -162,6 +179,34 @@ void waitForNewString() {
   }
 }
 
+
+void checkLEDActive() {
+  // Identify those LEDs that never differ from the background and
+  // remove them from the active list
+
+  for (int ii = 0; ii < nLEDs; ii++) {
+    int levelIdx = 0;
+    bool anyDiff = false;
+    bool stillChecking = true;
+    while (stillChecking) {
+      if (settings[ii][levelIdx] != background[ii]) {
+        anyDiff = true;
+        stillChecking = false;
+      } else {
+        levelIdx++;
+        if (levelIdx == nLevels) {
+          stillChecking = false;
+        }
+      }
+    }
+    if (anyDiff) {
+      ledIsActive[ii] = true;
+    } else {
+      ledIsActive[ii] = false;
+    }
+  }
+}
+
 int updateSettingsMatrix(int settings[nLEDs][nLevels], int selectedRow, String inputString) {
   // This function updates settings matrix by accepting a string, converting it to array and
   // appending to settingsMatrix
@@ -183,6 +228,56 @@ int updateSettingsMatrix(int settings[nLEDs][nLevels], int selectedRow, String i
   }
 
   return settings[nLEDs][nLevels];
+}
+
+void setToBackground() {
+  if (simulatePrizmatix) {
+    // Use the built in arduino LED, which has a binary state
+    int ledSetting = background[0];
+    if (ledSetting > (maxVal / 2)) {
+      digitalWrite(LED_BUILTIN, HIGH);
+    } else {
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+  } else {
+    for (int ii = 0; ii < nLEDs; ii++) {
+      // Get the setting for this LED
+      int ledSetting = background[ii];
+      writeToOneCombiLED(ledSetting, ii);
+    }
+  }
+}
+
+
+void updateLEDs(int cycleIndex) {
+  for (int ii = 0; ii < nLEDs; ii++) {
+    // Check if the LED is active
+    if (ledIsActive[ii]) {
+      // Get the setting for this LED
+      int ledSetting = settings[ii][waveform[cycleIndex]];
+      if (simulatePrizmatix) {
+        // Use the built in arduino LED, which has a binary state
+        if (ledSetting > (maxVal / 2)) {
+          digitalWrite(LED_BUILTIN, HIGH);
+        } else {
+          digitalWrite(LED_BUILTIN, LOW);
+        }
+      } else {
+        writeToOneCombiLED(ledSetting, ii);
+      }
+    }
+  }
+}
+
+void writeToOneCombiLED(int level, int ledIndex) {
+  Wire.beginTransmission(0x70);
+  Wire.write(1 << ledIndex);
+  Wire.endTransmission();
+  Wire.beginTransmission(0x61);
+  Wire.write(0b01011000);
+  Wire.write((uint8_t)(highByte(level << 4)));
+  Wire.write((uint8_t)(lowByte(level << 4)));
+  Wire.endTransmission(1);
 }
 
 void printCurrentSettings() {
