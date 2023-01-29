@@ -68,7 +68,7 @@ void setup() {
   setToBackground();
 
   // Announce we are starting
-  Serial.println("== entering setup mode ==");
+  Serial.println("== config mode ==");
 }
 
 void loop() {
