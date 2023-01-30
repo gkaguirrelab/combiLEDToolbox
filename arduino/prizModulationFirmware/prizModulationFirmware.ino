@@ -30,7 +30,7 @@ bool stringComplete = false;   // whether the string is complete
 bool configMode = false;       // stay in setup mode until commanded otherwise
 bool modulationState = false;  // When we are running, are we modulating?
 
-int waveType = 1;  // sinusoid
+int waveform = 1;  // sinusoid
 
 
 // Define default waveform and settings
@@ -53,8 +53,6 @@ int settings[8][10] = {
   { 0, 455, 910, 1365, 1820, 2275, 2730, 3185, 3640, 4095 },  //LED0
   { 0, 455, 910, 1365, 1820, 2275, 2730, 3185, 3640, 4095 },  //LED0
 };
-int nCycleSteps = 100;
-int waveform[] = { 5, 5, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 9, 9, 9, 9, 9, 8, 8, 8, 8, 7, 7, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5 };
 int background[] = {
   2048,
   2048,
@@ -168,10 +166,10 @@ void getConfig() {
     inputString = "";
     Serial.print("wave type: ");
     waitForNewString();
-    waveType = inputString.toInt();
-    if (waveType == 1) Serial.println("sin");
-    if (waveType == 2) Serial.println("saw on");
-    if (waveType == 3) Serial.println("saw off");
+    waveform = inputString.toInt();
+    if (waveform == 1) Serial.println("sin");
+    if (waveform == 2) Serial.println("saw on");
+    if (waveform == 3) Serial.println("saw off");
   }
   if (inputString.indexOf("freq") >= 0) {
     inputString = "";
@@ -313,11 +311,11 @@ void setToOff() {
 
 void updateLED(double cyclePhase, int cycleLED) {
   if (ledIsActive[cycleLED]) {
-    // Get the level for this LED, based upon waveType
+    // Get the level for this LED, based upon waveform
     int ledLevel = 0;
-    if (waveType == 1) ledLevel = (nLevels - 1) * ((sin(2 * 3.1415925 * cyclePhase) + 1) / 2); // sin
-    if (waveType == 2) ledLevel = (nLevels - 1) * cyclePhase; // saw on
-    if (waveType == 3) ledLevel = (nLevels - 1) - ((nLevels - 1) * cyclePhase); // saw off
+    if (waveform == 1) ledLevel = (nLevels - 1) * ((sin(2 * 3.1415925 * cyclePhase) + 1) / 2); // sin
+    if (waveform == 2) ledLevel = (nLevels - 1) * cyclePhase; // saw on
+    if (waveform == 3) ledLevel = (nLevels - 1) - ((nLevels - 1) * cyclePhase); // saw off
     int ledSetting = settings[cycleLED][ledLevel];
     //    int ledSetting = settings[cycleLED][waveform[cycleIndex]];
     if (simulatePrizmatix) {
