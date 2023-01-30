@@ -16,38 +16,63 @@
 // package to write to the LEDs
 #include <Wire.h>
 
-// Explicit definition of constants that define array sizes
-const int nLEDs = 8;    // number of LEDs defining the number of rows of the settings matrix.
-const int nLevels = 2;  // the number of modulation levels that are specified for each LED
+// Determine if we are connected to an Arduino Uno, in which case we should
+// set simulation mode to true
+bool simulatePrizmatix = false;     // Simulate the prizmatix LEDs
+const int nLEDs = 8;                // number of LEDs defining the number of rows of the settings matrix.
+const int nLevels = 10;             // the number of modulation levels that are specified for each LED
+const int minLEDAddressTime = 360;  // the time, in microseconds, that it takes to refresh an LED setting
 
 // Global variables
-int maxVal = 4095;              // maximum setting value for the prizmatix LEDs
-String inputString = "";        // a String to hold incoming data
-bool stringComplete = false;    // whether the string is complete
-bool configMode = true;         // stay in setup mode until commanded otherwise
-bool simulatePrizmatix = true;  // Simulate the prizmatix LEDs
-bool modulationState = false;   // When we are running, are we modulating?
+int maxVal = 4095;             // maximum setting value for the prizmatix LEDs
+String inputString = "";       // a String to hold incoming data
+bool stringComplete = false;   // whether the string is complete
+bool configMode = false;       // stay in setup mode until commanded otherwise
+bool modulationState = false;  // When we are running, are we modulating?
+
+int waveType = 1;  // sinusoid
+
 
 // Define default waveform and settings
-int settings[nLEDs][nLevels] = {
-  { maxVal, 0 },  //LED0
-  { 0, 0 },       //LED1
-  { 0, 0 },       //LED2
-  { 0, 0 },       //LED3
-  { 0, 0 },       //LED4
-  { 0, 0 },       //LED5
-  { 0, 0 },       //LED6
-  { 0, 0 },       //LED7
+// if (simulatePrizmatix) {
+//   int settings[1][2] = {
+//     { maxVal, 0 },  //LED0
+//   };
+//   int nCycleSteps = 100;
+//   int waveform[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+//   int background[] = { 0 };
+//   bool ledIsActive[] = { true };
+// } else {
+int settings[8][10] = {
+  { 0, 455, 910, 1365, 1820, 2275, 2730, 3185, 3640, 4095 },  //LED0
+  { 0, 455, 910, 1365, 1820, 2275, 2730, 3185, 3640, 4095 },  //LED0
+  { 0, 455, 910, 1365, 1820, 2275, 2730, 3185, 3640, 4095 },  //LED0
+  { 0, 455, 910, 1365, 1820, 2275, 2730, 3185, 3640, 4095 },  //LED0
+  { 0, 455, 910, 1365, 1820, 2275, 2730, 3185, 3640, 4095 },  //LED0
+  { 0, 455, 910, 1365, 1820, 2275, 2730, 3185, 3640, 4095 },  //LED0
+  { 0, 455, 910, 1365, 1820, 2275, 2730, 3185, 3640, 4095 },  //LED0
+  { 0, 455, 910, 1365, 1820, 2275, 2730, 3185, 3640, 4095 },  //LED0
 };
 int nCycleSteps = 100;
-int waveform[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
-int background[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-bool ledIsActive[] = { true, false, false, false, false, false, false, false };
+int waveform[] = { 5, 5, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 9, 9, 9, 9, 9, 8, 8, 8, 8, 7, 7, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5 };
+int background[] = {
+  2048,
+  2048,
+  2048,
+  2048,
+  2048,
+  2048,
+  2048,
+  2048,
+};
+bool ledIsActive[] = { true, true, true, true, true, true, true, true };
+// }
 
 // timing variables
-unsigned long lastTime = micros();
-unsigned long stepTime = 1e6 / (3*nCycleSteps);  // initialize at 3 Hz
-int cycleIndex = 0;
+unsigned long cycleDur = 1e6 / 3;  // initialize at 3 Hz
+unsigned long modulationStartTime = micros();
+unsigned long lastLEDUpdateTime = micros();
+int cycleLED = 0;
 
 // setup
 void setup() {
@@ -55,12 +80,13 @@ void setup() {
   // Initialize serial port communication
   Serial.begin(57600);
 
-  // Initialize the built-in LED
-  pinMode(LED_BUILTIN, OUTPUT);
-
-  // Set the LEDs to background
-  digitalWrite(LED_BUILTIN, LOW);
-
+  // Set up the built-in LED if we are simulating
+  if (simulatePrizmatix) {
+    pinMode(LED_BUILTIN, OUTPUT);
+  } else {
+    Wire.begin();
+    Wire.setClock(400000);
+  }
   // Check which LEDs are "active"
   checkLEDActive();
 
@@ -68,7 +94,7 @@ void setup() {
   setToBackground();
 
   // Announce we are starting
-  Serial.println("== config mode ==");
+  Serial.println("== run mode");
 }
 
 void loop() {
@@ -83,20 +109,31 @@ void loop() {
   pollSerialPort();
   if (stringComplete) {
     stringComplete = false;
-    if (inputString.indexOf("config") >= 0) {
-      Serial.println("== config mode");
-      modulationState = false;
-      configMode = true;
-    }
     if (inputString.indexOf("go") >= 0) {
       Serial.println("go");
       modulationState = true;
-      cycleIndex = 0;
+      lastLEDUpdateTime = micros();
+      modulationStartTime = micros();
     }
     if (inputString.indexOf("stop") >= 0) {
       setToBackground();
       Serial.println("stop");
       modulationState = false;
+    }
+    if (inputString.indexOf("off") >= 0) {
+      setToOff();
+      Serial.println("off");
+      modulationState = false;
+    }
+    if (inputString.indexOf("background") >= 0) {
+      setToBackground();
+      Serial.println("background");
+      modulationState = false;
+    }
+    if (inputString.indexOf("config") >= 0) {
+      Serial.println("== config mode");
+      modulationState = false;
+      configMode = true;
     }
     inputString = "";
   }
@@ -104,13 +141,17 @@ void loop() {
   // Advance the LED settings
   if (modulationState) {
     unsigned long currentTime = micros();
-    if ((currentTime - lastTime) > stepTime) {
-      lastTime = currentTime;
-      // loop through the LEDs
-      updateLEDs(cycleIndex);
-      // advance the cycleIndex
-      cycleIndex++;
-      if (cycleIndex >= nCycleSteps) cycleIndex = 0;
+    if ((currentTime - lastLEDUpdateTime) > minLEDAddressTime) {
+      // Determine where we are in the cycle
+      unsigned long cycleTime = ((currentTime - modulationStartTime) % cycleDur);
+      double cyclePhase = double(cycleTime) / double(cycleDur);
+      // update the lastTime
+      lastLEDUpdateTime = currentTime;
+      // send the newLED settings
+      updateLED(cyclePhase, cycleLED);
+      // advance the cycleLED
+      cycleLED++;
+      cycleLED = cycleLED % nLEDs;
     }
   }
 }
@@ -123,12 +164,21 @@ void getConfig() {
     configMode = false;
     modulationState = false;
   }
+  if (inputString.indexOf("wave") >= 0) {
+    inputString = "";
+    Serial.print("wave type: ");
+    waitForNewString();
+    waveType = inputString.toInt();
+    if (waveType == 1) Serial.println("sin");
+    if (waveType == 2) Serial.println("saw on");
+    if (waveType == 3) Serial.println("saw off");
+  }
   if (inputString.indexOf("freq") >= 0) {
     inputString = "";
     Serial.print("frequency in Hz: ");
     waitForNewString();
     Serial.print(inputString);
-    stepTime = 1e6 / (nCycleSteps * inputString.toFloat());
+    cycleDur = 1e6 / inputString.toFloat();
   }
   if (inputString.indexOf("led") >= 0) {
     String ledString = inputString.substring(inputString.length() - 2);
@@ -179,10 +229,10 @@ void waitForNewString() {
   }
 }
 
-
 void checkLEDActive() {
   // Identify those LEDs that never differ from the background and
   // remove them from the active list
+  int nActiveLEDs = 0;
 
   for (int ii = 0; ii < nLEDs; ii++) {
     int levelIdx = 0;
@@ -201,6 +251,7 @@ void checkLEDActive() {
     }
     if (anyDiff) {
       ledIsActive[ii] = true;
+      nActiveLEDs++;
     } else {
       ledIsActive[ii] = false;
     }
@@ -248,23 +299,36 @@ void setToBackground() {
   }
 }
 
-
-void updateLEDs(int cycleIndex) {
-  for (int ii = 0; ii < nLEDs; ii++) {
-    // Check if the LED is active
-    if (ledIsActive[ii]) {
+void setToOff() {
+  if (simulatePrizmatix) {
+    // Use the built in arduino LED, which has a binary state
+    digitalWrite(LED_BUILTIN, LOW);
+  } else {
+    for (int ii = 0; ii < nLEDs; ii++) {
       // Get the setting for this LED
-      int ledSetting = settings[ii][waveform[cycleIndex]];
-      if (simulatePrizmatix) {
-        // Use the built in arduino LED, which has a binary state
-        if (ledSetting > (maxVal / 2)) {
-          digitalWrite(LED_BUILTIN, HIGH);
-        } else {
-          digitalWrite(LED_BUILTIN, LOW);
-        }
+      writeToOneCombiLED(0, ii);
+    }
+  }
+}
+
+void updateLED(double cyclePhase, int cycleLED) {
+  if (ledIsActive[cycleLED]) {
+    // Get the level for this LED, based upon waveType
+    int ledLevel = 0;
+    if (waveType == 1) ledLevel = (nLevels - 1) * ((sin(2 * 3.1415925 * cyclePhase) + 1) / 2); // sin
+    if (waveType == 2) ledLevel = (nLevels - 1) * cyclePhase; // saw on
+    if (waveType == 3) ledLevel = (nLevels - 1) - ((nLevels - 1) * cyclePhase); // saw off
+    int ledSetting = settings[cycleLED][ledLevel];
+    //    int ledSetting = settings[cycleLED][waveform[cycleIndex]];
+    if (simulatePrizmatix) {
+      // Use the built in arduino LED, which has a binary state
+      if (ledSetting > (maxVal / 2)) {
+        digitalWrite(LED_BUILTIN, HIGH);
       } else {
-        writeToOneCombiLED(ledSetting, ii);
+        digitalWrite(LED_BUILTIN, LOW);
       }
+    } else {
+      writeToOneCombiLED(ledSetting, cycleLED);
     }
   }
 }
