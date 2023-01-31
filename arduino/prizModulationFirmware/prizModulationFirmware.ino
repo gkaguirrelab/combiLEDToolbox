@@ -8,9 +8,9 @@
 // levels might define a linear change in luminance contrast, or L–M contrast.
 // This is the "settings" matrix.
 //
-// Over time, we present a given column of the settings by assigning the 8 
+// Over time, we present a given column of the settings by assigning the 8
 // values to the 8 LEDs. The particular column that is presented is under the
-// control of a waveform (e.g., sin, square) and a frequency [Hz]. After 
+// control of a waveform (e.g., sin, square) and a frequency [Hz]. After
 // completing setup and configuration, the code enters a run loop during which
 // each LED is updated in turn. The waveform is used to define a floating point
 // level (0-1), which is mapped to the range of 40, fixed levels (0-39). The
@@ -18,7 +18,7 @@
 //
 // There is a minimum amount of time required to address an LED. For frequencies
 // above ~ 8 Hz, there is insufficient time to present all 40 levels of (e.g.) a
-// sinusoidal modulation for all LEDs. 
+// sinusoidal modulation for all LEDs.
 //
 //
 // maxVal:                  Int. The maximum setting value for any LED (4095)
@@ -40,7 +40,7 @@
 // Set this variable to use the built-in LED to simulate
 // the output of the Prizmatix device
 //
-bool simulatePrizmatix = true;  // Simulate the prizmatix LEDs
+bool simulatePrizmatix = false;  // Simulate the prizmatix LEDs
 
 // Fixed hardware values
 const int maxVal = 4095;            // maximum setting value for the prizmatix LEDs
@@ -49,26 +49,82 @@ const int minLEDAddressTime = 360;  // the time, in microseconds, required refre
 // Fixed reality values
 const float pi = 3.1415927;
 
+// Define the device states
+enum { CONFIG,
+       RUN,
+       DIRECT } deviceState = RUN;
+
 // Global variables
 String inputString = "";       // a String to hold incoming data
 bool stringComplete = false;   // whether the string is complete
-bool configMode = false;       // stay in setup mode until commanded otherwise
 bool modulationState = false;  // When we are running, are we modulating?
 
 // Define settings and modulations
 const int nLEDs = 8;     // number of LEDs defining the number of rows of the settings matrix.
-const int nLevels = 40;  // the number of modulation levels that are specified for each LEDint waveform = 1;  // sinusoid
+const int nLevels = 45;  // the number of modulation levels that are specified for each LEDint waveform = 1;  // sinusoid
+
+// Light Flux, ~100 % contrast
 int settings[nLEDs][nLevels] = {
-  { 0, 105, 210, 315, 420, 525, 630, 735, 840, 945, 1050, 1155, 1260, 1365, 1470, 1575, 1680, 1785, 1890, 1995, 2100, 2205, 2310, 2415, 2520, 2625, 2730, 2835, 2940, 3045, 3150, 3255, 3360, 3465, 3570, 3675, 3780, 3885, 3990, 4095 },  //LED0
-  { 0, 105, 210, 315, 420, 525, 630, 735, 840, 945, 1050, 1155, 1260, 1365, 1470, 1575, 1680, 1785, 1890, 1995, 2100, 2205, 2310, 2415, 2520, 2625, 2730, 2835, 2940, 3045, 3150, 3255, 3360, 3465, 3570, 3675, 3780, 3885, 3990, 4095 },  //LED0
-  { 0, 105, 210, 315, 420, 525, 630, 735, 840, 945, 1050, 1155, 1260, 1365, 1470, 1575, 1680, 1785, 1890, 1995, 2100, 2205, 2310, 2415, 2520, 2625, 2730, 2835, 2940, 3045, 3150, 3255, 3360, 3465, 3570, 3675, 3780, 3885, 3990, 4095 },  //LED0
-  { 0, 105, 210, 315, 420, 525, 630, 735, 840, 945, 1050, 1155, 1260, 1365, 1470, 1575, 1680, 1785, 1890, 1995, 2100, 2205, 2310, 2415, 2520, 2625, 2730, 2835, 2940, 3045, 3150, 3255, 3360, 3465, 3570, 3675, 3780, 3885, 3990, 4095 },  //LED0
-  { 0, 105, 210, 315, 420, 525, 630, 735, 840, 945, 1050, 1155, 1260, 1365, 1470, 1575, 1680, 1785, 1890, 1995, 2100, 2205, 2310, 2415, 2520, 2625, 2730, 2835, 2940, 3045, 3150, 3255, 3360, 3465, 3570, 3675, 3780, 3885, 3990, 4095 },  //LED0
-  { 0, 105, 210, 315, 420, 525, 630, 735, 840, 945, 1050, 1155, 1260, 1365, 1470, 1575, 1680, 1785, 1890, 1995, 2100, 2205, 2310, 2415, 2520, 2625, 2730, 2835, 2940, 3045, 3150, 3255, 3360, 3465, 3570, 3675, 3780, 3885, 3990, 4095 },  //LED0
-  { 0, 105, 210, 315, 420, 525, 630, 735, 840, 945, 1050, 1155, 1260, 1365, 1470, 1575, 1680, 1785, 1890, 1995, 2100, 2205, 2310, 2415, 2520, 2625, 2730, 2835, 2940, 3045, 3150, 3255, 3360, 3465, 3570, 3675, 3780, 3885, 3990, 4095 },  //LED0
-  { 0, 105, 210, 315, 420, 525, 630, 735, 840, 945, 1050, 1155, 1260, 1365, 1470, 1575, 1680, 1785, 1890, 1995, 2100, 2205, 2310, 2415, 2520, 2625, 2730, 2835, 2940, 3045, 3150, 3255, 3360, 3465, 3570, 3675, 3780, 3885, 3990, 4095 },  //LED0
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
 };
-int background[nLEDs] = { 20, 20, 20, 20, 20, 20, 20, 20 };
+
+
+// LMS directed (mel silent), 45% contrast at 2° and 10°
+// int settings[nLEDs][nLevels] = {
+// { 205,289,372,456,540,624,707,791,875,959,1042,1126,1210,1294,1377,1461,1545,1629,1712,1796,1880,1964,2048,2131,2215,2299,2383,2466,2550,2634,2718,2801,2885,2969,3053,3136,3220,3304,3388,3471,3555,3639,3723,3806,3890 },
+// { 205,289,372,456,540,624,707,791,875,959,1042,1126,1210,1294,1377,1461,1545,1629,1712,1796,1880,1964,2048,2131,2215,2299,2383,2466,2550,2634,2718,2801,2885,2969,3053,3136,3220,3304,3388,3471,3555,3639,3723,3806,3890 },
+// { 3100,3052,3004,2956,2909,2861,2813,2765,2717,2669,2622,2574,2526,2478,2430,2382,2335,2287,2239,2191,2143,2095,2048,2000,1952,1904,1856,1808,1760,1713,1665,1617,1569,1521,1473,1426,1378,1330,1282,1234,1186,1139,1091,1043,995 },
+// { 2718,2687,2657,2626,2596,2565,2535,2504,2474,2443,2413,2383,2352,2322,2291,2261,2230,2200,2169,2139,2108,2078,2048,2017,1987,1956,1926,1895,1865,1834,1804,1773,1743,1712,1682,1652,1621,1591,1560,1530,1499,1469,1438,1408,1377 },
+// { 205,289,372,456,540,624,707,791,875,959,1042,1126,1210,1294,1377,1461,1545,1629,1712,1796,1880,1964,2048,2131,2215,2299,2383,2466,2550,2634,2718,2801,2885,2969,3053,3136,3220,3304,3388,3471,3555,3639,3723,3806,3890 },
+// { 205,289,372,456,540,624,707,791,875,959,1042,1126,1210,1294,1377,1461,1545,1629,1712,1796,1880,1964,2048,2131,2215,2299,2383,2466,2550,2634,2718,2801,2885,2969,3053,3136,3220,3304,3388,3471,3555,3639,3723,3806,3890 },
+// { 1442,1469,1497,1524,1552,1579,1607,1634,1662,1690,1717,1745,1772,1800,1827,1855,1882,1910,1937,1965,1992,2020,2048,2075,2103,2130,2158,2185,2213,2240,2268,2295,2323,2350,2378,2405,2433,2461,2488,2516,2543,2571,2598,2626,2653 },
+// { 3890,3806,3723,3639,3555,3471,3388,3304,3220,3136,3053,2969,2885,2801,2718,2634,2550,2466,2383,2299,2215,2131,2048,1964,1880,1796,1712,1629,1545,1461,1377,1294,1210,1126,1042,959,875,791,707,624,540,456,372,289,205 },
+// };
+
+// Melanopsin, cone silent at 10° (but not penumbral cone silent), 45% contrast at 2° and 10°
+// int settings[nLEDs][nLevels] = {
+//   { 3890, 3806, 3723, 3639, 3555, 3471, 3388, 3304, 3220, 3136, 3053, 2969, 2885, 2801, 2718, 2634, 2550, 2466, 2383, 2299, 2215, 2131, 2048, 1964, 1880, 1796, 1712, 1629, 1545, 1461, 1377, 1294, 1210, 1126, 1042, 959, 875, 791, 707, 624, 540, 456, 372, 289, 205 },
+//   { 2274, 2264, 2253, 2243, 2233, 2222, 2212, 2202, 2192, 2181, 2171, 2161, 2150, 2140, 2130, 2120, 2109, 2099, 2089, 2078, 2068, 2058, 2048, 2037, 2027, 2017, 2006, 1996, 1986, 1975, 1965, 1955, 1945, 1934, 1924, 1914, 1903, 1893, 1883, 1873, 1862, 1852, 1842, 1831, 1821 },
+//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
+//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
+//   { 3084, 3037, 2990, 2943, 2896, 2848, 2801, 2754, 2707, 2660, 2613, 2566, 2519, 2472, 2424, 2377, 2330, 2283, 2236, 2189, 2142, 2095, 2048, 2000, 1953, 1906, 1859, 1812, 1765, 1718, 1671, 1623, 1576, 1529, 1482, 1435, 1388, 1341, 1294, 1247, 1199, 1152, 1105, 1058, 1011 },
+//   { 3391, 3330, 3269, 3208, 3147, 3086, 3025, 2963, 2902, 2841, 2780, 2719, 2658, 2597, 2536, 2475, 2414, 2353, 2292, 2231, 2170, 2109, 2048, 1986, 1925, 1864, 1803, 1742, 1681, 1620, 1559, 1498, 1437, 1376, 1315, 1254, 1193, 1132, 1070, 1009, 948, 887, 826, 765, 704 },
+//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
+//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
+// };
+
+// S-cone directed, 70% contrast at 2° and 10°
+// int settings[nLEDs][nLevels] = {
+//   { 407, 481, 556, 630, 705, 780, 854, 929, 1003, 1078, 1153, 1227, 1302, 1376, 1451, 1525, 1600, 1675, 1749, 1824, 1898, 1973, 2048, 2122, 2197, 2271, 2346, 2420, 2495, 2570, 2644, 2719, 2793, 2868, 2942, 3017, 3092, 3166, 3241, 3315, 3390, 3465, 3539, 3614, 3688 },
+//   { 355, 432, 509, 586, 663, 740, 817, 894, 971, 1048, 1124, 1201, 1278, 1355, 1432, 1509, 1586, 1663, 1740, 1817, 1894, 1971, 2048, 2124, 2201, 2278, 2355, 2432, 2509, 2586, 2663, 2740, 2817, 2894, 2971, 3047, 3124, 3201, 3278, 3355, 3432, 3509, 3586, 3663, 3740 },
+//   { 707, 768, 829, 890, 951, 1012, 1073, 1134, 1194, 1255, 1316, 1377, 1438, 1499, 1560, 1621, 1682, 1743, 1804, 1865, 1926, 1987, 2048, 2108, 2169, 2230, 2291, 2352, 2413, 2474, 2535, 2596, 2657, 2718, 2779, 2840, 2901, 2961, 3022, 3083, 3144, 3205, 3266, 3327, 3388 },
+//   { 3624, 3552, 3480, 3409, 3337, 3265, 3194, 3122, 3050, 2979, 2907, 2836, 2764, 2692, 2621, 2549, 2477, 2406, 2334, 2262, 2191, 2119, 2048, 1976, 1904, 1833, 1761, 1689, 1618, 1546, 1474, 1403, 1331, 1259, 1188, 1116, 1045, 973, 901, 830, 758, 686, 615, 543, 471 },
+//   { 1925, 1931, 1936, 1942, 1947, 1953, 1959, 1964, 1970, 1975, 1981, 1986, 1992, 1997, 2003, 2009, 2014, 2020, 2025, 2031, 2036, 2042, 2048, 2053, 2059, 2064, 2070, 2075, 2081, 2086, 2092, 2098, 2103, 2109, 2114, 2120, 2125, 2131, 2136, 2142, 2148, 2153, 2159, 2164, 2170 },
+//   { 2072, 2071, 2070, 2069, 2068, 2067, 2065, 2064, 2063, 2062, 2061, 2060, 2059, 2058, 2056, 2055, 2054, 2053, 2052, 2051, 2050, 2049, 2048, 2046, 2045, 2044, 2043, 2042, 2041, 2040, 2039, 2037, 2036, 2035, 2034, 2033, 2032, 2031, 2030, 2028, 2027, 2026, 2025, 2024, 2023 },
+//   { 2126, 2122, 2119, 2115, 2112, 2108, 2104, 2101, 2097, 2094, 2090, 2087, 2083, 2080, 2076, 2072, 2069, 2065, 2062, 2058, 2055, 2051, 2048, 2044, 2040, 2037, 2033, 2030, 2026, 2023, 2019, 2015, 2012, 2008, 2005, 2001, 1998, 1994, 1991, 1987, 1983, 1980, 1976, 1973, 1969 },
+//   { 2072, 2071, 2070, 2069, 2068, 2067, 2066, 2064, 2063, 2062, 2061, 2060, 2059, 2058, 2057, 2055, 2054, 2053, 2052, 2051, 2050, 2049, 2048, 2046, 2045, 2044, 2043, 2042, 2041, 2040, 2038, 2037, 2036, 2035, 2034, 2033, 2032, 2031, 2029, 2028, 2027, 2026, 2025, 2024, 2023 },
+// };
+
+// L–M directed, 10% contrast at 2° and 10°
+// int settings[nLEDs][nLevels] = {
+//   { 2483, 2463, 2444, 2424, 2404, 2384, 2364, 2345, 2325, 2305, 2285, 2265, 2246, 2226, 2206, 2186, 2166, 2147, 2127, 2107, 2087, 2067, 2048, 2028, 2008, 1988, 1968, 1948, 1929, 1909, 1889, 1869, 1849, 1830, 1810, 1790, 1770, 1750, 1731, 1711, 1691, 1671, 1651, 1632, 1612 },
+//   { 558, 625, 693, 761, 828, 896, 964, 1032, 1099, 1167, 1235, 1303, 1370, 1438, 1506, 1573, 1641, 1709, 1777, 1844, 1912, 1980, 2048, 2115, 2183, 2251, 2318, 2386, 2454, 2522, 2589, 2657, 2725, 2792, 2860, 2928, 2996, 3063, 3131, 3199, 3267, 3334, 3402, 3470, 3537 },
+//   { 3890, 3806, 3723, 3639, 3555, 3471, 3388, 3304, 3220, 3136, 3053, 2969, 2885, 2801, 2718, 2634, 2550, 2466, 2383, 2299, 2215, 2131, 2048, 1964, 1880, 1796, 1712, 1629, 1545, 1461, 1377, 1294, 1210, 1126, 1042, 959, 875, 791, 707, 624, 540, 456, 372, 289, 205 },
+//   { 473, 544, 616, 688, 759, 831, 902, 974, 1045, 1117, 1189, 1260, 1332, 1403, 1475, 1546, 1618, 1690, 1761, 1833, 1904, 1976, 2048, 2119, 2191, 2262, 2334, 2405, 2477, 2549, 2620, 2692, 2763, 2835, 2906, 2978, 3050, 3121, 3193, 3264, 3336, 3407, 3479, 3551, 3622 },
+//   { 3045, 3000, 2954, 2909, 2864, 2818, 2773, 2728, 2682, 2637, 2592, 2546, 2501, 2456, 2410, 2365, 2320, 2274, 2229, 2184, 2138, 2093, 2048, 2002, 1957, 1911, 1866, 1821, 1775, 1730, 1685, 1639, 1594, 1549, 1503, 1458, 1413, 1367, 1322, 1277, 1231, 1186, 1141, 1095, 1050 },
+//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
+//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
+//   { 2132, 2128, 2125, 2121, 2117, 2113, 2109, 2105, 2101, 2098, 2094, 2090, 2086, 2082, 2078, 2074, 2071, 2067, 2063, 2059, 2055, 2051, 2048, 2044, 2040, 2036, 2032, 2028, 2024, 2021, 2017, 2013, 2009, 2005, 2001, 1997, 1994, 1990, 1986, 1982, 1978, 1974, 1970, 1967, 1963 },
+// };
+
+int background[nLEDs] = { 22, 22, 22, 22, 22, 22, 22, 22 };
 bool ledIsActive[nLEDs] = { true, true, true, true, true, true, true, true };
 
 // Variables that define an amplitude modulation
@@ -80,11 +136,12 @@ float ampVals[3][2] = {
 };
 
 // timing variables
-int waveform = 5;
-unsigned long cycleDur = 1e6 / 4;  // initialize at 10 Hz
+int waveform = 1;
+unsigned long cycleDur = 1e6 / 10;  // initialize at 10 Hz
 unsigned long modulationStartTime = micros();
 unsigned long lastLEDUpdateTime = micros();
 float blinkDurationSecs = 0.25;
+int ledIndexOrder[] = { 1, 8, 2, 7, 3, 6, 4, 5 };
 int cycleLED = 0;
 
 // setup
@@ -123,13 +180,98 @@ void setup() {
 
 void loop() {
 
-  // If configMode, go wait for the next input
-  if (configMode) {
-    getConfig();
-    return;
+  // Handle inputs dependent upon the deviceState
+  switch (deviceState) {
+    case CONFIG:
+      getConfig();
+      return;
+
+    case DIRECT:
+      getDirect();
+      return;
+
+    case RUN:
+      getRun();
+      break;
   }
 
-  // We are in run mode. Poll the serial port, and cycle the LED settings
+  // Advance the LED settings
+  if (modulationState) {
+    unsigned long currentTime = micros();
+    if ((currentTime - lastLEDUpdateTime) > minLEDAddressTime) {
+      // Determine where we are in the cycle
+      unsigned long cycleTime = ((currentTime - modulationStartTime) % cycleDur);
+      double cyclePhase = double(cycleTime) / double(cycleDur);
+      // update the lastTime
+      lastLEDUpdateTime = currentTime;
+      // send the newLED settings
+      updateLED(cyclePhase, ledIndexOrder[cycleLED]);
+      // advance the cycleLED
+      cycleLED++;
+      cycleLED = cycleLED % nLEDs;
+    }
+  }
+}
+
+
+void getConfig() {
+  waitForNewString();
+  stringComplete = false;
+  if (inputString.indexOf("run") >= 0) {
+    Serial.println("== run mode");
+    deviceState = RUN;
+    modulationState = false;
+  }
+  if (inputString.indexOf("waveform") >= 0) {
+    inputString = "";
+    Serial.print("waveform index: ");
+    waitForNewString();
+    waveform = inputString.toInt();
+    if (waveform == 0) Serial.println("step");
+    if (waveform == 1) Serial.println("sin");
+    if (waveform == 2) Serial.println("square");
+    if (waveform == 3) Serial.println("saw on");
+    if (waveform == 4) Serial.println("saw off");
+    if (waveform == 5) Serial.println("Stockman A");
+  }
+  if (inputString.indexOf("freq") >= 0) {
+    inputString = "";
+    Serial.print("frequency in Hz: ");
+    waitForNewString();
+    Serial.print(inputString);
+    cycleDur = 1e6 / inputString.toFloat();
+  }
+  if (inputString.indexOf("ampModType") >= 0) {
+    inputString = "";
+    Serial.print("Amplitude modulation type: ");
+    waitForNewString();
+    ampModType = inputString.toInt();
+    if (ampModType == 0) Serial.println("none");
+    if (ampModType == 1) Serial.println("half cosine window");
+    if (ampModType == 2) Serial.println("sin amplitude modulate");
+  }
+  if (inputString.indexOf("led") >= 0) {
+    String ledString = inputString.substring(inputString.length() - 2);
+    inputString = "";
+    int ledIndex = ledString.toInt();
+    Serial.print("Settings for LED");
+    Serial.print(ledIndex);
+    Serial.print(":");
+    waitForNewString();
+    updateSettingsMatrix(settings, ledIndex, inputString);
+    identifyActiveLEDs();
+  }
+  if (inputString.indexOf("print") >= 0) {
+    printCurrentSettings();
+  }
+  inputString = "";
+}
+
+void getDirect() {
+}
+
+void getRun() {
+  // We are in run mode. Poll the serial port
   pollSerialPort();
   if (stringComplete) {
     stringComplete = false;
@@ -163,79 +305,10 @@ void loop() {
     if (inputString.indexOf("config") >= 0) {
       Serial.println("== config mode");
       modulationState = false;
-      configMode = true;
+      deviceState = CONFIG;
     }
     inputString = "";
   }
-
-  // Advance the LED settings
-  if (modulationState) {
-    unsigned long currentTime = micros();
-    if ((currentTime - lastLEDUpdateTime) > minLEDAddressTime) {
-      // Determine where we are in the cycle
-      unsigned long cycleTime = ((currentTime - modulationStartTime) % cycleDur);
-      double cyclePhase = double(cycleTime) / double(cycleDur);
-      // update the lastTime
-      lastLEDUpdateTime = currentTime;
-      // send the newLED settings
-      updateLED(cyclePhase, cycleLED);
-      // advance the cycleLED
-      cycleLED++;
-      cycleLED = cycleLED % nLEDs;
-    }
-  }
-}
-
-void getConfig() {
-  waitForNewString();
-  stringComplete = false;
-  if (inputString.indexOf("run") >= 0) {
-    Serial.println("== run mode");
-    configMode = false;
-    modulationState = false;
-  }
-  if (inputString.indexOf("waveform") >= 0) {
-    inputString = "";
-    Serial.print("waveform index: ");
-    waitForNewString();
-    waveform = inputString.toInt();
-    if (waveform == 0) Serial.println("step");
-    if (waveform == 1) Serial.println("sin");
-    if (waveform == 2) Serial.println("square");
-    if (waveform == 3) Serial.println("saw on");
-    if (waveform == 4) Serial.println("saw off");
-  }
-  if (inputString.indexOf("freq") >= 0) {
-    inputString = "";
-    Serial.print("frequency in Hz: ");
-    waitForNewString();
-    Serial.print(inputString);
-    cycleDur = 1e6 / inputString.toFloat();
-  }
-  if (inputString.indexOf("ampModType") >= 0) {
-    inputString = "";
-    Serial.print("Amplitude modulation type: ");
-    waitForNewString();
-    ampModType = inputString.toInt();
-    if (ampModType == 0) Serial.println("none");
-    if (ampModType == 1) Serial.println("half cosine window");
-    if (ampModType == 2) Serial.println("sin amplitude modulate");
-  }
-  if (inputString.indexOf("led") >= 0) {
-    String ledString = inputString.substring(inputString.length() - 2);
-    inputString = "";
-    int ledIndex = ledString.toInt();
-    Serial.print("Settings for LED");
-    Serial.print(ledIndex);
-    Serial.print(":");
-    waitForNewString();
-    updateSettingsMatrix(settings, ledIndex, inputString);
-    identifyActiveLEDs();
-  }
-  if (inputString.indexOf("print") >= 0) {
-    printCurrentSettings();
-  }
-  inputString = "";
 }
 
 void pollSerialPort() {
