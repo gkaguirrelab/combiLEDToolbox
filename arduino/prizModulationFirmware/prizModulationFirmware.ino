@@ -55,9 +55,11 @@ enum { CONFIG,
        DIRECT } deviceState = RUN;
 
 // Global variables
-String inputString = "";       // a String to hold incoming data
-bool stringComplete = false;   // whether the string is complete
-bool modulationState = false;  // When we are running, are we modulating?
+const int inputStringLen = 12;
+char inputString[inputStringLen];  // a String to hold incoming data
+int inputCharIndex = 0;            // index to count our accumulated characters
+bool stringComplete = false;       // whether the string is complete
+bool modulationState = false;      // When we are running, are we modulating?
 
 // Define settings and modulations
 const int nLEDs = 8;     // number of LEDs defining the number of rows of the settings matrix.
@@ -146,10 +148,8 @@ int cycleLED = 0;
 
 // setup
 void setup() {
-
   // Initialize serial port communication
   Serial.begin(57600);
-
   // Modify the settings if we are simulating
   if (simulatePrizmatix) {
     for (int ii = 1; ii < nLEDs; ii++) {
@@ -159,7 +159,6 @@ void setup() {
       background[ii] = 0;
     }
   }
-
   // Set up the built-in LED if we are simulating
   if (simulatePrizmatix) {
     pinMode(LED_BUILTIN, OUTPUT);
@@ -167,34 +166,28 @@ void setup() {
     Wire.begin();
     Wire.setClock(400000);
   }
-
   // Check which LEDs are "active"
   identifyActiveLEDs();
-
   // Set the device to background
-  setToBackground();
-
+  setToOff();
   // Announce we are starting
-  Serial.println("== run mode");
+  showModeMenu();
 }
 
+// loop
 void loop() {
-
   // Handle inputs dependent upon the deviceState
   switch (deviceState) {
     case CONFIG:
       getConfig();
-      return;
-
+      break;
     case DIRECT:
       getDirect();
-      return;
-
+      break;
     case RUN:
       getRun();
       break;
   }
-
   // Advance the LED settings
   if (modulationState) {
     unsigned long currentTime = micros();
@@ -214,19 +207,39 @@ void loop() {
 }
 
 
-void getConfig() {
-  waitForNewString();
-  stringComplete = false;
-  if (inputString.indexOf("run") >= 0) {
-    Serial.println("== run mode");
-    deviceState = RUN;
-    modulationState = false;
+void showModeMenu() {
+  switch (deviceState) {
+    case CONFIG:
+      Serial.println("============ config mode ============");
+      Serial.println("WF: waveform index, FQ: FM freq [Hz]");
+      Serial.println("AM: AM index, AV: AM values [Freq, x]");
+      Serial.println("L1, L2, .., Ln: Settings for LED n");
+      Serial.println("PR: print current settings matrix");
+      Serial.println("RM: run mode, DM: direct mode");
+      break;
+    case DIRECT:
+      Serial.println("============ direct mode ============");
+      Serial.println("LL: settings [0 4095] for LEDs 1-8");
+      Serial.println("RM: run mode, CM: config mode");
+      break;
+    case RUN:
+      Serial.println("============= run mode ==============");
+      Serial.println("GO: go, ST: stop, BL: blink");
+      Serial.println("BG: background, DK: all off");
+      Serial.println("CM: config mode, DM: direct mode");
+      break;
   }
-  if (inputString.indexOf("waveform") >= 0) {
-    inputString = "";
+}
+
+void getConfig() {
+  // Operate in modal state waiting for input
+  waitForNewString();
+  //  if (inputString.indexOf("WF") >= 0) {
+  if (strncmp(inputString, "WF", 2) == 0) {
+    clearInputString();
     Serial.print("waveform index: ");
     waitForNewString();
-    waveform = inputString.toInt();
+    waveform = atoi(inputString);
     if (waveform == 0) Serial.println("step");
     if (waveform == 1) Serial.println("sin");
     if (waveform == 2) Serial.println("square");
@@ -234,113 +247,151 @@ void getConfig() {
     if (waveform == 4) Serial.println("saw off");
     if (waveform == 5) Serial.println("Stockman A");
   }
-  if (inputString.indexOf("freq") >= 0) {
-    inputString = "";
+  if (strncmp(inputString, "FQ", 2) == 0) {
+    clearInputString();
     Serial.print("frequency in Hz: ");
     waitForNewString();
     Serial.print(inputString);
-    cycleDur = 1e6 / inputString.toFloat();
+    cycleDur = 1e6 / atof(inputString);
   }
-  if (inputString.indexOf("ampModType") >= 0) {
-    inputString = "";
+  if (strncmp(inputString, "AM", 2) == 0) {
+    clearInputString();
     Serial.print("Amplitude modulation type: ");
     waitForNewString();
-    ampModType = inputString.toInt();
+    ampModType = atoi(inputString);
     if (ampModType == 0) Serial.println("none");
     if (ampModType == 1) Serial.println("half cosine window");
     if (ampModType == 2) Serial.println("sin amplitude modulate");
   }
-  if (inputString.indexOf("led") >= 0) {
-    String ledString = inputString.substring(inputString.length() - 2);
-    inputString = "";
-    int ledIndex = ledString.toInt();
-    Serial.print("Settings for LED");
-    Serial.print(ledIndex);
-    Serial.print(":");
-    waitForNewString();
-    updateSettingsMatrix(settings, ledIndex, inputString);
-    identifyActiveLEDs();
-  }
-  if (inputString.indexOf("print") >= 0) {
+  // if (strncmp(inputString, "L", 1) == 0) {
+  //   int ledIndex = atoi(inputString[1]);
+  //   clearInputString();
+  //   Serial.print("Settings for LED");
+  //   Serial.print(ledIndex);
+  //   Serial.print(":");
+  //   waitForNewString();
+  //   updateSettingsMatrix(settings, ledIndex, inputString);
+  //   identifyActiveLEDs();
+  // }
+  if (strncmp(inputString, "PR", 2) == 0) {
     printCurrentSettings();
   }
-  inputString = "";
+  if (strncmp(inputString, "RM", 2) == 0) {
+    modulationState = false;
+    deviceState = RUN;
+    showModeMenu();
+  }
+  if (strncmp(inputString, "DM", 2) == 0) {
+    modulationState = false;
+    deviceState = DIRECT;
+    showModeMenu();
+  }
+  clearInputString();
 }
 
 void getDirect() {
+  // Operate in modal state waiting for input
+  waitForNewString();
+  // if (strncmp(inputString, "LL", 2) == 0) {
+  //   clearInputString();
+  //   Serial.print("LED settings [8]: ");
+  //   waitForNewString();
+  //   int vector[nLEDs] = { stringToIntArrayLEDs(inputString) };
+  //   for (int ii = 0; ii < nLEDs; ii++) {
+  //     writeToOneCombiLED(vector[ii], ii);
+  //   }
+  // }
+  if (strncmp(inputString, "RM", 2) == 0) {
+    modulationState = false;
+    deviceState = RUN;
+    showModeMenu();
+  }
+  if (strncmp(inputString, "CM", 2) == 0) {
+    modulationState = false;
+    deviceState = CONFIG;
+    showModeMenu();
+  }
+  clearInputString();
 }
 
 void getRun() {
-  // We are in run mode. Poll the serial port
+  // Operate in amodal state. Only act if we have
+  // a complete string
   pollSerialPort();
   if (stringComplete) {
     stringComplete = false;
-    if (inputString.indexOf("go") >= 0) {
+    if (strncmp(inputString, "GO", 2) == 0) {
       Serial.println("go");
       modulationState = true;
       lastLEDUpdateTime = micros();
       modulationStartTime = micros();
     }
-    if (inputString.indexOf("stop") >= 0) {
+    if (strncmp(inputString, "ST", 2) == 0) {
       setToBackground();
       Serial.println("stop");
       modulationState = false;
     }
-    if (inputString.indexOf("blink") >= 0) {
-      Serial.println("stop");
+    if (strncmp(inputString, "BL", 2) == 0) {
+      Serial.println("blink");
       setToOff();
       delay(int(blinkDurationSecs * 1000));
       setToBackground();
     }
-    if (inputString.indexOf("off") >= 0) {
-      setToOff();
-      Serial.println("off");
-      modulationState = false;
-    }
-    if (inputString.indexOf("background") >= 0) {
+    if (strncmp(inputString, "BG", 2) == 0) {
       setToBackground();
       Serial.println("background");
       modulationState = false;
     }
-    if (inputString.indexOf("config") >= 0) {
-      Serial.println("== config mode");
+    if (strncmp(inputString, "DK", 2) == 0) {
+      setToOff();
+      Serial.println("off");
+      modulationState = false;
+    }
+    if (strncmp(inputString, "DM", 2) == 0) {
+      modulationState = false;
+      deviceState = DIRECT;
+      showModeMenu();
+    }
+    if (strncmp(inputString, "CM", 2) == 0) {
       modulationState = false;
       deviceState = CONFIG;
+      showModeMenu();
     }
-    inputString = "";
+    clearInputString();
   }
 }
 
 void pollSerialPort() {
+  // Detect the case that we have received a complete string but
+  // have not yet finished doing something with it. In this case,
+  // do not accept anything further from the buffer
+  if ((stringComplete) && (inputCharIndex == 0)) return;
+  // See if there is something in the buffer
   while (Serial.available()) {
     // get the new byte:
     char inChar = (char)Serial.read();
     // add it to the inputString:
-    inputString += inChar;
+    inputString[inputCharIndex] = inChar;
+    inputCharIndex++;
+    if (inputCharIndex >= inputStringLen) {
+      Serial.println("ERROR: Input overflow inputString buffer");
+      clearInputString();
+      return;
+    }
     // if the incoming character is a newline,
     // set a flag so the main loop can
     // do something about it:
     if (inChar == '\n') {
       stringComplete = true;
+      inputCharIndex = 0;
     }
   }
 }
 
 void waitForNewString() {
   bool stillWaiting = true;
-  while (stillWaiting) {
-    while (Serial.available()) {
-      // get the new byte:
-      char inChar = (char)Serial.read();
-      // add it to the inputString:
-      inputString += inChar;
-      // if the incoming character is a newline, set a flag so the main loop can
-      // do something about it:
-      if (inChar == '\n') {
-        stringComplete = true;
-        stillWaiting = false;
-      }
-    }
+  while (!stringComplete) {
+    pollSerialPort();
   }
 }
 
@@ -372,26 +423,46 @@ void identifyActiveLEDs() {
   }
 }
 
-int updateSettingsMatrix(int settings[nLEDs][nLevels], int selectedRow, String inputString) {
-  // This function updates settings matrix by accepting a string, converting it to array and
-  // appending to settingsMatrix
-  inputString += ',';        // Add a comma at the end of the input string to make life easier
-  String vectorString = "";  // Set a vector string which will be appended with chars
-  int numberOfCommas = -1;   // Comma counter, zero indexed language, so start from -1
-  // Loop through input string. if not comma, append to vectorString
-  // If comma, assign the completed vectorString to a vector index.
-  for (int i = 0; i < inputString.length(); i++) {
-    char c = inputString[i];
-    if (c != ',') {
-      vectorString += c;
-    } else {
-      numberOfCommas += 1;
-      settings[selectedRow][numberOfCommas] = vectorString.toInt();
-      vectorString = "";
-    }
-  }
-  return settings[nLEDs][nLevels];
-}
+// int updateSettingsMatrix(int settings[nLEDs][nLevels], int selectedRow, String inputString) {
+//   // This function updates settings matrix by accepting a string, converting it to array and
+//   // appending to settingsMatrix
+//   inputString += ',';       // Add a comma at the end of the input string to make life easier
+//   char vectorString[300];   // Set a vector string which will be appended with chars
+//   int numberOfCommas = -1;  // Comma counter, zero indexed language, so start from -1
+//   // Loop through input string. if not comma, append to vectorString
+//   // If comma, assign the completed vectorString to a vector index.
+//   for (int i = 0; i < inputString.length(); i++) {
+//     char c = inputString[i];
+//     if (c != ',') {
+//       vectorString += c;
+//     } else {
+//       numberOfCommas += 1;
+//       settings[selectedRow][numberOfCommas] = vectorString.toInt();
+//       vectorString = "";
+//     }
+//   }
+//   return settings[nLEDs][nLevels];
+// }
+
+// int stringToIntArrayLEDs(String inputString) {
+//   int vector[nLEDs];
+//   inputString += ',';        // Add a comma at the end of the input string to make life easier
+//   String vectorString = "";  // Set a vector string which will be appended with chars
+//   int numberOfCommas = -1;   // Comma counter, zero indexed language, so start from -1
+//   // Loop through input string. if not comma, append to vectorString
+//   // If comma, assign the completed vectorString to a vector index.
+//   for (int i = 0; i < inputString.length(); i++) {
+//     char c = inputString[i];
+//     if (c != ',') {
+//       vectorString += c;
+//     } else {
+//       numberOfCommas += 1;
+//       vector[numberOfCommas] = vectorString.toInt();
+//       vectorString = "";
+//     }
+//   }
+//   return vector[nLEDs];
+// }
 
 void setToBackground() {
   if (simulatePrizmatix) {
@@ -539,7 +610,6 @@ void pulseWidthModulate(int setting) {
   }
 }
 
-
 void writeToOneCombiLED(int level, int ledIndex) {
   Wire.beginTransmission(0x70);
   Wire.write(1 << ledIndex);
@@ -562,4 +632,12 @@ void printCurrentSettings() {
     }
   }
   Serial.print("\n");
+}
+
+void clearInputString() {
+  for (int ii = 0; ii < inputStringLen; ii++) {
+    inputString[ii] = "";
+  }
+  inputCharIndex = 0;
+  stringComplete = false;
 }
