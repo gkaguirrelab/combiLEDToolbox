@@ -50,17 +50,18 @@ int background[nLEDs] = { 20, 20, 20, 20, 20, 20, 20, 20 };
 bool ledIsActive[nLEDs] = { true, true, true, true, true, true, true, true };
 
 // Variables that define an amplitude modulation
-// int ampModType = 1;
-// float ampVals[] = { 1.5, 6 };  // ramp duration, total block duration
-
 int ampModType = 2;
-float ampVals[] = { 0.1, 1.0 };  // AM modulation frequency, AM deoth
-
+float ampVals[3][2] = {
+  { 0.0, 0.0 },  // no amplitude modulation
+  { 1.5, 6.0 },  // ramp duration, total block duration
+  { 0.1, 1.0 },  // AM modulation frequency, AM depth
+};
 
 // timing variables
-unsigned long cycleDur = 1e6 / 3;  // initialize at 3 Hz
+unsigned long cycleDur = 1e6 / 10;  // initialize at 10 Hz
 unsigned long modulationStartTime = micros();
 unsigned long lastLEDUpdateTime = micros();
+float blinkDurationSecs = 0.25;
 int cycleLED = 0;
 
 // setup
@@ -120,6 +121,12 @@ void loop() {
       Serial.println("stop");
       modulationState = false;
     }
+    if (inputString.indexOf("blink") >= 0) {
+      Serial.println("stop");
+      setToOff();
+      delay(int(blinkDurationSecs * 1000));
+      setToBackground();
+    }
     if (inputString.indexOf("off") >= 0) {
       setToOff();
       Serial.println("off");
@@ -164,9 +171,9 @@ void getConfig() {
     configMode = false;
     modulationState = false;
   }
-  if (inputString.indexOf("wave") >= 0) {
+  if (inputString.indexOf("waveform") >= 0) {
     inputString = "";
-    Serial.print("wave type: ");
+    Serial.print("waveform index: ");
     waitForNewString();
     waveform = inputString.toInt();
     if (waveform == 1) Serial.println("sin");
@@ -180,6 +187,15 @@ void getConfig() {
     waitForNewString();
     Serial.print(inputString);
     cycleDur = 1e6 / inputString.toFloat();
+  }
+  if (inputString.indexOf("ampModType") >= 0) {
+    inputString = "";
+    Serial.print("Amplitude modulation type: ");
+    waitForNewString();
+    ampModType = inputString.toInt();
+    if (ampModType == 0) Serial.println("none");
+    if (ampModType == 1) Serial.println("half cosine window");
+    if (ampModType == 2) Serial.println("sin amplitude modulate");
   }
   if (inputString.indexOf("led") >= 0) {
     String ledString = inputString.substring(inputString.length() - 2);
@@ -349,8 +365,8 @@ float getFrequencyModulation(float phase) {
 
 float applyAmplitudeModulation(float level, int ledIndex) {
   if (ampModType == 1) {
-    float rampDur = ampVals[0];
-    float totalDur = ampVals[1];
+    float rampDur = ampVals[ampModType][0];
+    float totalDur = ampVals[ampModType][1];
     // Determine how far along the half-cosine ramp we are
     float elapsedTimeSecs = (micros() - modulationStartTime) / 1e6;
     float modLevel = 0;
@@ -369,11 +385,11 @@ float applyAmplitudeModulation(float level, int ledIndex) {
     level = (level - offset) * modLevel + offset;
   }
   if (ampModType == 2) {
-    float AMFrequencyHz = ampVals[0];
-    float AMDepth = ampVals[1];
+    float AMFrequencyHz = ampVals[ampModType][0];
+    float AMDepth = ampVals[ampModType][1];
     // Determine how far along the modulation we are
     float elapsedTimeSecs = (micros() - modulationStartTime) / 1e6;
-    float modLevel = AMDepth * (sin(2 * 3.1415927 * (elapsedTimeSecs / (1/AMFrequencyHz))) + 1) / 2;
+    float modLevel = AMDepth * (sin(2 * 3.1415927 * (elapsedTimeSecs / (1 / AMFrequencyHz))) + 1) / 2;
     // center the level around the background
     float offset = float(settings[ledIndex][background[ledIndex]]) / float(maxVal);
     level = (level - offset) * modLevel + offset;
