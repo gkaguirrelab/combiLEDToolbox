@@ -21,8 +21,8 @@
 // sinusoidal modulation for all LEDs.
 //
 //
-// maxVal:                  Int. The maximum setting value for any LED (4095)
-// settingsMatrix:          8 x n matrix of ints, all between 0 and maxVal.
+// maxLevelVal:                  Int. The maximum setting value for any LED (4095)
+// settingsMatrix:          8 x n matrix of ints, all between 0 and maxLevelVal.
 //                          Each column defines the settings on the 8 LEDs at
 //                          each of n levels of the modulation.
 // waveform:                r x 1 integer vector, where each value is between
@@ -43,7 +43,7 @@
 bool simulatePrizmatix = false;  // Simulate the prizmatix LEDs
 
 // Fixed hardware values
-const int maxVal = 4095;            // maximum setting value for the prizmatix LEDs
+const int maxLevelVal = 4095;            // maximum setting value for the prizmatix LEDs
 const int minLEDAddressTime = 360;  // the time, in microseconds, required refresh an LED setting
 
 // Fixed reality values
@@ -54,29 +54,28 @@ enum { CONFIG,
        RUN,
        DIRECT } deviceState = RUN;
 
-// Global variables
-const int inputStringLen = 12;
+// Global and control variables
+const uint8_t inputStringLen = 6;
 char inputString[inputStringLen];  // a String to hold incoming data
-int inputCharIndex = 0;            // index to count our accumulated characters
+uint8_t inputCharIndex = 0;        // index to count our accumulated characters
 bool stringComplete = false;       // whether the string is complete
 bool modulationState = false;      // When we are running, are we modulating?
 
 // Define settings and modulations
-const int nLEDs = 8;     // number of LEDs defining the number of rows of the settings matrix.
-const int nLevels = 45;  // the number of modulation levels that are specified for each LEDint waveform = 1;  // sinusoid
+const uint8_t nLEDs = 8;  // number of LEDs defining the number of rows of the settings matrix.
+const uint8_t nLevels = 45;   // the number of modulation levels that are specified for each LEDint waveform = 1;  // sinusoid
 
 // Light Flux, ~100 % contrast
-int settings[nLEDs][nLevels] = {
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-};
-
+// int settings[nLEDs][nLevels] = {
+//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+// };
 
 // LMS directed (mel silent), 45% contrast at 2° and 10°
 // int settings[nLEDs][nLevels] = {
@@ -115,36 +114,40 @@ int settings[nLEDs][nLevels] = {
 // };
 
 // L–M directed, 10% contrast at 2° and 10°
-// int settings[nLEDs][nLevels] = {
-//   { 2483, 2463, 2444, 2424, 2404, 2384, 2364, 2345, 2325, 2305, 2285, 2265, 2246, 2226, 2206, 2186, 2166, 2147, 2127, 2107, 2087, 2067, 2048, 2028, 2008, 1988, 1968, 1948, 1929, 1909, 1889, 1869, 1849, 1830, 1810, 1790, 1770, 1750, 1731, 1711, 1691, 1671, 1651, 1632, 1612 },
-//   { 558, 625, 693, 761, 828, 896, 964, 1032, 1099, 1167, 1235, 1303, 1370, 1438, 1506, 1573, 1641, 1709, 1777, 1844, 1912, 1980, 2048, 2115, 2183, 2251, 2318, 2386, 2454, 2522, 2589, 2657, 2725, 2792, 2860, 2928, 2996, 3063, 3131, 3199, 3267, 3334, 3402, 3470, 3537 },
-//   { 3890, 3806, 3723, 3639, 3555, 3471, 3388, 3304, 3220, 3136, 3053, 2969, 2885, 2801, 2718, 2634, 2550, 2466, 2383, 2299, 2215, 2131, 2048, 1964, 1880, 1796, 1712, 1629, 1545, 1461, 1377, 1294, 1210, 1126, 1042, 959, 875, 791, 707, 624, 540, 456, 372, 289, 205 },
-//   { 473, 544, 616, 688, 759, 831, 902, 974, 1045, 1117, 1189, 1260, 1332, 1403, 1475, 1546, 1618, 1690, 1761, 1833, 1904, 1976, 2048, 2119, 2191, 2262, 2334, 2405, 2477, 2549, 2620, 2692, 2763, 2835, 2906, 2978, 3050, 3121, 3193, 3264, 3336, 3407, 3479, 3551, 3622 },
-//   { 3045, 3000, 2954, 2909, 2864, 2818, 2773, 2728, 2682, 2637, 2592, 2546, 2501, 2456, 2410, 2365, 2320, 2274, 2229, 2184, 2138, 2093, 2048, 2002, 1957, 1911, 1866, 1821, 1775, 1730, 1685, 1639, 1594, 1549, 1503, 1458, 1413, 1367, 1322, 1277, 1231, 1186, 1141, 1095, 1050 },
-//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
-//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
-//   { 2132, 2128, 2125, 2121, 2117, 2113, 2109, 2105, 2101, 2098, 2094, 2090, 2086, 2082, 2078, 2074, 2071, 2067, 2063, 2059, 2055, 2051, 2048, 2044, 2040, 2036, 2032, 2028, 2024, 2021, 2017, 2013, 2009, 2005, 2001, 1997, 1994, 1990, 1986, 1982, 1978, 1974, 1970, 1967, 1963 },
-// };
+int settings[nLEDs][nLevels] = {
+  { 2483, 2463, 2444, 2424, 2404, 2384, 2364, 2345, 2325, 2305, 2285, 2265, 2246, 2226, 2206, 2186, 2166, 2147, 2127, 2107, 2087, 2067, 2048, 2028, 2008, 1988, 1968, 1948, 1929, 1909, 1889, 1869, 1849, 1830, 1810, 1790, 1770, 1750, 1731, 1711, 1691, 1671, 1651, 1632, 1612 },
+  { 558, 625, 693, 761, 828, 896, 964, 1032, 1099, 1167, 1235, 1303, 1370, 1438, 1506, 1573, 1641, 1709, 1777, 1844, 1912, 1980, 2048, 2115, 2183, 2251, 2318, 2386, 2454, 2522, 2589, 2657, 2725, 2792, 2860, 2928, 2996, 3063, 3131, 3199, 3267, 3334, 3402, 3470, 3537 },
+  { 3890, 3806, 3723, 3639, 3555, 3471, 3388, 3304, 3220, 3136, 3053, 2969, 2885, 2801, 2718, 2634, 2550, 2466, 2383, 2299, 2215, 2131, 2048, 1964, 1880, 1796, 1712, 1629, 1545, 1461, 1377, 1294, 1210, 1126, 1042, 959, 875, 791, 707, 624, 540, 456, 372, 289, 205 },
+  { 473, 544, 616, 688, 759, 831, 902, 974, 1045, 1117, 1189, 1260, 1332, 1403, 1475, 1546, 1618, 1690, 1761, 1833, 1904, 1976, 2048, 2119, 2191, 2262, 2334, 2405, 2477, 2549, 2620, 2692, 2763, 2835, 2906, 2978, 3050, 3121, 3193, 3264, 3336, 3407, 3479, 3551, 3622 },
+  { 3045, 3000, 2954, 2909, 2864, 2818, 2773, 2728, 2682, 2637, 2592, 2546, 2501, 2456, 2410, 2365, 2320, 2274, 2229, 2184, 2138, 2093, 2048, 2002, 1957, 1911, 1866, 1821, 1775, 1730, 1685, 1639, 1594, 1549, 1503, 1458, 1413, 1367, 1322, 1277, 1231, 1186, 1141, 1095, 1050 },
+  { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
+  { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
+  { 2132, 2128, 2125, 2121, 2117, 2113, 2109, 2105, 2101, 2098, 2094, 2090, 2086, 2082, 2078, 2074, 2071, 2067, 2063, 2059, 2055, 2051, 2048, 2044, 2040, 2036, 2032, 2028, 2024, 2021, 2017, 2013, 2009, 2005, 2001, 1997, 1994, 1990, 1986, 1982, 1978, 1974, 1970, 1967, 1963 },
+};
 
-int background[nLEDs] = { 22, 22, 22, 22, 22, 22, 22, 22 };
+uint8_t background[nLEDs] = { 22, 22, 22, 22, 22, 22, 22, 22 };
 bool ledIsActive[nLEDs] = { true, true, true, true, true, true, true, true };
 
 // Variables that define an amplitude modulation
-int ampModType = 0;
+uint8_t ampModType = 0;
 float ampVals[3][2] = {
   { 0.0, 0.0 },  // no amplitude modulation
   { 0.1, 1.5 },  // Half-cosine window: block frequency Hz, window duration seconds
   { 0.1, 1.0 },  // AM modulation: frequency Hz, AM depth
 };
 
+// We need to know what the min and max values are across a full cycle
+// for a given Stockman compound waveform. This variable holds the result
+float stockmanRange[2] = {-1, 1};
+
 // timing variables
-int waveform = 1;
+uint8_t waveform = 1;
 unsigned long cycleDur = 1e6 / 10;  // initialize at 10 Hz
 unsigned long modulationStartTime = micros();
 unsigned long lastLEDUpdateTime = micros();
-float blinkDurationSecs = 0.25;
-int ledIndexOrder[] = { 1, 8, 2, 7, 3, 6, 4, 5 };
-int cycleLED = 0;
+int blinkDurationMSecs = 250;
+uint8_t ledIndexOrder[] = { 1, 8, 2, 7, 3, 6, 4, 5 };
+uint8_t ledCycleIdx = 0;
 
 // setup
 void setup() {
@@ -170,6 +173,9 @@ void setup() {
   identifyActiveLEDs();
   // Set the device to background
   setToOff();
+  // Update the "Stockman Range", in case we have
+  // a compound modulation to start
+  updateStockmanRange();
   // Announce we are starting
   showModeMenu();
 }
@@ -198,10 +204,10 @@ void loop() {
       // update the lastTime
       lastLEDUpdateTime = currentTime;
       // send the newLED settings
-      updateLED(cyclePhase, ledIndexOrder[cycleLED]);
-      // advance the cycleLED
-      cycleLED++;
-      cycleLED = cycleLED % nLEDs;
+      updateLED(cyclePhase, ledIndexOrder[ledCycleIdx]);
+      // advance the ledCycleIdx
+      ledCycleIdx++;
+      ledCycleIdx = ledCycleIdx % nLEDs;
     }
   }
 }
@@ -210,23 +216,23 @@ void loop() {
 void showModeMenu() {
   switch (deviceState) {
     case CONFIG:
-      Serial.println("============ config mode ============");
-      Serial.println("WF: waveform index, FQ: FM freq [Hz]");
-      Serial.println("AM: AM index, AV: AM values [Freq, x]");
-      Serial.println("L1, L2, .., Ln: Settings for LED n");
-      Serial.println("PR: print current settings matrix");
-      Serial.println("RM: run mode, DM: direct mode");
+      Serial.println("============ CONFIG mode ============");
+      // Serial.println("WF: waveform index, FQ: FM freq [Hz]");
+      // Serial.println("AM: AM index, V1...Vn: AM vals idx n");
+      // Serial.println("L0, L1, .., Ln: Settings for LED n");
+      // Serial.println("PR: print current settings matrix");
+      // Serial.println("RM: run mode, DM: direct mode");
       break;
     case DIRECT:
-      Serial.println("============ direct mode ============");
-      Serial.println("LL: settings [0 4095] for LEDs 1-8");
-      Serial.println("RM: run mode, CM: config mode");
+      Serial.println("============ DIRECT mode ============");
+      // Serial.println("LL: settings [0 4095] for LEDs 1-8");
+      // Serial.println("RM: run mode, CM: config mode");
       break;
     case RUN:
-      Serial.println("============= run mode ==============");
-      Serial.println("GO: go, ST: stop, BL: blink");
-      Serial.println("BG: background, DK: all off");
-      Serial.println("CM: config mode, DM: direct mode");
+      Serial.println("============= RUN mode ==============");
+      // Serial.println("GO: go, ST: stop, BL: blink");
+      // Serial.println("BG: background, DK: all off");
+      // Serial.println("CM: config mode, DM: direct mode");
       break;
   }
 }
@@ -234,7 +240,6 @@ void showModeMenu() {
 void getConfig() {
   // Operate in modal state waiting for input
   waitForNewString();
-  //  if (inputString.indexOf("WF") >= 0) {
   if (strncmp(inputString, "WF", 2) == 0) {
     clearInputString();
     Serial.print("waveform index: ");
@@ -245,14 +250,16 @@ void getConfig() {
     if (waveform == 2) Serial.println("square");
     if (waveform == 3) Serial.println("saw on");
     if (waveform == 4) Serial.println("saw off");
-    if (waveform == 5) Serial.println("Stockman A");
+    if (waveform == 5) Serial.println("Stockman i");
+    if (waveform == 6) Serial.println("Stockman iii");
+    if (waveform >= 5) updateStockmanRange();
   }
   if (strncmp(inputString, "FQ", 2) == 0) {
     clearInputString();
     Serial.print("frequency in Hz: ");
     waitForNewString();
-    Serial.print(inputString);
     cycleDur = 1e6 / atof(inputString);
+    Serial.println(atof(inputString));
   }
   if (strncmp(inputString, "AM", 2) == 0) {
     clearInputString();
@@ -263,16 +270,39 @@ void getConfig() {
     if (ampModType == 1) Serial.println("half cosine window");
     if (ampModType == 2) Serial.println("sin amplitude modulate");
   }
-  // if (strncmp(inputString, "L", 1) == 0) {
-  //   int ledIndex = atoi(inputString[1]);
-  //   clearInputString();
-  //   Serial.print("Settings for LED");
-  //   Serial.print(ledIndex);
-  //   Serial.print(":");
-  //   waitForNewString();
-  //   updateSettingsMatrix(settings, ledIndex, inputString);
-  //   identifyActiveLEDs();
-  // }
+  if (strncmp(inputString, "V", 1) == 0) {
+    int amIndex = atoi(inputString[1]);
+    clearInputString();
+    Serial.print("AM val 1 [float]: ");
+    waitForNewString();
+    ampVals[amIndex][1] = atof(inputString);
+    Serial.print(ampVals[amIndex][1]);
+    clearInputString();
+    Serial.print("; AM val 2 [float]: ");
+    waitForNewString();
+    ampVals[amIndex][2] = atof(inputString);
+    Serial.print(ampVals[amIndex][2]);
+    Serial.println("; done");
+  }
+  if (strncmp(inputString, "L", 1) == 0) {
+    int ledIndex = atoi(inputString[1]);
+    clearInputString();
+    Serial.print("Enter ");
+    Serial.print(nLevels);
+    Serial.print(" new-line terminated levels for LED");
+    Serial.print(ledIndex);
+    Serial.print(": ");
+    clearInputString();
+    for (int ii = 0; ii < nLevels; ii++) {
+      waitForNewString();
+      int level = atoi(inputString);
+      settings[ledIndex][ii] = level;
+      clearInputString();
+      Serial.print(".");
+    }
+    Serial.println("done");
+    identifyActiveLEDs();
+  }
   if (strncmp(inputString, "PR", 2) == 0) {
     printCurrentSettings();
   }
@@ -292,15 +322,26 @@ void getConfig() {
 void getDirect() {
   // Operate in modal state waiting for input
   waitForNewString();
-  // if (strncmp(inputString, "LL", 2) == 0) {
-  //   clearInputString();
-  //   Serial.print("LED settings [8]: ");
-  //   waitForNewString();
-  //   int vector[nLEDs] = { stringToIntArrayLEDs(inputString) };
-  //   for (int ii = 0; ii < nLEDs; ii++) {
-  //     writeToOneCombiLED(vector[ii], ii);
-  //   }
-  // }
+  if (strncmp(inputString, "LL", 2) == 0) {
+    clearInputString();
+    for (int ii = 0; ii < nLEDs; ii++) {
+      Serial.print("LED");
+      Serial.print(ii);
+      Serial.print(": ");
+      waitForNewString();
+      int level = atoi(inputString);
+      clearInputString();
+      Serial.print(level);
+      Serial.print("; ");
+      writeToOneCombiLED(level, ii);
+    }
+    Serial.println("done");
+  }
+  if (strncmp(inputString, "DK", 2) == 0) {
+    setToOff();
+    Serial.println("off");
+    modulationState = false;
+  }
   if (strncmp(inputString, "RM", 2) == 0) {
     modulationState = false;
     deviceState = RUN;
@@ -334,7 +375,7 @@ void getRun() {
     if (strncmp(inputString, "BL", 2) == 0) {
       Serial.println("blink");
       setToOff();
-      delay(int(blinkDurationSecs * 1000));
+      delay(blinkDurationMSecs);
       setToBackground();
     }
     if (strncmp(inputString, "BG", 2) == 0) {
@@ -395,6 +436,23 @@ void waitForNewString() {
   }
 }
 
+void updateStockmanRange() {
+  if (waveform<5) return;
+  stockmanRange[0]=0;
+  stockmanRange[1]=1;
+  float newRange[2] = {0, 0};
+  for (int ii = 0; ii < 1000; ii++) {
+    float level = getFrequencyModulation(float(ii)/1000);
+    newRange[0] = min(newRange[0],level);
+    newRange[1] = max(newRange[1],level);
+  }
+  stockmanRange[0] = newRange[0];
+  stockmanRange[1] = newRange[1];
+  Serial.println(stockmanRange[0]);  
+  Serial.println(stockmanRange[1]);
+}
+
+
 void identifyActiveLEDs() {
   // Identify those LEDs that never differ from the background and
   // remove them from the active list
@@ -423,53 +481,12 @@ void identifyActiveLEDs() {
   }
 }
 
-// int updateSettingsMatrix(int settings[nLEDs][nLevels], int selectedRow, String inputString) {
-//   // This function updates settings matrix by accepting a string, converting it to array and
-//   // appending to settingsMatrix
-//   inputString += ',';       // Add a comma at the end of the input string to make life easier
-//   char vectorString[300];   // Set a vector string which will be appended with chars
-//   int numberOfCommas = -1;  // Comma counter, zero indexed language, so start from -1
-//   // Loop through input string. if not comma, append to vectorString
-//   // If comma, assign the completed vectorString to a vector index.
-//   for (int i = 0; i < inputString.length(); i++) {
-//     char c = inputString[i];
-//     if (c != ',') {
-//       vectorString += c;
-//     } else {
-//       numberOfCommas += 1;
-//       settings[selectedRow][numberOfCommas] = vectorString.toInt();
-//       vectorString = "";
-//     }
-//   }
-//   return settings[nLEDs][nLevels];
-// }
-
-// int stringToIntArrayLEDs(String inputString) {
-//   int vector[nLEDs];
-//   inputString += ',';        // Add a comma at the end of the input string to make life easier
-//   String vectorString = "";  // Set a vector string which will be appended with chars
-//   int numberOfCommas = -1;   // Comma counter, zero indexed language, so start from -1
-//   // Loop through input string. if not comma, append to vectorString
-//   // If comma, assign the completed vectorString to a vector index.
-//   for (int i = 0; i < inputString.length(); i++) {
-//     char c = inputString[i];
-//     if (c != ',') {
-//       vectorString += c;
-//     } else {
-//       numberOfCommas += 1;
-//       vector[numberOfCommas] = vectorString.toInt();
-//       vectorString = "";
-//     }
-//   }
-//   return vector[nLEDs];
-// }
-
 void setToBackground() {
   if (simulatePrizmatix) {
     // Use the built in arduino LED, which has a binary state
     int ii = 0;
     int ledSetting = settings[ii][background[ii]];
-    if (ledSetting > (maxVal / 2)) {
+    if (ledSetting > (maxLevelVal / 2)) {
       digitalWrite(LED_BUILTIN, HIGH);
     } else {
       digitalWrite(LED_BUILTIN, LOW);
@@ -530,20 +547,26 @@ float getFrequencyModulation(float phase) {
   if (waveform == 4) {  // saw off
     level = 1 - phase;
   }
-  if (waveform == 5) {  // Stockman example A
-    float minMax[] = { -0.8532, 1.4950 };
-    float harmFreqs[] = { 1, 2 };
+  if (waveform == 5) {  // Rider & Stockman 2018 PNAS modulation i
+    float harmIdx[] = { 1, 2 };
     float harmAmps[] = { 1, 0.5 };
     float harmPhases[] = { 0, 256 / 360 };
     level = 0;
     for (int ii = 1; ii < 2; ii++) {
-      level = level + harmAmps[ii] * sin(2 * pi * phase * harmFreqs[ii] + 2 * pi * harmPhases[ii] * harmFreqs[ii]);
+      level = level + harmAmps[ii] * sin(2 * pi * phase * harmIdx[ii] + 2 * pi * harmPhases[ii] * harmIdx[ii]);
     }
-    level = (level - minMax[0]) / (minMax[1] - minMax[0]);
+    level = (level - stockmanRange[0]) / (stockmanRange[1] - stockmanRange[0]);
   }
-  // ensure that level is within the 0-1 range
-  level = max(level, 0);
-  level = min(level, 1);
+  if (waveform == 6) {  // Rider & Stockman 2018 PNAS modulation iii
+    float harmIdx[] = { 1, 3, 4 };
+    float harmAmps[] = { 0.5, 1, 1 };
+    float harmPhases[] = { 0, 333 / 360, 46 / 360 };
+    level = 0;
+    for (int ii = 1; ii < 3; ii++) {
+      level = level + harmAmps[ii] * sin(2 * pi * phase * harmIdx[ii] + 2 * pi * harmPhases[ii] * harmIdx[ii]);
+    }
+    level = (level - stockmanRange[0]) / (stockmanRange[1] - stockmanRange[0]);
+  }
   return level;
 }
 
@@ -567,7 +590,7 @@ float applyAmplitudeModulation(float level, int ledIndex) {
       modLevel = (cos(pi * ((elapsedTimeSecs - plateauDur) / rampDur)) + 1) / 2;
     }
     // center the level around the background
-    float offset = float(settings[ledIndex][background[ledIndex]]) / float(maxVal);
+    float offset = float(settings[ledIndex][background[ledIndex]]) / float(maxLevelVal);
     level = (level - offset) * modLevel + offset;
   }
   if (ampModType == 2) {
@@ -577,16 +600,19 @@ float applyAmplitudeModulation(float level, int ledIndex) {
     float elapsedTimeSecs = (micros() - modulationStartTime) / 1e6;
     float modLevel = AMDepth * (sin(2 * pi * (elapsedTimeSecs / (1 / AMFrequencyHz))) + 1) / 2;
     // center the level around the background
-    float offset = float(settings[ledIndex][background[ledIndex]]) / float(maxVal);
+    float offset = float(settings[ledIndex][background[ledIndex]]) / float(maxLevelVal);
     level = (level - offset) * modLevel + offset;
   }
+  // ensure that level is within the 0-1 range
+  level = max(level, 0);
+  level = min(level, 1);
   return level;
 }
 
 void pulseWidthModulate(int setting) {
   // Use pulse-width modulation to vary the
   // intensity of the built in arduino LED
-  float portionOn = float(setting) / float(maxVal);
+  float portionOn = float(setting) / float(maxLevelVal);
   int timeOn = minLEDAddressTime * portionOn;
   int timeOff = minLEDAddressTime - timeOn;
   unsigned long startTime = micros();
@@ -611,6 +637,10 @@ void pulseWidthModulate(int setting) {
 }
 
 void writeToOneCombiLED(int level, int ledIndex) {
+  // sanitize the input
+  level = max(level, 0);
+  level = min(level, maxLevelVal);
+  // write the values
   Wire.beginTransmission(0x70);
   Wire.write(1 << ledIndex);
   Wire.endTransmission();
@@ -624,6 +654,7 @@ void writeToOneCombiLED(int level, int ledIndex) {
 void printCurrentSettings() {
   int numRows = sizeof(settings) / sizeof(settings[0]);
   int numCols = sizeof(settings[0]) / sizeof(settings[0][0]);
+  Serial.println("Settings matrix:");
   for (int r = 0; r < numRows; r++) {
     Serial.print("\n");
     for (int c = 0; c < numCols; c++) {
