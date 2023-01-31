@@ -26,6 +26,9 @@ bool simulatePrizmatix = true;  // Simulate the prizmatix LEDs
 const int maxVal = 4095;            // maximum setting value for the prizmatix LEDs
 const int minLEDAddressTime = 360;  // the time, in microseconds, required refresh an LED setting
 
+// Fixed reality values
+const float pi = 3.1415927;
+
 // Global variables
 String inputString = "";       // a String to hold incoming data
 bool stringComplete = false;   // whether the string is complete
@@ -35,7 +38,6 @@ bool modulationState = false;  // When we are running, are we modulating?
 // Define settings and modulations
 const int nLEDs = 8;     // number of LEDs defining the number of rows of the settings matrix.
 const int nLevels = 40;  // the number of modulation levels that are specified for each LEDint waveform = 1;  // sinusoid
-int waveform = 1;
 int settings[nLEDs][nLevels] = {
   { 0, 105, 210, 315, 420, 525, 630, 735, 840, 945, 1050, 1155, 1260, 1365, 1470, 1575, 1680, 1785, 1890, 1995, 2100, 2205, 2310, 2415, 2520, 2625, 2730, 2835, 2940, 3045, 3150, 3255, 3360, 3465, 3570, 3675, 3780, 3885, 3990, 4095 },  //LED0
   { 0, 105, 210, 315, 420, 525, 630, 735, 840, 945, 1050, 1155, 1260, 1365, 1470, 1575, 1680, 1785, 1890, 1995, 2100, 2205, 2310, 2415, 2520, 2625, 2730, 2835, 2940, 3045, 3150, 3255, 3360, 3465, 3570, 3675, 3780, 3885, 3990, 4095 },  //LED0
@@ -50,15 +52,16 @@ int background[nLEDs] = { 20, 20, 20, 20, 20, 20, 20, 20 };
 bool ledIsActive[nLEDs] = { true, true, true, true, true, true, true, true };
 
 // Variables that define an amplitude modulation
-int ampModType = 2;
+int ampModType = 0;
 float ampVals[3][2] = {
   { 0.0, 0.0 },  // no amplitude modulation
-  { 1.5, 6.0 },  // ramp duration, total block duration
-  { 0.1, 1.0 },  // AM modulation frequency, AM depth
+  { 0.1, 1.5 },  // Half-cosine window: block frequency Hz, window duration seconds
+  { 0.1, 1.0 },  // AM modulation: frequency Hz, AM depth
 };
 
 // timing variables
-unsigned long cycleDur = 1e6 / 10;  // initialize at 10 Hz
+int waveform = 5;
+unsigned long cycleDur = 1e6 / 4;  // initialize at 10 Hz
 unsigned long modulationStartTime = micros();
 unsigned long lastLEDUpdateTime = micros();
 float blinkDurationSecs = 0.25;
@@ -176,6 +179,7 @@ void getConfig() {
     Serial.print("waveform index: ");
     waitForNewString();
     waveform = inputString.toInt();
+    if (waveform == 0) Serial.println("step");
     if (waveform == 1) Serial.println("sin");
     if (waveform == 2) Serial.println("square");
     if (waveform == 3) Serial.println("saw on");
@@ -343,9 +347,11 @@ void updateLED(double cyclePhase, int ledIndex) {
 }
 
 float getFrequencyModulation(float phase) {
-  float level = 0;
-  if (waveform == 1) {                               // sin
-    level = ((sin(2 * 3.1415927 * phase) + 1) / 2);  // 0-1 domain
+// Provides the "level", between 0-1, of a
+// temporal modulation
+  float level = 0.5;
+  if (waveform == 1) {  // sin
+    level = ((sin(2 * pi * phase) + 1) / 2);
   }
   if (waveform == 2) {  // square wave
     if (phase >= 0.5) {
@@ -357,28 +363,44 @@ float getFrequencyModulation(float phase) {
   if (waveform == 3) {  // saw on
     level = phase;
   }
-  if (waveform == 4) {  // saw on
+  if (waveform == 4) {  // saw off
     level = 1 - phase;
   }
+  if (waveform == 5) {  // Stockman example A
+    float minMax[] = {-0.8532,1.4950};
+    float harmFreqs[] = { 1, 2};
+    float harmAmps[] = { 1, 0.5};
+    float harmPhases[] = { 0, 256/360};
+    level = 0;
+    for (int ii = 1; ii < 2; ii++) {
+    level = level + harmAmps[ii]*sin( 2*pi*phase*harmFreqs[ii] + 2*pi*harmPhases[ii]*harmFreqs[ii] );
+    }
+    level = (level - minMax[0]) / ( minMax[1] - minMax[0] );
+  }
+  // ensure that level is within the 0-1 range
+  level = max(level,0);
+  level = min(level,1);
   return level;
 }
 
 float applyAmplitudeModulation(float level, int ledIndex) {
-  if (ampModType == 1) {
-    float rampDur = ampVals[ampModType][0];
-    float totalDur = ampVals[ampModType][1];
-    // Determine how far along the half-cosine ramp we are
-    float elapsedTimeSecs = (micros() - modulationStartTime) / 1e6;
+  if (ampModType == 1) { // Half-cosine window at block onset and offset
+    float totalDur = 1/ampVals[ampModType][0];
+    float rampDur = ampVals[ampModType][1];
+    // Determine how far along the half-cosine ramp we are, relative
+    // to the modulation frequency given by ampVals[0]
+    double elapsedTimeSecs = fmod((micros() - modulationStartTime) / 1e6, totalDur);
     float modLevel = 0;
-    float plateauDur = totalDur - rampDur;
+    float blockOnDur = totalDur/2;
+    float plateauDur = blockOnDur - rampDur;
     if (elapsedTimeSecs < rampDur) {
-      modLevel = (cos(3.1415927 + 3.1415927 * (elapsedTimeSecs / rampDur)) + 1) / 2;
+      modLevel = (cos(pi + pi * (elapsedTimeSecs / rampDur)) + 1) / 2;
     }
     if ((elapsedTimeSecs > rampDur) && (elapsedTimeSecs < plateauDur)) {
       modLevel = 1.0;
     }
-    if ((elapsedTimeSecs > plateauDur) && (elapsedTimeSecs < totalDur)) {
-      modLevel = (cos(3.1415927 * ((elapsedTimeSecs - plateauDur) / rampDur)) + 1) / 2;
+    if ((elapsedTimeSecs > plateauDur) && (elapsedTimeSecs < blockOnDur)) {
+      modLevel = (cos(pi * ((elapsedTimeSecs - plateauDur) / rampDur)) + 1) / 2;
     }
     // center the level around the background
     float offset = float(settings[ledIndex][background[ledIndex]]) / float(maxVal);
@@ -389,7 +411,7 @@ float applyAmplitudeModulation(float level, int ledIndex) {
     float AMDepth = ampVals[ampModType][1];
     // Determine how far along the modulation we are
     float elapsedTimeSecs = (micros() - modulationStartTime) / 1e6;
-    float modLevel = AMDepth * (sin(2 * 3.1415927 * (elapsedTimeSecs / (1 / AMFrequencyHz))) + 1) / 2;
+    float modLevel = AMDepth * (sin(2 * pi * (elapsedTimeSecs / (1 / AMFrequencyHz))) + 1) / 2;
     // center the level around the background
     float offset = float(settings[ledIndex][background[ledIndex]]) / float(maxVal);
     level = (level - offset) * modLevel + offset;
