@@ -1,4 +1,4 @@
-% calibrateCombiLED
+% SACC_calibrateMonitor
 %
 % Executive script for object-oriented-based monitor calibration.
 
@@ -11,23 +11,22 @@
 %                      Flat panel monitor located at the Stellar Chance 3T Magnet.
 %    10/18/2017  npc   Reset Radiometer before crashing
 %    12/12/2017  ana   Added eye tracker LCD case
-%    11/24/2021  smo   Delete the RadiometerOBJ and substitue it with PRIZ
+%    11/24/2021  smo   Delete the RadiometerOBJ and substitue it with SACC
 %                      measurement codes. It works faster and fine.
 %    12/15/2021  smo   Copied the object @PsychImagingCalibrator from BLTB
-%                      and changed the name as @PRIZPsychImagingCalibrator.
-%                      This is for using our PRIZ functions (cf.
+%                      and changed the name as @SACCPsychImagingCalibrator.
+%                      This is for using our SACC functions (cf.
 %                      measurement) in all calibrations. 
-%    02/01/2023  gka   Modifying for the 8-primary Prizmatix CombiLED 
 
-function PRIZ_calibrateMonitor
+function calibrateCombiLED
     
     % Select a calibration configuration name
     AvailableCalibrationConfigs = {  ...
-        'PRIZ'
+        '@CombiLEDcalibrator'
     };
     
-    % Default config is PRIZPrimary1
-    defaultCalibrationConfig = AvailableCalibrationConfigs{find(contains(AvailableCalibrationConfigs, 'PRIZ'))};
+    % Default config is @CombiLEDcalibrator
+    defaultCalibrationConfig = AvailableCalibrationConfigs{find(contains(AvailableCalibrationConfigs, '@CombiLEDcalibrator'))};
     
     while (true)
         fprintf('Available calibration configurations \n');
@@ -49,11 +48,11 @@ function PRIZ_calibrateMonitor
     runtimeParams = [];
     switch calibrationConfig
             
-        case 'PRIZ'
-            configFunctionHandle = @generateConfigurationForPRIZ; 
+        case '@CombiLEDcalibrator'
+            configFunctionHandle = @generateConfigurationForCombiLED; 
             
         otherwise
-            error('Unknown calibration configuration');
+            error('Not a valid calibration config')
     end
     
 
@@ -72,6 +71,11 @@ function PRIZ_calibrateMonitor
     % Set the calibrator options
     calibratorOBJ.options = calibratorOptions;
         
+    % Hack in some screen settings
+%    newCal.describe.hz =  120;
+%    newCal.screenSizePixel =  [1920 1080];
+%    calibratorOBJ.set(newCal);
+    
     % display calStruct if so desired
     beVerbose = false;
     if (beVerbose)
@@ -79,7 +83,7 @@ function PRIZ_calibrateMonitor
         calibratorOBJ.displayCalStruct();
     end
         
-    try 
+%    try 
         % Calibrate !
         calibratorOBJ.calibrate();
             
@@ -99,22 +103,23 @@ function PRIZ_calibrateMonitor
         % Shutdown spectroradiometer.
           CloseSpectroradiometer;
           
-    catch err
-        % Shutdown DBLab_Calibrator object  
-        if (~isempty(calibratorOBJ))
-            % Shutdown calibratorOBJ
-            calibratorOBJ.shutDown();
-        end
-        
-        % Shutdown spectroradiometer.
-        CloseSpectroradiometer;
+%     catch err
+%         % Shutdown DBLab_Calibrator object  
+%         if (~isempty(calibratorOBJ))
+%             % Shutdown calibratorOBJ
+%             calibratorOBJ.shutDown();
+%         end
+%         
+%         % Shutdown spectroradiometer.
+%         CloseSpectroradiometer;
+% 
+%         rethrow(err)
+%     end % end try/catch
 
-        rethrow(err)
-    end % end try/catch
 end
 
-% Configuration function for the PRIZ display (LED/DLP optical system)
-function [displaySettings, calibratorOptions] = generateConfigurationForPRIZ()
+% Configuration function for the SACC display (LED/DLP optical system)
+function [displaySettings, calibratorOptions] = generateConfigurationForCombiLED()
     % Specify where to send the 'Calibration Done' notification email
     emailAddressForNotification = 'aguirreg@upenn.edu';
     
@@ -124,13 +129,13 @@ function [displaySettings, calibratorOptions] = generateConfigurationForPRIZ()
     displayPrimariesNum = 8;
     displaySettings = { ...
         'screenToCalibrate',        2, ...                          % which display to calibrate. main screen = 1, second display = 2
-        'desiredScreenSizePixel',   [1 1], ...                % pixels along the width and height of the display to be calibrated
+        'desiredScreenSizePixel',   [1920 1080], ...                % pixels along the width and height of the display to be calibrated
         'desiredRefreshRate',       120, ...                        % refresh rate in Hz
         'displayPrimariesNum',      displayPrimariesNum, ...        % for regular displays this is always 3 (RGB) 
         'displayDeviceType',        'monitor', ...                  % this should always be set to 'monitor' for now
-        'displayDeviceName',        'PRIZ', ...                     % a name for the display been calibrated
-        'calibrationFile',          'PRIZ', ...                     % name of calibration file to be generated
-        'comment',                  'The Prizmatix CombiLED 8-channel light engine' ...          % some comment, could be anything
+        'displayDeviceName',        'CombiLED', ...                     % a name for the display been calibrated
+        'calibrationFile',          'CombiLED', ...                     % name of calibration file to be generated
+        'comment',                  'The CombiLED light engine' ...          % some comment, could be anything
         };
     
     % Specify the @Calibrator's optional params using a CalibratorOptions object
@@ -142,9 +147,9 @@ function [displaySettings, calibratorOptions] = generateConfigurationForPRIZ()
         'emailAddressForDoneNotification',  GetWithDefault('Enter email address for done notification',  emailAddressForNotification), ...
         'blankOtherScreen',                 0, ...                          % whether to blank other displays attached to the host computer (1=yes, 0 = no), ...
         'whichBlankScreen',                 1, ...                          % screen number of the display to be blanked  (main screen = 1, second display = 2)
-        'blankSettings',                    [0.0 0.0 0.0], ...              % color of the whichBlankScreen 
-        'bgColor',                          [0.3962 0.3787 0.4039], ...     % color of the background  
-        'fgColor',                          [0.3962 0.3787 0.4039], ...     % color of the foreground
+        'blankSettings',                    [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 ], ...              % color of the whichBlankScreen 
+        'bgColor',                          [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 ], ...     % color of the background  
+        'fgColor',                          [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 ], ...     % color of the foreground
         'meterDistance',                    1.0, ...                        % distance between radiometer and screen in meters
         'leaveRoomTime',                    3, ...                          % seconds allowed to leave room
         'nAverage',                         1, ...                          % number of repeated measurements for averaging
@@ -166,7 +171,7 @@ end
 % Users should not modify this function unless they know what they are doing.
 %
 % This function has been updated to exclude the radiometerOBJ to substitue
-% it with PRIZ measurement functions.
+% it with SACC measurement functions.
 function calibratorOBJ = generateCalibratorObject(displaySettings, execScriptFileName)
     % set init params
     calibratorInitParams = displaySettings;
@@ -183,28 +188,44 @@ end
 %
 % Users should not modify this function unless they know what they are doing.
 % 
-% In this function, radiometerOBJ has been also deleted and we use PRIZ
+% In this function, radiometerOBJ has been also deleted and we use SACC
 % measure function instead.
 function calibratorOBJ = selectAndInstantiateCalibrator(calibratorInitParams)
+
+    % List of available @Calibrator objects
+    calibratorTypes = {'CombiLED'};
+    calibratorsNum  = numel(calibratorTypes);
+    
+    % Ask the user to select a calibrator type
+    fprintf('\n\n Available calibrator types:\n');
+    for k = 1:calibratorsNum
+        fprintf('\t[%3d]. %s\n', k, calibratorTypes{k});
+    end
+    defaultCalibratorIndex = 1;
+    calibratorIndex = input(sprintf('\tSelect a calibrator type (1-%d) [%d]: ', calibratorsNum, defaultCalibratorIndex));
+    if isempty(calibratorIndex) || (calibratorIndex < 1) || (calibratorIndex > calibratorsNum)
+        calibratorIndex = defaultCalibratorIndex;
+    end
+    fprintf('\n\t-------------------------\n');
+    selectedCalibratorType = calibratorTypes{calibratorIndex};
+    fprintf('Will employ an %s calibrator object [%d].\n', selectedCalibratorType, calibratorIndex);
     
     calibratorOBJ = [];
 
-                calibratorOBJ = PRIZPrimaryCalibrator(calibratorInitParams);
-% 
-%     try
-%             calibratorOBJ = PRIZPrimaryCalibrator(calibratorInitParams);
-%         
-%     catch err
-% 
-%         % Shutdown the radiometer
-%         CloseSpectroradiometer;
-%         
-%         % Shutdown DBLab_Radiometer object  
-%         if (~isempty(calibratorOBJ))
-%             % Shutdown calibratorOBJ
-%             calibratorOBJ.shutDown();
-%         end
-%         
-%         rethrow(err)
-%    end % end try/catch
+    try
+        % Instantiate an Calibrator object with the required configration variables.
+            calibratorOBJ = CombiLEDcalibrator(calibratorInitParams);
+        
+    catch err
+        % Shutdown the radiometer
+        CloseSpectroradiometer;
+        
+        % Shutdown DBLab_Radiometer object  
+        if (~isempty(calibratorOBJ))
+            % Shutdown calibratorOBJ
+            calibratorOBJ.shutDown();
+        end
+        
+        rethrow(err)
+   end % end try/catch
 end

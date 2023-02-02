@@ -33,6 +33,7 @@ writeline(obj.serialObj,'LL');
 % Loop over the primaries and write the values
 for ii=1:length(settings)
     writeline(obj.serialObj,num2str(settings(ii)));
+    pause(0.1);
 end
 
 if obj.verbose
