@@ -17,7 +17,7 @@
 //  LED7 --   561          15            470
 //
 // Each LED can be set to an intensity with 12 bit depth (0-4095). Practically,
-// we pre-define an ordered set of 45 different levels across the LEDs. The 45
+// we pre-define an ordered set of 45 discrete levels across the LEDs. The 45
 // levels might define a linear change in luminance contrast, or L–M contrast.
 // This is the "settings" matrix.
 //
@@ -26,17 +26,17 @@
 // control of a waveform (e.g., sin, square) and a frequency [Hz]. After
 // setup, the code enters a run loop during which each LED is updated
 // sequentially. The waveform is used to define a floating point level (0-1),
-// which is mapped to the fixed levels (0-44). The settings matrix provides
+// which is mapped to the discrete levels (0-44). The settings matrix provides
 // the setting of a given LED at the given level.
 //
-// There is a minimum amount of time required to address an LED (about 360
+// There is a minimum amount of time required to address an LED (about 250
 // microseconds). The program clock advances and, at this interval, determines
 // where we are in the waveform cycle and updates the next LED to the setting
-// for that LED. As a consequence different LEDs oscillate at different phase
+// for that LED. As a consequence, different LEDs oscillate at different phase
 // delays of the waveform. As the waveform frequency is unlikely to be
 // synchronized to the minimum LED refresh rate, this phase delay will precess
-// across waveform cycles. To address this, the update order of the LEDs is
-// reversed each cycle.
+// across waveform cycles. This can cause aliasing of the modulation to lower
+// frequencies. To reduce this, the LEDs are updated in an interleaved order.
 //
 // If an LED has settings that never vary from the background, then that LED
 // is marked as "inactive", and skipped in the sequential updating. This allows
@@ -48,21 +48,21 @@
 // In operation, the firmware supports placing the device in three states:
 //  RUN MODE (RM) -- continuously present the specified modulation
 //  CONFIG MODE (CM) -- change the parameters of the modulation
-//  DIRECT MODE (DM) -- pass setting values directly to the set of LEDs; this
+//  DIRECT MODE (DM) -- pass setting values directly to the LEDs; this
 //                      mode is used when performing device calibration.
 //
 // Global variables of note:
-//  simulatePrizmatix   Boolean. If set to true, the code treats the arduino
+//  simulatePrizmatix   Boolean. If set to true, the code treats the Arduino
 //                      built-in LED as LED0. The intensity of the LED is
 //                      pulse-width modulated. The other 7 channels are ignored.
 //  maxLevelVal         4095. This is the max of the 12-bit range.
-//  minLEDAddressTime   Scalar. microseconds. We find that it takes 234 microsec
+//  minLEDAddressTime   Scalar, microseconds. We find that it takes 234 microsecs
 //                      to write a setting to one LED. We set this minimum address
 //                      time to somewhat longer than this to allow time for
 //                      computation overhead.
 //  settings            8x45 int matrix, all between 0 and maxLevelVal.
 //                      Each column defines the settings on the 8 LEDs at
-//                      each of n levels of the modulation.
+//                      each of n discrete levels of the modulation.
 //  background          8x1 int array of value 0-44. Specifies the
 //                      background level to be taken from the settings for
 //                      each LED.
@@ -88,9 +88,8 @@
 //                      During run-mode, passing a "blink" command sets all LEDs
 //                      to zero for the blink duration. Default is 100 msecs.
 //  ledUpdateOrder      8x1 int array, of values 0-7. Defines the order in which
-//                      the LEDs are updated across the cycle. By defauly, the order
-//                      intermixes LEDs from the short and long ends of the spectrum
-//                      to avoid having a phase sweep across the spectrum.
+//                      the LEDs are updated across the cycle. By default, the order
+//                      interleaves LEDs.
 //
 //
 //
@@ -120,14 +119,14 @@ enum { CONFIG,
 
 // Global and control variables
 const uint8_t inputStringLen = 12;  // size of the string buffer used to send commands
-char inputString[inputStringLen];  // a String to hold incoming data
-uint8_t inputCharIndex = 0;        // index to count our accumulated characters
-bool stringComplete = false;       // whether the string is complete
-bool modulationState = false;      // When we are running, are we modulating?
+char inputString[inputStringLen];   // a character vector to hold incoming data
+uint8_t inputCharIndex = 0;         // index to count our accumulated characters
+bool stringComplete = false;        // whether the input string is complete
+bool modulationState = false;       // When we are running, are we modulating?
 
 // Define settings and modulations
-const uint8_t nLEDs = 8;     // number of LEDs defining the number of rows of the settings matrix.
-const uint8_t nLevels = 45;  // the number of modulation levels that are specified for each LED
+const uint8_t nLEDs = 8;     // the number of LEDs
+const uint8_t nLevels = 45;  // the number of discrete settings that are specified for each LED
 
 // Light Flux, ~100 % contrast, built for speed
 // int settings[nLEDs][nLevels] = {
@@ -213,31 +212,32 @@ uint8_t background[nLEDs] = { 22, 22, 22, 22, 22, 22, 22, 22 };
 bool ledIsActive[nLEDs] = { false, false, false, false, false, false, false, false };
 
 // Variables that define an amplitude modulation
-uint8_t amplitudeIndex = 0;
+uint8_t amplitudeIndex = 0;  // Default to no amplitude modulation
 float amplitudeVals[3][2] = {
-  { 0.0, 0.0 },  // no amplitude modulation
+  { 0.0, 0.0 },  // unused entries for no amplitude modulation
   { 0.1, 1.0 },  // AM modulation: frequency Hz, AM depth
   { 0.1, 1.5 },  // Half-cosine window: block frequency Hz, window duration seconds
 };
 
-// We need to know what the min and max values are across a full cycle
-// for a given Stockman compound waveform. This variable holds the result
+// We need to know the min and max values across a full cycle of a given Stockman
+// compound waveform. This variable holds the result. See the function
+// "updateStockmanRange" for details.
 float stockmanRange[2] = { 0, 0 };
 
-// timing variables
-uint8_t waveformIndex = 1;         // sinusoid
-unsigned long cycleDur = 1e6 / 3;  // initialize at 3 Hz
-unsigned long modulationStartTime = micros();
-unsigned long lastLEDUpdateTime = micros();
-int blinkDurationMSecs = 100;
-uint8_t ledUpdateOrder[] = { 0, 7, 1, 6, 2, 5, 3, 4 };
-uint8_t ledCycleIdx = 0;
+// Timing variables
+uint8_t waveformIndex = 1;                     // Default to sinusoid
+unsigned long cycleDur = round(1e6 / 3.0);     // Initialize at 3 Hz
+unsigned long modulationStartTime = micros();  // Initialize these with the clock
+unsigned long lastLEDUpdateTime = micros();    // Initialize these with the clock
+int blinkDurationMSecs = 100;                  // Default duration of the blink event in msecs
+uint8_t ledCycleIdx = 0;                       // Counter to index our cycle through updating LEDs
+uint8_t ledUpdateOrder[] = { 0, 2, 4, 6, 1, 3, 5, 7 };
 
 // setup
 void setup() {
   // Initialize serial port communication
   Serial.begin(57600);
-  // Modify the settings if we are simulating
+  // Modify the settings and background if we are simulating
   if (simulatePrizmatix) {
     for (int ii = 1; ii < nLEDs; ii++) {
       for (int jj = 0; jj < nLevels; jj++) {
@@ -246,10 +246,12 @@ void setup() {
       background[ii] = 0;
     }
   }
-  // Set up the built-in LED if we are simulating
+  // Initialize communication with the LED(s)
   if (simulatePrizmatix) {
+    // Use the built-in LED
     pinMode(LED_BUILTIN, OUTPUT);
   } else {
+    // USe the wired LEDs
     Wire.begin();
     Wire.setClock(400000);
   }
@@ -260,7 +262,7 @@ void setup() {
   // Update the "Stockman Range", in case we have
   // a compound modulation to start
   updateStockmanRange();
-  // Announce we are starting
+  // Show the console menu
   showModeMenu();
 }
 
@@ -285,11 +287,11 @@ void loop() {
       // Determine where we are in the cycle
       unsigned long cycleTime = ((currentTime - modulationStartTime) % cycleDur);
       double cyclePhase = double(cycleTime) / double(cycleDur);
-      // update the lastTime
+      // Update the lastTime
       lastLEDUpdateTime = currentTime;
-      // send the newLED settings
+      // Update the next LED
       updateLED(cyclePhase, ledUpdateOrder[ledCycleIdx]);
-      // advance the ledCycleIdx
+      // Advance the ledCycleIdx
       ledCycleIdx++;
       ledCycleIdx = ledCycleIdx % nLEDs;
     }
@@ -297,6 +299,8 @@ void loop() {
 }
 
 
+// Had to comment out the menu details as these serial entries
+// eat up dynamic memory space.
 void showModeMenu() {
   switch (deviceState) {
     case CONFIG:
@@ -446,7 +450,7 @@ void getDirect() {
 }
 
 void getRun() {
-  // Operate in amodal state. Only act if we have
+  // Operate in amodal state; only act if we have
   // a complete string
   pollSerialPort();
   if (stringComplete) {
@@ -511,7 +515,7 @@ void pollSerialPort() {
     }
     // if the incoming character is a newline,
     // set a flag so the main loop can
-    // do something about it:
+    // do something about it.
     if (inChar == '\n') {
       stringComplete = true;
       inputCharIndex = 0;
@@ -596,23 +600,29 @@ void setToBackground() {
 
 void setToOff() {
   if (simulatePrizmatix) {
-    // Use the built in arduino LED, which has a binary state
+    // Use the built in Arduino LED, which has a binary state
     digitalWrite(LED_BUILTIN, LOW);
   } else {
+    // Loop through the LEDs and set them to zero
     for (int ii = 0; ii < nLEDs; ii++) {
-      // Get the setting for this LED
       writeToOneCombiLED(0, ii);
     }
   }
 }
 
 void updateLED(double cyclePhase, int ledIndex) {
+  // Check if the current LED is marked as active
   if (ledIsActive[ledIndex]) {
-    // Get the level for this LED, based upon waveformIndex
+    // Get the level for the current cyclePhase
     float floatLevel = getFrequencyModulation(cyclePhase);
+    // Apply any amplitude modulation
     floatLevel = applyAmplitudeModulation(floatLevel, ledIndex);
+    // Cast the continuous floatLevel to one of the 45 discrete
+    // levels.
     int ledLevel = round((nLevels - 1) * floatLevel);
+    // Get the 12 bit setting from the settings matrix
     int ledSetting = settings[ledIndex][ledLevel];
+    // Update the LED
     if (simulatePrizmatix) {
       pulseWidthModulate(ledSetting);
     } else {
@@ -621,44 +631,55 @@ void updateLED(double cyclePhase, int ledIndex) {
   }
 }
 
+
 float getFrequencyModulation(float phase) {
-  // Provides the "level", between 0-1, of a
-  // temporal modulation
+  // Provides a continuous level, between 0-1, for a given waveform
+  // at the specified phase position. We default to a half-on level
+  // if not otherwise specified
   float level = 0.5;
-  if (waveformIndex == 1) {  // sin
+
+  // Sinusoid
+  if (waveformIndex == 1) {
     level = ((sin(2 * pi * phase) + 1) / 2);
   }
-  if (waveformIndex == 2) {  // square wave
+  // Square wave, off then on
+  if (waveformIndex == 2) {
     if (phase >= 0.5) {
       level = 1;
     } else {
       level = 0;
     }
-  }
-  if (waveformIndex == 3) {  // saw on
+  } 
+  // Saw-tooth, ramping on and then sudden off
+  if (waveformIndex == 3) {
     level = phase;
-  }
+  } 
+  // Saw-tooth, ramping off and then sudden on
   if (waveformIndex == 4) {  // saw off
     level = 1 - phase;
-  }
-  if (waveformIndex == 5) {  // Rider & Stockman 2018 PNAS modulation i
-    float harmIdx[] = { 1, 2 };
+  } 
+  // Rider & Stockman 2018 PNAS modulation i
+  if (waveformIndex == 5) {  
+    float harmIdx[] = { 1, 2 }; // fundamental and 2nd harmonics
     float harmAmps[] = { 1, 0.5 };
     float harmPhases[] = { 0, 0.711 };  // converted values in Rider to radians
     level = 0;
     for (int ii = 0; ii < 2; ii++) {
       level = level + harmAmps[ii] * sin(2 * pi * phase * harmIdx[ii] - 2 * pi * harmPhases[ii]);
     }
+    // Use the pre-computed "StockmanRange" to place level in the 0-1 range
     level = (level - stockmanRange[0]) / (stockmanRange[1] - stockmanRange[0]);
   }
-  if (waveformIndex == 6) {  // Rider & Stockman 2018 PNAS modulation iii
-    float harmIdx[] = { 1, 3, 4 };
+  // Rider & Stockman 2018 PNAS modulation iii
+  if (waveformIndex == 6) {  
+    float harmIdx[] = { 1, 3, 4 }; // fundamental, 3rd, and 4th hamonics
     float harmAmps[] = { 0.5, 1, 1 };
     float harmPhases[] = { 0, 0.9250, 0.1278 };  // converted values in Rider to radians
     level = 0;
     for (int ii = 0; ii < 3; ii++) {
       level = level + harmAmps[ii] * sin(2 * pi * phase * harmIdx[ii] - 2 * pi * harmPhases[ii]);
     }
+    // Use the pre-computed "StockmanRange" to place level in the 0-1 range
     level = (level - stockmanRange[0]) / (stockmanRange[1] - stockmanRange[0]);
   }
   return level;
@@ -677,7 +698,6 @@ float applyAmplitudeModulation(float level, int ledIndex) {
     float offset = float(settings[ledIndex][background[ledIndex]]) / float(maxLevelVal);
     level = (level - offset) * modLevel + offset;
   }
-
   // Half-cosine window at block onset and offset
   if (amplitudeIndex == 2) {
     float totalDur = 1 / amplitudeVals[amplitudeIndex][0];
@@ -709,7 +729,7 @@ float applyAmplitudeModulation(float level, int ledIndex) {
 
 void pulseWidthModulate(int setting) {
   // Use pulse-width modulation to vary the
-  // intensity of the built in arduino LED
+  // intensity of the built in Arduino LED
   float portionOn = float(setting) / float(maxLevelVal);
   int timeOn = round(minLEDAddressTime * portionOn);
   int timeOff = minLEDAddressTime - timeOn;
@@ -734,6 +754,7 @@ void pulseWidthModulate(int setting) {
   }
 }
 
+// Send a setting to an wired LED
 void writeToOneCombiLED(int level, int ledIndex) {
   // sanitize the input
   level = max(level, 0);
@@ -749,6 +770,7 @@ void writeToOneCombiLED(int level, int ledIndex) {
   Wire.endTransmission(1);
 }
 
+// Dump the settings matrix to the console
 void printCurrentSettings() {
   int numRows = sizeof(settings) / sizeof(settings[0]);
   int numCols = sizeof(settings[0]) / sizeof(settings[0][0]);
@@ -763,6 +785,7 @@ void printCurrentSettings() {
   Serial.print("\n");
 }
 
+// Clean-up after receiving inputString
 void clearInputString() {
   for (int ii = 0; ii < inputStringLen; ii++) {
     inputString[ii] = "";
