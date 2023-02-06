@@ -4,10 +4,10 @@ function serialOpen(obj)
 portList = serialportlist("available");
 
 % Look for the two possible string patterns
-arduinoPortIdx = find((contains(serialportlist("available"),'tty.usbmodem')));
+arduinoPortIdx = find((contains(serialportlist("available"),'tty.usbserial')));
 arduinoPort = portList(arduinoPortIdx);
 if isempty(arduinoPort)
-    arduinoPortIdx = find((contains(serialportlist("available"),'tty.usbserial')));
+    arduinoPortIdx = find((contains(serialportlist("available"),'tty.usbmodem2101')));
     arduinoPort = portList(arduinoPortIdx);
 end
 

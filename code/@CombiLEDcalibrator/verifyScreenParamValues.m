@@ -23,7 +23,7 @@ function obj = verifyScreenParamValues(obj)
         mainScreen.unitNumber = '0';
         
         % gammaTableLength & samplesPerPixel
-        mainScreen.gammaTableLength = 100; %size(obj.origLUT,1);
+        mainScreen.gammaTableLength = 45; %size(obj.origLUT,1);
         mainScreen.samplesPerPixel  = 8; %size(obj.origLUT,2);
         
         % bitsPerSample, bitsPerPixel, samplesPerPixel
@@ -41,7 +41,7 @@ function obj = verifyScreenParamValues(obj)
         targetScreen.unitNumber = '0';
         
         % gammaTableLength & samplesPerPixel
-        targetScreen.gammaTableLength = 100; %size(obj.origLUT,1);
+        targetScreen.gammaTableLength = 45; %size(obj.origLUT,1);
         targetScreen.samplesPerPixel  = 8; %size(obj.origLUT,2);
         
         % bitsPerSample, bitsPerPixel, samplesPerPixel

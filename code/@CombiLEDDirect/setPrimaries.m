@@ -24,6 +24,9 @@ if isempty(obj.serialObj)
     return
 end
 
+% Flush the serial port IO
+flush(obj.serialObj);
+
 % Place the CombiLED in Direct Mode
 writeline(obj.serialObj,'DM');
 
@@ -33,7 +36,7 @@ writeline(obj.serialObj,'LL');
 % Loop over the primaries and write the values
 for ii=1:length(settings)
     writeline(obj.serialObj,num2str(settings(ii)));
-    pause(0.1);
+    readline(obj.serialObj);
 end
 
 if obj.verbose
