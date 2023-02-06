@@ -21,6 +21,10 @@
 
 function calibrateCombiLED
 
+% Set the save location for calibration files
+calLocalData = fullfile(tbLocateProject('prizmatixDesign'),'cal');
+setpref('BrainardLabToolbox','CalDataFolder',calLocalData);
+
 % Select a calibration configuration name
 AvailableCalibrationConfigs = {  ...
     '@CombiLEDcalibrator'
@@ -118,65 +122,6 @@ end
 
 
 
-function radiometerOBJ = generateRadiometerObject(calibrationConfig)
-
-    if (strcmp(calibrationConfig, 'debugMode'))
-        % Dummy radiometer - measurements will be all zeros
-        radiometerOBJ = PR670dev('emulateHardware',  true);
-        fprintf('Will employ a dummy PR670dev radiometer (all measurements will be zeros).\n');
-        return;
-    end
-    
-    
-    % List of available @Radiometer objects
-    radiometerTypes = {'PR650dev', 'PR670dev', 'SpectroCALdev'};
-    radiometersNum  = numel(radiometerTypes);
-    
-    % Ask the user to select a calibrator type
-    fprintf('\n\n Available radiometer types:\n');
-    for k = 1:radiometersNum
-        fprintf('\t[%3d]. %s\n', k, radiometerTypes{k});
-    end
-    defaultRadiometerIndex = 1;
-    radiometerIndex = input(sprintf('\tSelect a radiometer type (1-%d) [%d]: ', radiometersNum, defaultRadiometerIndex));
-    if isempty(radiometerIndex) || (radiometerIndex < 1) || (radiometerIndex > radiometersNum)
-        radiometerIndex = defaultRadiometerIndex;
-    end
-    fprintf('\n\t-------------------------\n');
-    selectedRadiometerType = radiometerTypes{radiometerIndex};
-    fprintf('Will employ an %s radiometer object [%d].\n', selectedRadiometerType, radiometerIndex);
-    
-    if (strcmp(selectedRadiometerType, 'PR650dev'))
-        radiometerOBJ = PR650dev(...
-            'verbosity',        1, ...                  % 1 -> minimum verbosity
-            'devicePortString', '/dev/cu.KeySerial1');  % PR650 port string
-
-    elseif (strcmp(selectedRadiometerType, 'PR670dev'))
-        radiometerOBJ = PR670dev(...
-            'verbosity',        1, ...       % 1 -> minimum verbosity
-            'devicePortString', [] ...       % empty -> automatic port detection
-            );
-        
-        % Specify extra properties
-        desiredSyncMode = 'OFF';
-        desiredCyclesToAverage = 1;
-        desiredSensitivityMode = 'STANDARD';
-        desiredApertureSize = '1 DEG';
-        desiredExposureTime =  'ADAPTIVE';  % 'ADAPTIVE' or range [1-6000 msec] or [1-30000 msec]
-        
-        radiometerOBJ.setOptions(...
-        	'syncMode',         desiredSyncMode, ...
-            'cyclesToAverage',  desiredCyclesToAverage, ...
-            'sensitivityMode',  desiredSensitivityMode, ...
-            'apertureSize',     desiredApertureSize, ...
-            'exposureTime',     desiredExposureTime ...
-        );
-    elseif (strcmp(selectedRadiometerType, 'SpectroCALdev'))
-        radiometerOBJ = SpectroCALdev();
-    end
-    
-end
-
 
 % Configuration function for the SACC display (LED/DLP optical system)
 function [displaySettings, calibratorOptions] = generateConfigurationForCombiLED()
@@ -212,8 +157,8 @@ calibratorOptions = CalibratorOptions( ...
     'fgColor',                          [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 ], ...     % color of the foreground
     'meterDistance',                    1.0, ...                        % distance between radiometer and screen in meters
     'leaveRoomTime',                    3, ...                          % seconds allowed to leave room
-    'nAverage',                         1, ...                          % number of repeated measurements for averaging
-    'nMeas',                            10, ...                          % samples along gamma curve
+    'nAverage',                         3, ...                          % number of repeated measurements for averaging
+    'nMeas',                            15, ...                         % samples along gamma curve
     'nDevices',                         displayPrimariesNum, ...        % number of primaries
     'boxSize',                          600, ...                        % size of calibration stimulus in pixels
     'boxOffsetX',                       0, ...                          % x-offset from center of screen (neg: leftwards, pos:rightwards)
