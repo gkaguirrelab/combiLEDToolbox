@@ -102,7 +102,7 @@
 // Set this variable to use the built-in LED to simulate
 // the output of the Prizmatix device
 //
-bool simulatePrizmatix = false;  // Simulate the prizmatix LEDs
+bool simulatePrizmatix = false;
 /////////////////////////////////////////////////////////////////////
 
 // Fixed hardware values
@@ -411,17 +411,17 @@ void getConfig() {
 void getDirect() {
   // Operate in modal state waiting for input
   waitForNewString();
+
+  // The primary Direct mode activity: send a 
+  // vector of settings for the LEDs.
   if (strncmp(inputString, "LL", 2) == 0) {
     clearInputString();
+    Serial.println("LED settings:");
     for (int ii = 0; ii < nLEDs; ii++) {
-      Serial.print("LED");
-      Serial.print(ii);
-      Serial.print(": ");
       waitForNewString();
       int level = atoi(inputString);
       clearInputString();
-      Serial.print(level);
-      Serial.print("; ");
+      Serial.println("ok");
       if (simulatePrizmatix) {
         pulseWidthModulate(level);
       } else {
