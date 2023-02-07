@@ -128,6 +128,19 @@ bool modulationState = false;       // When we are running, are we modulating?
 const uint8_t nLEDs = 8;     // the number of LEDs
 const uint8_t nLevels = 45;  // the number of discrete settings that are specified for each LED
 
+// L-cone, ~16% at 2 and 10 degrees
+// int settings[nLEDs][nLevels] = {
+//   { 1591, 1628, 1666, 1704, 1743, 1781, 1817, 1855, 1892, 1929, 1966, 2002, 2037, 2073, 2108, 2144, 2180, 2215, 2251, 2288, 2325, 2362, 2399, 2434, 2470, 2505, 2539, 2571, 2602, 2632, 2662, 2692, 2722, 2751, 2781, 2812, 2844, 2876, 2908, 2939, 2971, 3003, 3035, 3066, 3097 },
+//   { 3674, 3632, 3589, 3546, 3503, 3460, 3416, 3372, 3326, 3281, 3234, 3187, 3140, 3092, 3044, 2996, 2948, 2899, 2849, 2799, 2747, 2693, 2639, 2583, 2527, 2471, 2415, 2358, 2301, 2243, 2183, 2122, 2060, 1996, 1930, 1863, 1795, 1726, 1658, 1588, 1517, 1444, 1368, 1289, 1207 },
+//   { 569, 723, 870, 1004, 1129, 1248, 1361, 1473, 1580, 1686, 1789, 1888, 1983, 2073, 2159, 2240, 2320, 2401, 2480, 2559, 2635, 2708, 2777, 2840, 2901, 2957, 3012, 3068, 3128, 3191, 3254, 3316, 3370, 3420, 3468, 3517, 3570, 3622, 3671, 3713, 3748, 3780, 3812, 3851, 3896 },
+//   { 3997, 3960, 3923, 3885, 3844, 3800, 3753, 3704, 3652, 3598, 3545, 3491, 3438, 3384, 3331, 3275, 3216, 3154, 3088, 3019, 2947, 2876, 2806, 2735, 2662, 2586, 2507, 2425, 2336, 2244, 2151, 2059, 1965, 1866, 1760, 1649, 1534, 1419, 1305, 1190, 1067, 935, 791, 637, 469 },
+//   { 2161, 2176, 2190, 2204, 2219, 2233, 2247, 2262, 2276, 2290, 2304, 2318, 2332, 2346, 2359, 2374, 2387, 2401, 2414, 2427, 2441, 2454, 2468, 2480, 2493, 2507, 2519, 2532, 2546, 2558, 2571, 2584, 2596, 2610, 2622, 2634, 2648, 2660, 2673, 2686, 2698, 2711, 2724, 2736, 2749 },
+//   { 3960, 3918, 3878, 3837, 3791, 3738, 3679, 3615, 3551, 3487, 3425, 3364, 3303, 3238, 3165, 3079, 2988, 2897, 2813, 2732, 2654, 2574, 2492, 2407, 2318, 2226, 2133, 2039, 1944, 1848, 1752, 1656, 1558, 1460, 1364, 1269, 1172, 1074, 974, 875, 778, 685, 591, 491, 376 },
+//   { 4026, 3982, 3934, 3881, 3825, 3770, 3711, 3645, 3569, 3487, 3408, 3338, 3279, 3224, 3164, 3093, 3014, 2931, 2847, 2761, 2673, 2581, 2488, 2393, 2302, 2214, 2127, 2039, 1946, 1849, 1752, 1655, 1557, 1458, 1356, 1254, 1149, 1044, 938, 833, 726, 617, 506, 396, 283 },
+//   { 3910, 3838, 3765, 3691, 3613, 3531, 3447, 3362, 3278, 3197, 3119, 3045, 2974, 2901, 2826, 2744, 2659, 2577, 2500, 2426, 2351, 2271, 2187, 2100, 2013, 1927, 1842, 1758, 1673, 1589, 1504, 1420, 1335, 1249, 1162, 1074, 986, 900, 816, 735, 653, 571, 486, 397, 297 },
+// };
+// uint8_t background[nLEDs] = { 22, 22, 22, 22, 22, 22, 22, 22 };
+
 // Light Flux, ~100 % contrast, built for speed
 // int settings[nLEDs][nLevels] = {
 //   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -412,7 +425,7 @@ void getDirect() {
   // Operate in modal state waiting for input
   waitForNewString();
 
-  // The primary Direct mode activity: send a 
+  // The primary Direct mode activity: send a
   // vector of settings for the LEDs.
   if (strncmp(inputString, "LL", 2) == 0) {
     clearInputString();
@@ -649,18 +662,18 @@ float getFrequencyModulation(float phase) {
     } else {
       level = 0;
     }
-  } 
+  }
   // Saw-tooth, ramping on and then sudden off
   if (waveformIndex == 3) {
     level = phase;
-  } 
+  }
   // Saw-tooth, ramping off and then sudden on
   if (waveformIndex == 4) {  // saw off
     level = 1 - phase;
-  } 
+  }
   // Rider & Stockman 2018 PNAS modulation i
-  if (waveformIndex == 5) {  
-    float harmIdx[] = { 1, 2 }; // fundamental and 2nd harmonics
+  if (waveformIndex == 5) {
+    float harmIdx[] = { 1, 2 };  // fundamental and 2nd harmonics
     float harmAmps[] = { 1, 0.5 };
     float harmPhases[] = { 0, 0.711 };  // converted values in Rider to radians
     level = 0;
@@ -671,8 +684,8 @@ float getFrequencyModulation(float phase) {
     level = (level - stockmanRange[0]) / (stockmanRange[1] - stockmanRange[0]);
   }
   // Rider & Stockman 2018 PNAS modulation iii
-  if (waveformIndex == 6) {  
-    float harmIdx[] = { 1, 3, 4 }; // fundamental, 3rd, and 4th hamonics
+  if (waveformIndex == 6) {
+    float harmIdx[] = { 1, 3, 4 };  // fundamental, 3rd, and 4th hamonics
     float harmAmps[] = { 0.5, 1, 1 };
     float harmPhases[] = { 0, 0.9250, 0.1278 };  // converted values in Rider to radians
     level = 0;
