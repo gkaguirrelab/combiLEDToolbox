@@ -18,18 +18,10 @@ displayObj.setPrimaries(deviceSettings);
 % Get the radiometer object
 radiometerObj = obj.radiometerObj;
 
-% If the radiometer object is empty, assume we are simulating a
-% radiometer and return the simulated response for the CombiLED
-% then measure
-if isempty(radiometerObj)
-    load(fullfile(fileparts(mfilename('fullpath')),'resultSet.mat'),'resultSet');
-    measurement = resultSet.B_primary*targetSettings;
-    S = resultSet.Svals;
-    foo = 1;
-else
-    obj.radiometerObj.measure();
-    measurement = obj.radiometerObj.measurement.energy;
-    S = WlsToS((obj.radiometerObj.measurement.spectralAxis)');
-end
+% Measure
+obj.radiometerObj.measure();
+measurement = obj.radiometerObj.measurement.energy;
+S = WlsToS((obj.radiometerObj.measurement.spectralAxis)');
+
 
 end

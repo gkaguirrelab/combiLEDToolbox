@@ -2,7 +2,7 @@
 % CombiLED 8-channel light engine. This routine presumes that the
 % prizModulationFirmware is installed on the device.
 
-classdef CombiLEDDirect < handle
+classdef CombiLEDcontrol < handle
 
     properties (Constant)
 
@@ -34,7 +34,7 @@ classdef CombiLEDDirect < handle
     methods
 
         % Constructor
-        function obj = CombiLEDDirect(varargin)
+        function obj = CombiLEDcontrol(varargin)
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;

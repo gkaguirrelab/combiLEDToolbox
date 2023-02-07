@@ -4,7 +4,7 @@ function setDisplaysInitialState(obj, userPrompt)
     calStruct = obj.cal;
     
     % Instantiate the CombiLED object and setup the serial connection
-    displayObj = CombiLEDDirect();
+    displayObj = CombiLEDcontrol();
     displayObj.serialOpen;
 
     % Give it 5 seconds for the firmware to boot
