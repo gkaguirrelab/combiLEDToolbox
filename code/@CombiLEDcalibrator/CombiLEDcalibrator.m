@@ -51,6 +51,11 @@ classdef CombiLEDcalibrator < Calibrator
         % Method to shutdown the Calibrator
         obj = shutdown(obj);
 
+    end % Implementations of required -- Public -- Abstract methods defined in the @Calibrator interface
+
+    % Protected methods that shadow functions from the calibration class
+    methods (Access = protected)
+
         % Shadow the function from the calibrator class so that we can 
         % plot all  8 primaries
         obj = plotBasicMeasurements(obj);
@@ -58,11 +63,6 @@ classdef CombiLEDcalibrator < Calibrator
         % Shadow the function from the calibrator class so that we can set
         % the number of input levels to 12 bit.
         obj = processRawData(obj)
-
-    end % Implementations of required -- Public -- Abstract methods defined in the @Calibrator interface
-
-    % Private methods that only the CombiLEDCalibrator object can call
-    methods (Access = private)
 
     end  % Private methods
 
