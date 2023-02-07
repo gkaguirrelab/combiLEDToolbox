@@ -1,6 +1,6 @@
 function [isolatingPrimary] = isolateReceptors(T_receptors,whichReceptorsToIsolate, ...
     whichReceptorsToIgnore, B_primary,backgroundPrimary,initialPrimary, ...
-    primaryHeadRoom,desiredContrasts,ambientSpd)
+    primaryHeadRoom,desiredContrastVector,ambientSpd,matchConstraint)
 % [isolatingPrimaries] = ReceptorIsolate(T_receptors,whichReceptorsToIsolate, ...
 %   whichReceptorsToIgnore,whichReceptorsToMinimize,B_primary,backgroundPrimary,initialPrimary, ...
 %   whichPrimariesToPin,primaryHeadRoom,maxPowerDiff,[desiredContrasts],[ambientSpd])
@@ -81,7 +81,7 @@ function [isolatingPrimary] = isolateReceptors(T_receptors,whichReceptorsToIsola
 x = initialPrimary;
 
 %% Figure out which receptors get zero modulation and set up constraint for this.
-whichReceptorsToZero = setdiff(1:size(T_receptors,1),[whichReceptorsToIsolate whichReceptorsToIgnore whichReceptorsToMinimize]);
+whichReceptorsToZero = setdiff(1:size(T_receptors,1),[whichReceptorsToIsolate whichReceptorsToIgnore]);
 backgroundReceptors = T_receptors*B_primary*backgroundPrimary;
 backgroundReceptorsZero = backgroundReceptors(whichReceptorsToZero);
 Aeq = T_receptors(whichReceptorsToZero,:)*B_primary;
@@ -115,40 +115,6 @@ for b = 1:size(backgroundPrimary, 1)
     end
 end
 
-% If we are pinning some primaries, pin them by forcing their upper and
-% lower bounds to match their initial value.
-if (~isempty(whichPrimariesToPin))
-    vlb(whichPrimariesToPin) = initialPrimary(whichPrimariesToPin);
-    vub(whichPrimariesToPin) = initialPrimary(whichPrimariesToPin);
-end
-
-%% Construct constraint matrix.  This enforces the
-% smoothness constraint on the spectrum, ensuring that
-% the maximum difference between power at adjacent wavelengths
-% is less than passed value maxPowerDiff.
-%
-% We use two tacked matrices, C1 and C2, so that we can express
-% the desired absolute value constraint in terms of a set of
-% linear inequalities.
-vectorLength = size(B_primary, 1);
-C1 = zeros(vectorLength-1, vectorLength);
-for i = 1:vectorLength-1
-    C1(i,i) = 1;
-    C1(i,i+1) = -1;
-end
-
-C2 = zeros(vectorLength-1, vectorLength);
-for i = 1:vectorLength-1
-    C2(i,i) = -1;
-    C2(i,i+1) = 1;
-end
-
-% Stack the two constraint matrices and premultiply
-% by the primary basis.
-C = [C1 ; C2]*B_primary;
-
-% Tolerance vector, just expand passed maxPowerDiff.
-Q = ones(2*(vectorLength-1), 1)*maxPowerDiff;
 
 %% Fix numerical issues with vlb > vub that can sometimes come up.
 vlbTolerance = 1e-6;
@@ -158,12 +124,14 @@ for ii = 1:length(vub)
     end
 end
 
+myObj = @(x) IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrastVector,matchConstraint);
+
 %% Optimize.
 % Progressive smoothing seems to work better than providing final value all
 % at once.
 options = optimset('fmincon');
 options = optimset(options,'Diagnostics','off','Display','off','LargeScale','on','Algorithm','interior-point', 'MaxFunEvals', 100000, 'TolFun', 1e-10, 'TolCon', 1e-10, 'TolX', 1e-10);
-x = fmincon(@(x) IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrasts,whichReceptorsToMinimize),x,C,Q,Aeq,beq,vlb,vub,[],options);
+x = fmincon(myObj,x,[],[],Aeq,beq,vlb,vub,[],options);
 
 % Extract the output arguments to be passed back.
 % This enforces a sanity check on the primaries.
@@ -182,26 +150,21 @@ end
 
 % Optimization subfunction.  This mixes maximizing response of isolated
 % receptors with smoothness.
-function f = IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrasts,whichReceptorsToMinimize)
+function fVal = IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrasts,matchConstraint)
 
 % Compute background including ambient
 backgroundSpd = B_primary*backgroundPrimary + ambientSpd;
 
-% Comptue contrasts for receptors we want to isolate.
+% Compute contrasts for receptors we want to isolate.
 modulationSpd = B_primary*(x-backgroundPrimary);
 isolateContrasts = T_receptors(whichReceptorsToIsolate,:)*modulationSpd ./ (T_receptors(whichReceptorsToIsolate,:)*backgroundSpd);
 
-
-if isempty(desiredContrasts)
-    % Want the sum of the isolated receptor contrasts to be big. fmincon
-    % minimizes, hence the negative sign.  Acheive this by minimizing
-    % the difference between the isolatedContrasts and unity.  For
-    % reasons not fully understood, this works better numerically than
-    % simply minimizing the negative sum of squared contrasts.
-    f = sum((isolateContrasts-1).^2);
+if length(isolateContrasts)==1
+    fVal = norm(abs(isolateContrasts)-1);
 else
-    % Minimize difference between desired and what we get
-    f = sum((isolateContrasts-desiredContrasts').^2);
+    beta = isolateContrasts\desiredContrasts';
+    scaledContrasts = beta*isolateContrasts;
+    fVal = norm(abs(isolateContrasts)-1) + (10^matchConstraint)*norm(scaledContrasts-desiredContrasts');
 end
 
 end

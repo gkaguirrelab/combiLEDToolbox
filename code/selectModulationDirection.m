@@ -1,4 +1,4 @@
-function [whichReceptorsToTarget,whichReceptorsToIgnore,whichReceptorsToMinimize,desiredContrast] = ...
+function [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast] = ...
     selectModulationDirection(whichDirection)
 
 %% Define the receptor sets to isolate
@@ -17,41 +17,34 @@ function [whichReceptorsToTarget,whichReceptorsToIgnore,whichReceptorsToMinimize
 %   SnoMel- S modulation in the periphery that silences melanopsin.
 
 switch whichDirection
-    case 'LMS'
-        whichReceptorsToTarget = [4 5 6];
-        whichReceptorsToIgnore = [1 2 3];
-        whichReceptorsToMinimize = []; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-        desiredContrast = [0.35 0.35 0.35];
     case 'LminusM'
         whichReceptorsToTarget = [1 2 4 5];
         whichReceptorsToIgnore = 7;
-        whichReceptorsToMinimize = []; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-        desiredContrast = [0.10 -0.10 0.10 -0.10];
+        desiredContrast = [1 -1 1 -1];
     case 'L'
         whichReceptorsToTarget = [1 4];
         whichReceptorsToIgnore = 7;
-        whichReceptorsToMinimize = []; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-        desiredContrast = [0.15 0.15];
+        desiredContrast = [1 1];
     case 'M'
         whichReceptorsToTarget = [2 5];
         whichReceptorsToIgnore = 7;
-        whichReceptorsToMinimize = []; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-        desiredContrast = [0.15 0.15];
+        desiredContrast = [1 1];
     case 'S'
         whichReceptorsToTarget = [3 6];
         whichReceptorsToIgnore = [7];
-        whichReceptorsToMinimize = []; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-        desiredContrast = [0.75 0.75];
+        desiredContrast = [1 1];
+    case 'LMS'
+        whichReceptorsToTarget = [1 2 3 4 5 6];
+        whichReceptorsToIgnore = [];
+        desiredContrast = [1 1 1 1 1 1];
     case 'Mel'
         whichReceptorsToTarget = 7;
         whichReceptorsToIgnore = [1 2 3];
-        whichReceptorsToMinimize = []; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-        desiredContrast = 0.5;
+        desiredContrast = 1;
     case 'SnoMel'
         whichReceptorsToTarget = 6;
         whichReceptorsToIgnore = [1 2 3];
-        whichReceptorsToMinimize = []; % This can be left empty. Any receptor that is neither targeted nor ignored will be silenced
-        desiredContrast = 0.60;
+        desiredContrast = 1;
 end
 
 end

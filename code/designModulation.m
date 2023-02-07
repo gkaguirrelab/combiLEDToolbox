@@ -39,6 +39,7 @@ function resultSet = designModulation(whichDirection,varargin)
 p = inputParser;
 p.addRequired('whichDirection',@ischar)
 p.addParameter('calLocalData',fullfile(tbLocateProject('prizmatixDesign'),'cal','CombiLED.mat'),@ischar);
+p.addParameter('matchConstraint',1,@isscalar)
 p.addParameter('primaryHeadRoom',0.00,@isscalar)
 p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
@@ -57,6 +58,8 @@ cal = cals{end};
 S = cal.rawData.S;
 B_primary = cal.processedData.P_device;
 ambientSpd = cal.processedData.P_ambient;
+
+matchConstraint = p.Results.matchConstraint;
 
 %% Get the photoreceptors
 % Define photoreceptor classes that we'll consider.
@@ -77,13 +80,8 @@ fractionBleached = [];
 T_receptors = GetHumanPhotoreceptorSS(S, photoreceptorClasses, p.Results.fieldSizeDegrees, p.Results.observerAgeInYears, p.Results.pupilDiameterMm, [], fractionBleached, oxygenationFraction, vesselThickness);
 
 % Define the modulation direction
-[whichReceptorsToTarget,whichReceptorsToIgnore,whichReceptorsToMinimize,desiredContrast] = ...
+[whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast] = ...
     selectModulationDirection(whichDirection);
-
-% No smoothness constraint enforced for the LED primaries
-maxPowerDiff = 10000;
-% Don't pin any primaries.
-whichPrimariesToPin = [];
 
 primaryHeadRoom = p.Results.primaryHeadRoom;
 
@@ -92,9 +90,10 @@ backgroundPrimary = repmat(0.5,size(B_primary,2),1);
 
 x0Primary = backgroundPrimary;
 
-modulationPrimary = ReceptorIsolate(T_receptors,whichReceptorsToTarget, whichReceptorsToIgnore, whichReceptorsToMinimize, ...
-    B_primary, backgroundPrimary, x0Primary, whichPrimariesToPin,...
-    primaryHeadRoom, maxPowerDiff, desiredContrast, ambientSpd);
+modulationPrimary = isolateReceptors(T_receptors,whichReceptorsToTarget, ...
+    whichReceptorsToIgnore, B_primary,backgroundPrimary,x0Primary, ...
+    primaryHeadRoom,desiredContrast,ambientSpd,matchConstraint);
+
 
 % Obtain the isomerization rate for the receptors by the background
 backgroundReceptors = T_receptors*(B_primary*backgroundPrimary + ambientSpd);
@@ -104,6 +103,56 @@ backgroundReceptors = T_receptors*(B_primary*backgroundPrimary + ambientSpd);
 
 modulationReceptors = T_receptors*B_primary*(modulationPrimary - backgroundPrimary);
 contrastReceptors = modulationReceptors ./ backgroundReceptors
+
+    positiveModulationSPD = B_primary*modulationPrimary;
+    negativeModulationSPD = B_primary*(backgroundPrimary-(modulationPrimary - backgroundPrimary));
+    backgroundSPD = B_primary*backgroundPrimary;
+    wavelengthsNm = SToWls(S);
+
+        % Create a figure with an appropriate title
+        fighandle = figure('Name',sprintf([whichDirection ': contrast = %2.2f'],contrastReceptors(1)));
+
+        % Modulation spectra
+        subplot(1,2,1)
+        hold on
+        plot(wavelengthsNm,positiveModulationSPD,'k','LineWidth',2);
+        plot(wavelengthsNm,negativeModulationSPD,'r','LineWidth',2);
+        plot(wavelengthsNm,backgroundSPD,'Color',[0.5 0.5 0.5],'LineWidth',2);
+        title(sprintf('Modulation spectra [%2.2f]',contrastReceptors(1)));
+        xlim([300 800]);
+        xlabel('Wavelength');
+        ylabel('Power');
+        legend({'Positive', 'Negative', 'Background'},'Location','NorthEast');
+
+        % Primaries
+        subplot(1,2,2)
+        c = 0:7;
+        hold on
+        plot(c,modulationPrimary,'*k');
+        plot(c,backgroundPrimary+(-(modulationPrimary-backgroundPrimary)),'*r');
+        plot(c,backgroundPrimary,'-*','Color',[0.5 0.5 0.5]);
+        set(gca,'TickLabelInterpreter','none');
+        title('Primary settings');
+        ylim([0 1]);
+        xlabel('Primary');
+        ylabel('Setting');
+
+for ii = 1:8
+        str = '{ ';
+    for bb = -22:1:22
+        level = round(4095 * (backgroundPrimary(ii)+ (bb/22)*(-(modulationPrimary(ii)-backgroundPrimary(ii)))));
+        val = round(4095 * cal.processedData.gammaTable(level+1,ii));
+        settings(ii,bb+23) = val;
+        str = [str sprintf('%d, ',val)];
+    end
+    str = str(1:end-2);
+    str = [str ' },\n'];
+    fprintf(str);
+end
+
+% Create the settings matrix for this modulation, using the gamma table
+% from the calibration
+foo=1;
 
 
 end
