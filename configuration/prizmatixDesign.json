@@ -20,7 +20,7 @@
 		"localHookTemplate": "",
 		"name": "BrainardLabToolbox",
 		"pathPlacement": "append",
-		"subfolder": ["Plotting", "OneLiners","Overrides","OOCalibrationToolbox"],
+		"subfolder": ["Klein10AColorimeterToolbox","Plotting", "OneLiners","Overrides","OOCalibrationToolbox"],
 		"toolboxRoot": "",
 		"type": "git",
 		"update": "",
