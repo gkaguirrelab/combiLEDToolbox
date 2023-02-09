@@ -15,9 +15,6 @@ displayObj = obj.displayObj;
 % Update the primaries
 displayObj.setPrimaries(deviceSettings);
 
-% Get the radiometer object
-radiometerObj = obj.radiometerObj;
-
 % Measure
 obj.radiometerObj.measure();
 measurement = obj.radiometerObj.measurement.energy;
