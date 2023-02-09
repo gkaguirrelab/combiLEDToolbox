@@ -353,6 +353,7 @@ void getConfig() {
     if (waveformIndex == 4) Serial.println("saw off");
     if (waveformIndex == 5) Serial.println("Stockman i");
     if (waveformIndex == 6) Serial.println("Stockman iii");
+    if (waveformIndex == 7) Serial.println("Stockman iv");
     if (waveformIndex >= 5) updateStockmanRange();
   }
   if (strncmp(inputString, "FQ", 2) == 0) {
@@ -692,10 +693,10 @@ float getFrequencyModulation(float phase) {
   if (waveformIndex == 5) {
     float harmIdx[] = { 1, 2 };  // fundamental and 2nd harmonics
     float harmAmps[] = { 1, 0.5 };
-    float harmPhases[] = { 0, 1.5708 };  // converted values in Rider to radians
+    float harmPhases[] = { 0, 1.3265 };  // converted values in Rider to radians
     level = 0;
     for (int ii = 0; ii < 2; ii++) {
-      level = level + harmAmps[ii] * sin( harmIdx[ii]*(2*pi*phase-harmPhases[ii]));
+      level = level + harmAmps[ii] * sin( harmIdx[ii]*2*pi*phase+harmPhases[ii]);
     }
     // Use the pre-computed "StockmanRange" to place level in the 0-1 range
     level = (level - stockmanRange[0]) / (stockmanRange[1] - stockmanRange[0]);
@@ -704,10 +705,22 @@ float getFrequencyModulation(float phase) {
   if (waveformIndex == 6) {
     float harmIdx[] = { 1, 3, 4 };  // fundamental, 3rd, and 4th hamonics
     float harmAmps[] = { 0.5, 1, 1 };
-    float harmPhases[] = { 0, 5.8119, 3.9444 };  // converted values in Rider to radians
+    float harmPhases[] = { 0, 2.9060, 0.8029 };  // converted values in Rider to radians
     level = 0;
     for (int ii = 0; ii < 3; ii++) {
-      level = level + harmAmps[ii] * sin( harmIdx[ii]*(2*pi*phase-harmPhases[ii]));
+      level = level + harmAmps[ii] * sin( harmIdx[ii]*2*pi*phase+harmPhases[ii]);
+    }
+    // Use the pre-computed "StockmanRange" to place level in the 0-1 range
+    level = (level - stockmanRange[0]) / (stockmanRange[1] - stockmanRange[0]);
+  }
+    // Rider & Stockman 2018 PNAS modulation iv
+  if (waveformIndex == 7) {
+    float harmIdx[] = { 1, 2, 4 };  // fundamental, 2nd, and 4th hamonics
+    float harmAmps[] = { 0.5, 1, 1 };
+    float harmPhases[] = { 0, 0.7854, 4.3633 };  // converted values in Rider to radians
+    level = 0;
+    for (int ii = 0; ii < 3; ii++) {
+      level = level + harmAmps[ii] * sin( harmIdx[ii]*2*pi*phase+harmPhases[ii]);
     }
     // Use the pre-computed "StockmanRange" to place level in the 0-1 range
     level = (level - stockmanRange[0]) / (stockmanRange[1] - stockmanRange[0]);
