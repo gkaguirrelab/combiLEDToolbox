@@ -343,7 +343,7 @@ void getConfig() {
   waitForNewString();
   if (strncmp(inputString, "WF", 2) == 0) {
     clearInputString();
-    Serial.print("waveform index: ");
+    Serial.println("waveform index: ");
     waitForNewString();
     waveformIndex = atoi(inputString);
     if (waveformIndex == 0) Serial.println("none");
@@ -357,14 +357,14 @@ void getConfig() {
   }
   if (strncmp(inputString, "FQ", 2) == 0) {
     clearInputString();
-    Serial.print("frequency in Hz: ");
+    Serial.println("frequency in Hz: ");
     waitForNewString();
     cycleDur = 1e6 / atof(inputString);
     Serial.println(atof(inputString));
   }
   if (strncmp(inputString, "AM", 2) == 0) {
     clearInputString();
-    Serial.print("AM index: ");
+    Serial.println("AM index: ");
     waitForNewString();
     amplitudeIndex = atoi(inputString);
     if (amplitudeIndex == 0) Serial.println("none");
@@ -372,18 +372,19 @@ void getConfig() {
     if (amplitudeIndex == 2) Serial.println("half-cos");
   }
   if (strncmp(inputString, "V", 1) == 0) {
-    int amIndex = atoi(inputString[1]);
+    int valIndex = atoi(inputString[1]);
     clearInputString();
-    Serial.print("AM val 1 [float]: ");
+    if (valIndex == 0) {
+      Serial.println("AM freq [float]: ");
+    }
+    if (valIndex == 1) {
+      Serial.println("AM 2nd val [float]: ");
+    }
     waitForNewString();
-    amplitudeVals[amIndex][0] = atof(inputString);
-    Serial.print(amplitudeVals[amIndex][1]);
+    float newVal = atof(inputString);
+    amplitudeVals[amplitudeIndex][valIndex] = newVal;
+    Serial.println(newVal);
     clearInputString();
-    Serial.print("; AM val 2 [float]: ");
-    waitForNewString();
-    amplitudeVals[amIndex][1] = atof(inputString);
-    Serial.print(amplitudeVals[amIndex][2]);
-    Serial.println("; done");
   }
   if (strncmp(inputString, "L", 1) == 0) {
     int ledIndex = atoi(inputString[1]);
@@ -392,17 +393,33 @@ void getConfig() {
     Serial.print(nLevels);
     Serial.print(" levels for LED");
     Serial.print(ledIndex);
-    Serial.print(": ");
+    Serial.println(": ");
     clearInputString();
     for (int ii = 0; ii < nLevels; ii++) {
       waitForNewString();
       int level = atoi(inputString);
       settings[ledIndex][ii] = level;
       clearInputString();
-      Serial.print(".");
+      Serial.println(".");
     }
-    Serial.println("done");
     identifyActiveLEDs();
+  }
+  if (strncmp(inputString, "BG", 2) == 0) {
+    clearInputString();
+    Serial.print("Enter ");
+    Serial.print(nLEDs);
+    Serial.print(" background levels:");
+    Serial.println(": ");
+    clearInputString();
+    for (int ii = 0; ii < nLEDs; ii++) {
+      waitForNewString();
+      int level = atoi(inputString);
+      background[ii] = level;
+      clearInputString();
+      Serial.println(".");
+    }
+    identifyActiveLEDs();
+    setToBackground();
   }
   if (strncmp(inputString, "PR", 2) == 0) {
     printCurrentSettings();
@@ -678,7 +695,7 @@ float getFrequencyModulation(float phase) {
     float harmPhases[] = { 0, 1.5708 };  // converted values in Rider to radians
     level = 0;
     for (int ii = 0; ii < 2; ii++) {
-      level = level + harmAmps[ii] * sin(2 * pi * phase * harmIdx[ii] - 2 * pi * harmPhases[ii]);
+      level = level + harmAmps[ii] * sin( harmIdx[ii]*(2*pi*phase-harmPhases[ii]));
     }
     // Use the pre-computed "StockmanRange" to place level in the 0-1 range
     level = (level - stockmanRange[0]) / (stockmanRange[1] - stockmanRange[0]);
@@ -690,7 +707,7 @@ float getFrequencyModulation(float phase) {
     float harmPhases[] = { 0, 5.8119, 3.9444 };  // converted values in Rider to radians
     level = 0;
     for (int ii = 0; ii < 3; ii++) {
-      level = level + harmAmps[ii] * sin(2 * pi * phase * harmIdx[ii] - 2 * pi * harmPhases[ii]);
+      level = level + harmAmps[ii] * sin( harmIdx[ii]*(2*pi*phase-harmPhases[ii]));
     }
     // Use the pre-computed "StockmanRange" to place level in the 0-1 range
     level = (level - stockmanRange[0]) / (stockmanRange[1] - stockmanRange[0]);
