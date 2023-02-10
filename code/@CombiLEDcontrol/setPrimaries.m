@@ -28,10 +28,17 @@ end
 flush(obj.serialObj);
 
 % Place the CombiLED in Direct Mode
-writeline(obj.serialObj,'DM');
+switch obj.deviceState
+    case 'DIRECT'
+    case {'RUN','CONFIG'}
+        writeline(obj.serialObj,'DM');
+        readline(obj.serialObj);
+        obj.deviceState = 'DIRECT';
+end
 
 % Prepare to send settings
 writeline(obj.serialObj,'LL');
+readline(obj.serialObj);
 
 % Loop over the primaries and write the values
 for ii=1:length(settings)

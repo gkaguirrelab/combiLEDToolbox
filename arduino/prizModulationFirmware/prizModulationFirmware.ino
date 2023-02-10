@@ -72,8 +72,7 @@
 //                        2 - square wave (off-on)
 //                        3 - saw-tooth on
 //                        4 - saw-tooth off
-//                        5 - Rider & Stockman 2018 PNAS example i
-//                        5 - Rider & Stockman 2018 PNAS example iii
+//                        5 - compound modulation
 //  cycleDur            Scalar. The duration in microseconds of the waveform.
 //  amplitudeIndex      Scalar. Defines the amplitude modulation profile:
 //                        0 - none
@@ -232,10 +231,17 @@ float amplitudeVals[3][2] = {
   { 0.1, 1.5 },  // Half-cosine window: block frequency Hz, window duration seconds
 };
 
-// We need to know the min and max values across a full cycle of a given Stockman
-// compound waveform. This variable holds the result. See the function
-// "updateStockmanRange" for details.
-float stockmanRange[2] = { 0, 0 };
+// Variables the define compound modulations. Support is provided for a compound modulation
+// composed of up to 5 sinusoids. For each sinusoid, we specify the harmonic index relative
+// to the fundamental FM modulation frequency (0 for no modulation), the relative amplitude
+// of that harmonic component, and the relative phase (in radians). Finally, we need to know
+// the min and max values across a full cycle of a given compound waveform. The compoundRange
+// variable holds the result. See the function "updateCompoundRange" for details.
+float compoundHarmonics[5] = { 1, 2, 4, 0, 0 };         // Multiples of the fundamental
+float compoundAmps[5] = { 0.5, 1, 1, 0, 0 };            // Relative amplitudes
+float compoundPhases[5] = { 0, 0.7854, 4.3633, 0, 0 };  // Phase delay in radians
+float compoundRange[2] = { 0, 1 };
+
 
 // Timing variables
 uint8_t waveformIndex = 1;                     // Default to sinusoid
@@ -272,9 +278,9 @@ void setup() {
   identifyActiveLEDs();
   // Set the device to background
   setToBackground();
-  // Update the "Stockman Range", in case we have
+  // Update the compoundRange, in case we have
   // a compound modulation to start
-  updateStockmanRange();
+  updateCompoundRange();
   // Show the console menu
   showModeMenu();
 }
@@ -342,8 +348,8 @@ void getConfig() {
   // Operate in modal state waiting for input
   waitForNewString();
   if (strncmp(inputString, "WF", 2) == 0) {
-    clearInputString();
     Serial.println("waveform index: ");
+    clearInputString();
     waitForNewString();
     waveformIndex = atoi(inputString);
     if (waveformIndex == 0) Serial.println("none");
@@ -351,21 +357,21 @@ void getConfig() {
     if (waveformIndex == 2) Serial.println("square");
     if (waveformIndex == 3) Serial.println("saw on");
     if (waveformIndex == 4) Serial.println("saw off");
-    if (waveformIndex == 5) Serial.println("Stockman i");
-    if (waveformIndex == 6) Serial.println("Stockman iii");
-    if (waveformIndex == 7) Serial.println("Stockman iv");
-    if (waveformIndex >= 5) updateStockmanRange();
+    if (waveformIndex == 5) {
+      Serial.println("compound");
+      updateCompoundRange();
+    }
   }
   if (strncmp(inputString, "FQ", 2) == 0) {
-    clearInputString();
     Serial.println("frequency in Hz: ");
+    clearInputString();
     waitForNewString();
     cycleDur = 1e6 / atof(inputString);
     Serial.println(atof(inputString));
   }
   if (strncmp(inputString, "AM", 2) == 0) {
-    clearInputString();
     Serial.println("AM index: ");
+    clearInputString();
     waitForNewString();
     amplitudeIndex = atoi(inputString);
     if (amplitudeIndex == 0) Serial.println("none");
@@ -374,22 +380,57 @@ void getConfig() {
   }
   if (strncmp(inputString, "V", 1) == 0) {
     int valIndex = atoi(inputString[1]);
-    clearInputString();
     if (valIndex == 0) {
       Serial.println("AM freq [float]: ");
     }
     if (valIndex == 1) {
       Serial.println("AM 2nd val [float]: ");
     }
+    clearInputString();
     waitForNewString();
     float newVal = atof(inputString);
     amplitudeVals[amplitudeIndex][valIndex] = newVal;
     Serial.println(newVal);
     clearInputString();
   }
+  if (strncmp(inputString, "CH", 2) == 0) {
+    Serial.println("Enter 5 compound harmonics: ");
+    clearInputString();
+    for (int ii = 0; ii < 5; ii++) {
+      waitForNewString();
+      float newVal = atof(inputString);
+      compoundHarmonics[ii] = newVal;
+      Serial.println(".");
+      clearInputString();
+    }
+    updateCompoundRange();
+  }
+  if (strncmp(inputString, "CA", 2) == 0) {
+    Serial.println("Enter 5 compound amplitudes: ");
+    clearInputString();
+    for (int ii = 0; ii < 5; ii++) {
+      waitForNewString();
+      float newVal = atof(inputString);
+      compoundAmps[ii] = newVal;
+      Serial.println(".");
+      clearInputString();
+    }
+    updateCompoundRange();
+  }
+  if (strncmp(inputString, "CP", 2) == 0) {
+    Serial.println("Enter 5 compound phases: ");
+    clearInputString();
+    for (int ii = 0; ii < 5; ii++) {
+      waitForNewString();
+      float newVal = atof(inputString);
+      compoundPhases[ii] = newVal;
+      Serial.println(".");
+      clearInputString();
+    }
+    updateCompoundRange();
+  }
   if (strncmp(inputString, "L", 1) == 0) {
     int ledIndex = atoi(inputString[1]);
-    clearInputString();
     Serial.print("Enter ");
     Serial.print(nLevels);
     Serial.print(" levels for LED");
@@ -400,13 +441,12 @@ void getConfig() {
       waitForNewString();
       int level = atoi(inputString);
       settings[ledIndex][ii] = level;
-      clearInputString();
       Serial.println(".");
+      clearInputString();
     }
     identifyActiveLEDs();
   }
   if (strncmp(inputString, "BG", 2) == 0) {
-    clearInputString();
     Serial.print("Enter ");
     Serial.print(nLEDs);
     Serial.print(" background levels:");
@@ -416,8 +456,8 @@ void getConfig() {
       waitForNewString();
       int level = atoi(inputString);
       background[ii] = level;
-      clearInputString();
       Serial.println(".");
+      clearInputString();
     }
     identifyActiveLEDs();
     setToBackground();
@@ -446,13 +486,13 @@ void getDirect() {
   // The primary Direct mode activity: send a
   // vector of settings for the LEDs.
   if (strncmp(inputString, "LL", 2) == 0) {
-    clearInputString();
     Serial.println("LED settings:");
+    clearInputString();
     for (int ii = 0; ii < nLEDs; ii++) {
       waitForNewString();
       int level = atoi(inputString);
-      clearInputString();
       Serial.println("ok");
+      clearInputString();
       if (simulatePrizmatix) {
         pulseWidthModulate(level);
       } else {
@@ -561,14 +601,14 @@ void waitForNewString() {
   }
 }
 
-void updateStockmanRange() {
-  // The "Stockman" modulations are compound waveforms. We need
+void updateCompoundRange() {
+  // Handle compound modulations. We need
   // to scale the waveform between 0 and 1. Here we examine
   // waveform across an entire cycle and store the range to be
   // used later to scale the levels to within 0 and 1.
   if (waveformIndex < 5) return;
-  stockmanRange[0] = 0;
-  stockmanRange[1] = 1;
+  compoundRange[0] = 0;
+  compoundRange[1] = 1;
   float newRange[2] = { 0, 0 };
   float phase = 0;
   float level = 0;
@@ -578,8 +618,8 @@ void updateStockmanRange() {
     newRange[0] = min(newRange[0], level);
     newRange[1] = max(newRange[1], level);
   }
-  stockmanRange[0] = newRange[0];
-  stockmanRange[1] = newRange[1];
+  compoundRange[0] = newRange[0];
+  compoundRange[1] = newRange[1];
 }
 
 void identifyActiveLEDs() {
@@ -689,41 +729,14 @@ float getFrequencyModulation(float phase) {
   if (waveformIndex == 4) {  // saw off
     level = 1 - phase;
   }
-  // Rider & Stockman 2018 PNAS modulation i
+  // Compound modulation
   if (waveformIndex == 5) {
-    float harmIdx[] = { 1, 2 };  // fundamental and 2nd harmonics
-    float harmAmps[] = { 1, 0.5 };
-    float harmPhases[] = { 0, 1.3265 };  // converted values in Rider to radians
     level = 0;
-    for (int ii = 0; ii < 2; ii++) {
-      level = level + harmAmps[ii] * sin( harmIdx[ii]*2*pi*phase+harmPhases[ii]);
+    for (int ii = 0; ii < 5; ii++) {
+      level = level + compoundAmps[ii] * sin(compoundHarmonics[ii] * 2 * pi * phase + compoundPhases[ii]);
     }
-    // Use the pre-computed "StockmanRange" to place level in the 0-1 range
-    level = (level - stockmanRange[0]) / (stockmanRange[1] - stockmanRange[0]);
-  }
-  // Rider & Stockman 2018 PNAS modulation iii
-  if (waveformIndex == 6) {
-    float harmIdx[] = { 1, 3, 4 };  // fundamental, 3rd, and 4th hamonics
-    float harmAmps[] = { 0.5, 1, 1 };
-    float harmPhases[] = { 0, 2.9060, 0.8029 };  // converted values in Rider to radians
-    level = 0;
-    for (int ii = 0; ii < 3; ii++) {
-      level = level + harmAmps[ii] * sin( harmIdx[ii]*2*pi*phase+harmPhases[ii]);
-    }
-    // Use the pre-computed "StockmanRange" to place level in the 0-1 range
-    level = (level - stockmanRange[0]) / (stockmanRange[1] - stockmanRange[0]);
-  }
-    // Rider & Stockman 2018 PNAS modulation iv
-  if (waveformIndex == 7) {
-    float harmIdx[] = { 1, 2, 4 };  // fundamental, 2nd, and 4th hamonics
-    float harmAmps[] = { 0.5, 1, 1 };
-    float harmPhases[] = { 0, 0.7854, 4.3633 };  // converted values in Rider to radians
-    level = 0;
-    for (int ii = 0; ii < 3; ii++) {
-      level = level + harmAmps[ii] * sin( harmIdx[ii]*2*pi*phase+harmPhases[ii]);
-    }
-    // Use the pre-computed "StockmanRange" to place level in the 0-1 range
-    level = (level - stockmanRange[0]) / (stockmanRange[1] - stockmanRange[0]);
+    // Use the pre-computed "compoundRange" to place level in the 0-1 range
+    level = (level - compoundRange[0]) / (compoundRange[1] - compoundRange[0]);
   }
   return level;
 }

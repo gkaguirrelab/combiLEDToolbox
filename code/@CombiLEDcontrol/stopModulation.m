@@ -1,4 +1,4 @@
-function runModulation(obj)
+function stopModulation(obj)
 
 % Check that we have an open connection
 if isempty(obj.serialObj)
@@ -14,13 +14,13 @@ switch obj.deviceState
         obj.deviceState = 'RUN';
 end
 
-% Go
-writeline(obj.serialObj,'GO');
+% Stop
+writeline(obj.serialObj,'SP');
 readline(obj.serialObj);
 
 % Say
 if obj.verbose
-    fprintf('Running modulation\n');
+    fprintf('Stopped modulation\n');
 end
 
 end

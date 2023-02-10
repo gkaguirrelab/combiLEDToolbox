@@ -7,6 +7,7 @@ classdef CombiLEDcontrol < handle
     properties (Constant)
 
         nPrimaries = 8;
+        nDiscreteLevels = 45;
         baudrate = 57600;
         refreshRate = 10; % Hz
     end
@@ -20,6 +21,7 @@ classdef CombiLEDcontrol < handle
     properties (SetAccess=private)
 
         serialObj
+        deviceState
 
     end
 
@@ -51,6 +53,13 @@ classdef CombiLEDcontrol < handle
         serialClose(obj)
         setPrimaries(obj,settings)
         runModulation(obj)
+        stopModulation(ob)
+        setFrequency(obj,frequency)
+        setSettings(obj,settings)
+        setBackground(obj,background)
+        setAMIndex(obj,amplitudeIndex)
+        setAMValues(obj,amplitudeVals)
+        setCompoundModulation(obj,compoundHarmonics,compoundAmplitudes,compoundPhases)
 
     end
 end

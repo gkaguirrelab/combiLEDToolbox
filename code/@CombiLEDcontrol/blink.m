@@ -1,26 +1,24 @@
-function runModulation(obj)
+function blink(obj)
 
 % Check that we have an open connection
 if isempty(obj.serialObj)
     warning('Serial connection not yet established');
 end
 
-% Place the CombiLED in Run Mode
+% Check the CombiLED in Run Mode
 switch obj.deviceState
     case 'RUN'
     case {'CONFIG','DIRECT'}
-        writeline(obj.serialObj,'RM');
-        readline(obj.serialObj);
-        obj.deviceState = 'RUN';
+        return
 end
 
-% Go
-writeline(obj.serialObj,'GO');
+% Send the blink
+writeline(obj.serialObj,'BL');
 readline(obj.serialObj);
 
 % Say
 if obj.verbose
-    fprintf('Running modulation\n');
+    fprintf('blink\n');
 end
 
 end
