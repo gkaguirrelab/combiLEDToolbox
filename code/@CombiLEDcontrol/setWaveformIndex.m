@@ -1,4 +1,4 @@
-function setAMValues(obj,amplitudeValues)
+function setWaveformIndex(obj,waveformIndex)
 
 % Check that we have an open connection
 if isempty(obj.serialObj)
@@ -15,18 +15,14 @@ switch obj.deviceState
         obj.deviceState = 'CONFIG';
 end
 
-% Enter the amplitude values send state
-writeline(obj.serialObj,'AV');
+% Set the waveform to index
+writeline(obj.serialObj,'WF');
+readline(obj.serialObj);
+writeline(obj.serialObj,num2str(waveformIndex));
 readline(obj.serialObj);
 
-% Loop over the amplitude values and send these
-for ii = 1:length(amplitudeValues)
-    writeline(obj.serialObj,num2str(amplitudeValues(ii)));
-    readline(obj.serialObj);
-end
-
 if obj.verbose
-    fprintf('Amplitude modulation values sent\n');
+    fprintf('Waveform index set\n');
 end
 
 end

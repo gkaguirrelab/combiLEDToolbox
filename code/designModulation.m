@@ -1,4 +1,4 @@
-function resultSet = designModulation(whichDirection,varargin)
+function modResult = designModulation(whichDirection,varargin)
 % Nominal primaries and SPDs for isolating post-receptoral mechanisms
 %
 % Syntax:
@@ -34,6 +34,9 @@ function resultSet = designModulation(whichDirection,varargin)
 %
 % Examples:
 
+% Save the ToolboxToolbox verbosity pref, and set it to false
+tbtbVerbose = getpref('ToolboxToolbox','verbose');
+setpref('ToolboxToolbox','verbose',false);
 
 %% Parse input
 p = inputParser;
@@ -45,11 +48,12 @@ p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
 p.addParameter('searchOverBackgrounds',false,@islogical)
-p.addParameter('verbose',true,@islogical)
-p.addParameter('makePlots',true,@islogical)
+p.addParameter('verbose',false,@islogical)
+p.addParameter('makePlots',false,@islogical)
 p.parse(whichDirection,varargin{:});
 
-% Set some constants
+% Restore the TbTb verbosity pref
+setpref('ToolboxToolbox','verbose',tbtbVerbose);
 
 % Load the calibration
 load(p.Results.calLocalData,'cals');
@@ -66,6 +70,7 @@ matchConstraint = p.Results.matchConstraint;
 photoreceptorClasses = {...
     'LConeTabulatedAbsorbance2Deg', 'MConeTabulatedAbsorbance2Deg', 'SConeTabulatedAbsorbance2Deg',...
     'LConeTabulatedAbsorbance10Deg', 'MConeTabulatedAbsorbance10Deg', 'SConeTabulatedAbsorbance10Deg',...
+    'LConeTabulatedAbsorbancePenumbral', 'MConeTabulatedAbsorbancePenumbral', 'SConeTabulatedAbsorbancePenumbral', ...
     'Melanopsin'};
 photoreceptorClassNames = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel'};
 
@@ -94,7 +99,6 @@ modulationPrimary = isolateReceptors(T_receptors,whichReceptorsToTarget, ...
     whichReceptorsToIgnore, B_primary,backgroundPrimary,x0Primary, ...
     primaryHeadRoom,desiredContrast,ambientSpd,matchConstraint);
 
-
 % Obtain the isomerization rate for the receptors by the background
 backgroundReceptors = T_receptors*(B_primary*backgroundPrimary + ambientSpd);
 
@@ -104,41 +108,44 @@ backgroundReceptors = T_receptors*(B_primary*backgroundPrimary + ambientSpd);
 modulationReceptors = T_receptors*B_primary*(modulationPrimary - backgroundPrimary);
 contrastReceptors = modulationReceptors ./ backgroundReceptors
 
-    positiveModulationSPD = B_primary*modulationPrimary;
-    negativeModulationSPD = B_primary*(backgroundPrimary-(modulationPrimary - backgroundPrimary));
-    backgroundSPD = B_primary*backgroundPrimary;
-    wavelengthsNm = SToWls(S);
+positiveModulationSPD = B_primary*modulationPrimary;
+negativeModulationSPD = B_primary*(backgroundPrimary-(modulationPrimary - backgroundPrimary));
+backgroundSPD = B_primary*backgroundPrimary;
+wavelengthsNm = SToWls(S);
 
-        % Create a figure with an appropriate title
-        fighandle = figure('Name',sprintf([whichDirection ': contrast = %2.2f'],contrastReceptors(1)));
+if p.Results.makePlots
 
-        % Modulation spectra
-        subplot(1,2,1)
-        hold on
-        plot(wavelengthsNm,positiveModulationSPD,'k','LineWidth',2);
-        plot(wavelengthsNm,negativeModulationSPD,'r','LineWidth',2);
-        plot(wavelengthsNm,backgroundSPD,'Color',[0.5 0.5 0.5],'LineWidth',2);
-        title(sprintf('Modulation spectra [%2.2f]',contrastReceptors(1)));
-        xlim([300 800]);
-        xlabel('Wavelength');
-        ylabel('Power');
-        legend({'Positive', 'Negative', 'Background'},'Location','NorthEast');
+    % Create a figure with an appropriate title
+    fighandle = figure('Name',sprintf([whichDirection ': contrast = %2.2f'],contrastReceptors(1)));
 
-        % Primaries
-        subplot(1,2,2)
-        c = 0:7;
-        hold on
-        plot(c,modulationPrimary,'*k');
-        plot(c,backgroundPrimary+(-(modulationPrimary-backgroundPrimary)),'*r');
-        plot(c,backgroundPrimary,'-*','Color',[0.5 0.5 0.5]);
-        set(gca,'TickLabelInterpreter','none');
-        title('Primary settings');
-        ylim([0 1]);
-        xlabel('Primary');
-        ylabel('Setting');
+    % Modulation spectra
+    subplot(1,2,1)
+    hold on
+    plot(wavelengthsNm,positiveModulationSPD,'k','LineWidth',2);
+    plot(wavelengthsNm,negativeModulationSPD,'r','LineWidth',2);
+    plot(wavelengthsNm,backgroundSPD,'Color',[0.5 0.5 0.5],'LineWidth',2);
+    title(sprintf('Modulation spectra [%2.2f]',contrastReceptors(whichReceptorsToTarget(1))));
+    xlim([300 800]);
+    xlabel('Wavelength');
+    ylabel('Power');
+    legend({'Positive', 'Negative', 'Background'},'Location','NorthEast');
+
+    % Primaries
+    subplot(1,2,2)
+    c = 0:7;
+    hold on
+    plot(c,modulationPrimary,'*k');
+    plot(c,backgroundPrimary+(-(modulationPrimary-backgroundPrimary)),'*r');
+    plot(c,backgroundPrimary,'-*','Color',[0.5 0.5 0.5]);
+    set(gca,'TickLabelInterpreter','none');
+    title('Primary settings');
+    ylim([0 1]);
+    xlabel('Primary');
+    ylabel('Setting');
+end
 
 for ii = 1:8
-        str = '{ ';
+    str = '{ ';
     for bb = -22:1:22
         level = round(4095 * (backgroundPrimary(ii)+ (bb/22)*(-(modulationPrimary(ii)-backgroundPrimary(ii)))));
         val = round(4095 * cal.processedData.gammaTable(level+1,ii));
@@ -147,13 +154,10 @@ for ii = 1:8
     end
     str = str(1:end-2);
     str = [str ' },\n'];
-    fprintf(str);
+    %    fprintf(str);
 end
 
-% Create the settings matrix for this modulation, using the gamma table
-% from the calibration
-foo=1;
-
+modResult.settings = settings;
 
 end
 

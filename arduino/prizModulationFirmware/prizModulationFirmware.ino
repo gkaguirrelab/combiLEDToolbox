@@ -378,20 +378,18 @@ void getConfig() {
     if (amplitudeIndex == 1) Serial.println("sin");
     if (amplitudeIndex == 2) Serial.println("half-cos");
   }
-  if (strncmp(inputString, "V", 1) == 0) {
-    int valIndex = atoi(inputString[1]);
-    if (valIndex == 0) {
-      Serial.println("AM freq [float]: ");
-    }
-    if (valIndex == 1) {
-      Serial.println("AM 2nd val [float]: ");
-    }
+  if (strncmp(inputString, "AV", 2) == 0) {
+    Serial.println("AM freq [float]: ");
     clearInputString();
     waitForNewString();
     float newVal = atof(inputString);
-    amplitudeVals[amplitudeIndex][valIndex] = newVal;
-    Serial.println(newVal);
+    amplitudeVals[amplitudeIndex][0] = newVal;
+    Serial.println("AM 2nd val [float]: ");
     clearInputString();
+    waitForNewString();
+    newVal = atof(inputString);
+    amplitudeVals[amplitudeIndex][1] = newVal;
+    Serial.println("done");
   }
   if (strncmp(inputString, "CH", 2) == 0) {
     Serial.println("Enter 5 compound harmonics: ");
@@ -429,20 +427,21 @@ void getConfig() {
     }
     updateCompoundRange();
   }
-  if (strncmp(inputString, "L", 1) == 0) {
-    int ledIndex = atoi(inputString[1]);
+  if (strncmp(inputString, "ST", 2) == 0) {
     Serial.print("Enter ");
     Serial.print(nLevels);
-    Serial.print(" levels for LED");
-    Serial.print(ledIndex);
-    Serial.println(": ");
+    Serial.print(" levels for the ");
+    Serial.print(nLEDs);
+    Serial.println(" LEDs: ");
     clearInputString();
-    for (int ii = 0; ii < nLevels; ii++) {
-      waitForNewString();
-      int level = atoi(inputString);
-      settings[ledIndex][ii] = level;
-      Serial.println(".");
-      clearInputString();
+    for (int ii = 0; ii < nLEDs; ii++) {
+      for (int jj = 0; jj < nLevels; jj++) {
+        waitForNewString();
+        int level = atoi(inputString);
+        settings[ii][jj] = level;
+        Serial.println(".");
+        clearInputString();
+      }
     }
     identifyActiveLEDs();
   }
@@ -555,11 +554,13 @@ void getRun() {
     }
     if (strncmp(inputString, "DM", 2) == 0) {
       modulationState = false;
+      setToBackground();
       deviceState = DIRECT;
       showModeMenu();
     }
     if (strncmp(inputString, "CM", 2) == 0) {
       modulationState = false;
+      setToBackground();
       deviceState = CONFIG;
       showModeMenu();
     }

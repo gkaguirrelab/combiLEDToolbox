@@ -20,13 +20,13 @@ end
 obj.serialObj = serialport(arduinoPort,obj.baudrate);
 
 % Use CR and LF as a terminator
-configureTerminator(obj.serialObj,"CR/LF")
+configureTerminator(obj.serialObj,"CR/LF");
 
 % Set the initial device state
 obj.deviceState = 'RUN';
 
 % Need to read and thus clear the first line of command output
-readline(obj.serialObj)
+readline(obj.serialObj);
 
 % Announce it
 if obj.verbose

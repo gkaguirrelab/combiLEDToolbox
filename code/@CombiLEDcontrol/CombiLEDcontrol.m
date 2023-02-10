@@ -52,7 +52,7 @@ classdef CombiLEDcontrol < handle
         serialOpen(obj)
         serialClose(obj)
         setPrimaries(obj,settings)
-        runModulation(obj)
+        startModulation(obj)
         stopModulation(ob)
         setFrequency(obj,frequency)
         setSettings(obj,settings)
@@ -60,6 +60,7 @@ classdef CombiLEDcontrol < handle
         setAMIndex(obj,amplitudeIndex)
         setAMValues(obj,amplitudeVals)
         setCompoundModulation(obj,compoundHarmonics,compoundAmplitudes,compoundPhases)
-
+        setWaveformIndex(obj,waveformIndex)
+        
     end
 end

@@ -6,7 +6,7 @@ if size(settings,1) ~= obj.nPrimaries
     return
 end
 
-if size(settings,1) ~= obj.nDiscreteLevels
+if size(settings,2) ~= obj.nDiscreteLevels
     warning('Second dimension of settings must match number of discrete levels')
     return
 end
@@ -38,14 +38,14 @@ switch obj.deviceState
         obj.deviceState = 'CONFIG';
 end
 
+% Enter the settings send state
+writeline(obj.serialObj,'ST');
+readline(obj.serialObj);
 
 % Loop over the primaries and send the settings
 for ii = 1:obj.nPrimaries
-    str = sprintf('L%d',ii-1);
-    writeline(obj.serialObj,str);
-    readline(obj.serialObj);
-    for ll= 1:obj.nDiscreteLevels
-        writeline(obj.serialObj,num2str(settings(ii,ll)));
+    for jj= 1:obj.nDiscreteLevels
+        writeline(obj.serialObj,num2str(settings(ii,jj)));
         readline(obj.serialObj);
     end
 end

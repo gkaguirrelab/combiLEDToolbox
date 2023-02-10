@@ -17,33 +17,53 @@ function [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast] = ...
 %   SnoMel- S modulation in the periphery that silences melanopsin.
 
 switch whichDirection
-    case 'LminusM'
+    case 'LminusM_wide'
         whichReceptorsToTarget = [1 2 4 5];
-        whichReceptorsToIgnore = 7;
+        whichReceptorsToIgnore = 10;
         desiredContrast = [1 -1 1 -1];
-    case 'L'
+    case 'LminusM_foveal'
+        whichReceptorsToTarget = [1 2];
+        whichReceptorsToIgnore = [4 5 7 8 9 10];
+        desiredContrast = [1 -1];
+    case 'L_wide'
         whichReceptorsToTarget = [1 4];
-        whichReceptorsToIgnore = 7;
+        whichReceptorsToIgnore = [7 8 9 10];
         desiredContrast = [1 1];
+    case 'L_foveal'
+        whichReceptorsToTarget = [1];
+        whichReceptorsToIgnore = [4 5 7 8 9 10];
+        desiredContrast = [1];
     case 'M'
         whichReceptorsToTarget = [2 5];
-        whichReceptorsToIgnore = 7;
+        whichReceptorsToIgnore = [7 8 9 10];
         desiredContrast = [1 1];
-    case 'S'
+    case 'S_wide'
         whichReceptorsToTarget = [3 6];
-        whichReceptorsToIgnore = [7];
+        whichReceptorsToIgnore = [7 8 9 10];
         desiredContrast = [1 1];
+    case 'S_foveal'
+        whichReceptorsToTarget = [3];
+        whichReceptorsToIgnore = [6 7 8 9 10];
+        desiredContrast = [1];
+    case 'PenumbralLuminance'
+        whichReceptorsToTarget = [4 5 7 8];
+        whichReceptorsToIgnore = [10];
+        desiredContrast = [-1 -1 1 1];
+    case 'CenterPeriphery'
+        whichReceptorsToTarget = [1 2 3 4 5 6];
+        whichReceptorsToIgnore = [7 8 9 10];
+        desiredContrast = [-1 -1 -1 1 1 1];
     case 'LMS'
         whichReceptorsToTarget = [1 2 3 4 5 6];
-        whichReceptorsToIgnore = [];
+        whichReceptorsToIgnore = [7 8 9 10];
         desiredContrast = [1 1 1 1 1 1];
     case 'Mel'
-        whichReceptorsToTarget = 7;
-        whichReceptorsToIgnore = [1 2 3];
+        whichReceptorsToTarget = 10;
+        whichReceptorsToIgnore = [1 2 3 7 8 9];
         desiredContrast = 1;
     case 'SnoMel'
         whichReceptorsToTarget = 6;
-        whichReceptorsToIgnore = [1 2 3];
+        whichReceptorsToIgnore = [1 2 3 7 8 9];
         desiredContrast = 1;
 end
 

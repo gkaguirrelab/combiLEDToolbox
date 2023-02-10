@@ -33,7 +33,6 @@ switch obj.deviceState
         obj.deviceState = 'CONFIG';
 end
 
-
 % Enter the background send state
 writeline(obj.serialObj,'BG');
 readline(obj.serialObj);

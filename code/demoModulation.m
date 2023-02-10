@@ -5,28 +5,99 @@ obj = CombiLEDcontrol();
 % Establish a serial connection
 obj.serialOpen;
 
+% Modulation demos
+modDemos = {...
+    'melanopsin pulses', ...
+    'Rider & Stockman distortion red', ...
+    'S-cone flicker distortion', ...
+    'penumbral cone flicker', ...
+    'light flux flicker', ...
+    'L–M slow modulation' ...
+    };
+
+% Present the options
+charSet = [97:97+25, 65:65+25];
+fprintf('\nSelect a modDemos:\n')
+for pp=1:length(modDemos)
+    optionName=['\t' char(charSet(pp)) '. ' modDemos{pp} '\n'];
+    fprintf(optionName);
+end
+
+choice = input('\nYour choice (return for done): ','s');
+idx = 0;
+if ~isempty(choice)
+    choice = int32(choice);
+    idx = find(charSet == choice);
+    notDone = true;
+else
+    notDone = false;
+end
+
+switch idx
+    case 1
+        melDemo(obj)
+    case 2
+        riderStockmanDemo(obj)
+    case 3
+        SConeDistortion(obj)
+    case 4
+        penumbralConeFlicker(obj)
+    case 5
+        lightFluxFlicker(obj)
+end
+
+obj.startModulation;
+
+
+
 % Send some values to set up that define a compound L-cone modulation described in
 % Rider & Stockman 2018 PNAS
-% M, sinusoidal modulation at 10 Hz with
-% a 0.5 Hz AM envelope
-obj.setFrequency(5);
-obj.setAMIndex(1);
-obj.setAMValues([0.2,1]);
 
-compoundHarmonics=[1,3,4,0,0];
-compoundAmplitudes=[0.5,1,1,0,0];
-compoundPhases=deg2rad([0,333,226,0,0]);
-obj.setCompoundModulation(compoundHarmonics,compoundAmplitudes,compoundPhases)
+function melDemo(obj)
+    modResult = designModulation('Mel','observerAgeInYears',53);
+    obj.setSettings(modResult.settings);
+    obj.setWaveformIndex(2);
+    obj.setFrequency(0.2);
+    obj.setAMIndex(2);
+    obj.setAMValues([0.2,0.5]);
+end
 
-pause
+function lightFluxFlicker(obj)
+    modResult = designModulation('LMS');
+    obj.setSettings(modResult.settings);
+    obj.setWaveformIndex(1);
+    obj.setFrequency(48);
+    obj.setAMIndex(1);
+    obj.setAMValues([1,1]);
+end
 
-% Start the modulation, wait 3 seconds, present a blink attention event,
-% wait 2 more seconds, then stop the modulation
-obj.runModulation;
-pause(2.5)
-obj.blink;
-pause(2.5)
-obj.stopModulation;
+function SConeDistortion(obj)
+    modResult = designModulation('S_foveal');
+    obj.setSettings(modResult.settings);
+    obj.setWaveformIndex(1);
+    obj.setFrequency(30);
+    obj.setAMIndex(1);
+    obj.setAMValues([1,1]);
+end
 
-% Close the serial connection
-obj.serialClose;
+function riderStockmanDemo(obj)
+    modResult = designModulation('L_foveal');
+    obj.setSettings(modResult.settings);
+    obj.setWaveformIndex(1);
+    obj.setFrequency(5);
+    obj.setAMIndex(1);
+    obj.setAMValues([0.33,0.5]);
+    compoundHarmonics=[1,3,4,0,0];
+    compoundAmplitudes=[0.5,1,1,0,0];
+    compoundPhases=deg2rad([0,333,226,0,0]);
+    obj.setCompoundModulation(compoundHarmonics,compoundAmplitudes,compoundPhases)
+end
+
+function penumbralConeFlicker(obj)
+    modResult = designModulation('PenumbralLuminance','matchConstraint',0,'observerAgeInYears',53);
+    obj.setSettings(modResult.settings);
+    obj.setWaveformIndex(1);
+    obj.setFrequency(16);
+    obj.setAMIndex(1);
+    obj.setAMValues([0.5,1]);
+end
