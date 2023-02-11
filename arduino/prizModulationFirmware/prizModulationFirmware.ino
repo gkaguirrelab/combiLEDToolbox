@@ -60,12 +60,14 @@
 //                      to write a setting to one LED. We set this minimum address
 //                      time to somewhat longer than this to allow time for
 //                      computation overhead.
-//  settings            8x45 int matrix, all between 0 and maxLevelVal.
-//                      Each column defines the settings on the 8 LEDs at
-//                      each of n discrete levels of the modulation.
-//  background          8x1 int array of value 0-44. Specifies the
-//                      background level to be taken from the settings for
-//                      each LED.
+//  settings            8x45 int matrix, all between 0 and 1e4. Each column
+//                      defines the linear settings on the 8 LEDs at each of n
+//                      levels of the modulation. The specified value is divided
+//                      by 1e4 to yield a value between 0 and 1. This value is
+//                      subject to gamma correction prior to being passed to the
+//                      LED.
+//  background          8x1 int array of value 0-1e4. Specifies the
+//                      background level for each LED.
 //  waveformIndex       Scalar. Defines the waveform profile to be used:
 //                        0 - no modulation (stay at background)
 //                        1 - sinusoid
@@ -111,6 +113,9 @@ const int minLEDAddressTime = 300;  // the time, in microseconds, required to se
 // Fixed reality values
 const float pi = 3.1415927;
 
+// Fixed value that scales the settings and background values to floats between 0 and 1
+const int settingScale = 1e4;
+
 // Define the device states
 enum { CONFIG,
        RUN,
@@ -127,100 +132,40 @@ bool modulationState = false;       // When we are running, are we modulating?
 const uint8_t nLEDs = 8;     // the number of LEDs
 const uint8_t nLevels = 45;  // the number of discrete settings that are specified for each LED
 
-// L-cone, ~16% at 2 and 10 degrees
-int settings[nLEDs][nLevels] = {
-  { 1591, 1628, 1666, 1704, 1743, 1781, 1817, 1855, 1892, 1929, 1966, 2002, 2037, 2073, 2108, 2144, 2180, 2215, 2251, 2288, 2325, 2362, 2399, 2434, 2470, 2505, 2539, 2571, 2602, 2632, 2662, 2692, 2722, 2751, 2781, 2812, 2844, 2876, 2908, 2939, 2971, 3003, 3035, 3066, 3097 },
-  { 3674, 3632, 3589, 3546, 3503, 3460, 3416, 3372, 3326, 3281, 3234, 3187, 3140, 3092, 3044, 2996, 2948, 2899, 2849, 2799, 2747, 2693, 2639, 2583, 2527, 2471, 2415, 2358, 2301, 2243, 2183, 2122, 2060, 1996, 1930, 1863, 1795, 1726, 1658, 1588, 1517, 1444, 1368, 1289, 1207 },
-  { 569, 723, 870, 1004, 1129, 1248, 1361, 1473, 1580, 1686, 1789, 1888, 1983, 2073, 2159, 2240, 2320, 2401, 2480, 2559, 2635, 2708, 2777, 2840, 2901, 2957, 3012, 3068, 3128, 3191, 3254, 3316, 3370, 3420, 3468, 3517, 3570, 3622, 3671, 3713, 3748, 3780, 3812, 3851, 3896 },
-  { 3997, 3960, 3923, 3885, 3844, 3800, 3753, 3704, 3652, 3598, 3545, 3491, 3438, 3384, 3331, 3275, 3216, 3154, 3088, 3019, 2947, 2876, 2806, 2735, 2662, 2586, 2507, 2425, 2336, 2244, 2151, 2059, 1965, 1866, 1760, 1649, 1534, 1419, 1305, 1190, 1067, 935, 791, 637, 469 },
-  { 2161, 2176, 2190, 2204, 2219, 2233, 2247, 2262, 2276, 2290, 2304, 2318, 2332, 2346, 2359, 2374, 2387, 2401, 2414, 2427, 2441, 2454, 2468, 2480, 2493, 2507, 2519, 2532, 2546, 2558, 2571, 2584, 2596, 2610, 2622, 2634, 2648, 2660, 2673, 2686, 2698, 2711, 2724, 2736, 2749 },
-  { 3960, 3918, 3878, 3837, 3791, 3738, 3679, 3615, 3551, 3487, 3425, 3364, 3303, 3238, 3165, 3079, 2988, 2897, 2813, 2732, 2654, 2574, 2492, 2407, 2318, 2226, 2133, 2039, 1944, 1848, 1752, 1656, 1558, 1460, 1364, 1269, 1172, 1074, 974, 875, 778, 685, 591, 491, 376 },
-  { 4026, 3982, 3934, 3881, 3825, 3770, 3711, 3645, 3569, 3487, 3408, 3338, 3279, 3224, 3164, 3093, 3014, 2931, 2847, 2761, 2673, 2581, 2488, 2393, 2302, 2214, 2127, 2039, 1946, 1849, 1752, 1655, 1557, 1458, 1356, 1254, 1149, 1044, 938, 833, 726, 617, 506, 396, 283 },
-  { 3910, 3838, 3765, 3691, 3613, 3531, 3447, 3362, 3278, 3197, 3119, 3045, 2974, 2901, 2826, 2744, 2659, 2577, 2500, 2426, 2351, 2271, 2187, 2100, 2013, 1927, 1842, 1758, 1673, 1589, 1504, 1420, 1335, 1249, 1162, 1074, 986, 900, 816, 735, 653, 571, 486, 397, 297 },
+// Define a set of gamma functions. Each gamma function is a 5th order polynomial (plus a
+// constant) that maps an input setting to an output setting
+const int nGammaParams = 6;
+float gammaParams[nLEDs][nGammaParams] = {
+  { 0.3241, -0.9178, 0.9954, -0.8699, 1.4695, -0.0033 },
+  { 3.4026, -9.9485, 11.0843, -6.1732, 2.6318, 0.0054 },
+  { -4.6673, 12.4840, -11.6360, 3.6100, 1.2128, -0.0077 },
+  { 2.0584, -5.7416, 6.2709, -3.9664, 2.3784, 0.0012 },
+  { 1.5879, -4.5637, 4.9856, -2.8691, 1.8582, 0.0017 },
+  { 2.0232, -5.3562, 4.9171, -2.1851, 1.5988, 0.0041 },
+  { 0.6844, -1.9140, 1.6533, -0.8179, 1.3934, -0.0008 },
+  { 1.3413, -3.8755, 4.0251, -1.8342, 1.3422, 0.0016 },
 };
-uint8_t background[nLEDs] = { 22, 22, 22, 22, 22, 22, 22, 22 };
-
-// Light Flux, ~100 % contrast, built for speed
-// int settings[nLEDs][nLevels] = {
-//   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-//   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-//   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-//   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-//   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-// };
-// uint8_t background[nLEDs] = { 0, 22, 0, 0, 22, 0, 22, 0 };
 
 // Light Flux, ~100 % contrast
-// int settings[nLEDs][nLevels] = {
-//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-//   { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-// };
-// uint8_t background[nLEDs] = { 22, 22, 22, 22, 22, 22, 22, 22 };
+int settings[nLEDs][nLevels] = {
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+};
+uint8_t background[nLEDs] = { 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000 };
 
-// LMS directed (mel silent), 45% contrast at 2° and 10°
-// int settings[nLEDs][nLevels] = {
-// { 205,289,372,456,540,624,707,791,875,959,1042,1126,1210,1294,1377,1461,1545,1629,1712,1796,1880,1964,2048,2131,2215,2299,2383,2466,2550,2634,2718,2801,2885,2969,3053,3136,3220,3304,3388,3471,3555,3639,3723,3806,3890 },
-// { 205,289,372,456,540,624,707,791,875,959,1042,1126,1210,1294,1377,1461,1545,1629,1712,1796,1880,1964,2048,2131,2215,2299,2383,2466,2550,2634,2718,2801,2885,2969,3053,3136,3220,3304,3388,3471,3555,3639,3723,3806,3890 },
-// { 3100,3052,3004,2956,2909,2861,2813,2765,2717,2669,2622,2574,2526,2478,2430,2382,2335,2287,2239,2191,2143,2095,2048,2000,1952,1904,1856,1808,1760,1713,1665,1617,1569,1521,1473,1426,1378,1330,1282,1234,1186,1139,1091,1043,995 },
-// { 2718,2687,2657,2626,2596,2565,2535,2504,2474,2443,2413,2383,2352,2322,2291,2261,2230,2200,2169,2139,2108,2078,2048,2017,1987,1956,1926,1895,1865,1834,1804,1773,1743,1712,1682,1652,1621,1591,1560,1530,1499,1469,1438,1408,1377 },
-// { 205,289,372,456,540,624,707,791,875,959,1042,1126,1210,1294,1377,1461,1545,1629,1712,1796,1880,1964,2048,2131,2215,2299,2383,2466,2550,2634,2718,2801,2885,2969,3053,3136,3220,3304,3388,3471,3555,3639,3723,3806,3890 },
-// { 205,289,372,456,540,624,707,791,875,959,1042,1126,1210,1294,1377,1461,1545,1629,1712,1796,1880,1964,2048,2131,2215,2299,2383,2466,2550,2634,2718,2801,2885,2969,3053,3136,3220,3304,3388,3471,3555,3639,3723,3806,3890 },
-// { 1442,1469,1497,1524,1552,1579,1607,1634,1662,1690,1717,1745,1772,1800,1827,1855,1882,1910,1937,1965,1992,2020,2048,2075,2103,2130,2158,2185,2213,2240,2268,2295,2323,2350,2378,2405,2433,2461,2488,2516,2543,2571,2598,2626,2653 },
-// { 3890,3806,3723,3639,3555,3471,3388,3304,3220,3136,3053,2969,2885,2801,2718,2634,2550,2466,2383,2299,2215,2131,2048,1964,1880,1796,1712,1629,1545,1461,1377,1294,1210,1126,1042,959,875,791,707,624,540,456,372,289,205 },
-// };
-//uint8_t background[nLEDs] = { 22, 22, 22, 22, 22, 22, 22, 22 };
-
-// Melanopsin, cone silent at 10° (but not penumbral cone silent), 45% contrast at 2° and 10°
-// int settings[nLEDs][nLevels] = {
-//   { 3890, 3806, 3723, 3639, 3555, 3471, 3388, 3304, 3220, 3136, 3053, 2969, 2885, 2801, 2718, 2634, 2550, 2466, 2383, 2299, 2215, 2131, 2048, 1964, 1880, 1796, 1712, 1629, 1545, 1461, 1377, 1294, 1210, 1126, 1042, 959, 875, 791, 707, 624, 540, 456, 372, 289, 205 },
-//   { 2274, 2264, 2253, 2243, 2233, 2222, 2212, 2202, 2192, 2181, 2171, 2161, 2150, 2140, 2130, 2120, 2109, 2099, 2089, 2078, 2068, 2058, 2048, 2037, 2027, 2017, 2006, 1996, 1986, 1975, 1965, 1955, 1945, 1934, 1924, 1914, 1903, 1893, 1883, 1873, 1862, 1852, 1842, 1831, 1821 },
-//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
-//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
-//   { 3084, 3037, 2990, 2943, 2896, 2848, 2801, 2754, 2707, 2660, 2613, 2566, 2519, 2472, 2424, 2377, 2330, 2283, 2236, 2189, 2142, 2095, 2048, 2000, 1953, 1906, 1859, 1812, 1765, 1718, 1671, 1623, 1576, 1529, 1482, 1435, 1388, 1341, 1294, 1247, 1199, 1152, 1105, 1058, 1011 },
-//   { 3391, 3330, 3269, 3208, 3147, 3086, 3025, 2963, 2902, 2841, 2780, 2719, 2658, 2597, 2536, 2475, 2414, 2353, 2292, 2231, 2170, 2109, 2048, 1986, 1925, 1864, 1803, 1742, 1681, 1620, 1559, 1498, 1437, 1376, 1315, 1254, 1193, 1132, 1070, 1009, 948, 887, 826, 765, 704 },
-//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
-//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
-// };
-// uint8_t background[nLEDs] = { 22, 22, 22, 22, 22, 22, 22, 22 };
-
-// S-cone directed, 70% contrast at 2° and 10°
-// int settings[nLEDs][nLevels] = {
-//   { 407, 481, 556, 630, 705, 780, 854, 929, 1003, 1078, 1153, 1227, 1302, 1376, 1451, 1525, 1600, 1675, 1749, 1824, 1898, 1973, 2048, 2122, 2197, 2271, 2346, 2420, 2495, 2570, 2644, 2719, 2793, 2868, 2942, 3017, 3092, 3166, 3241, 3315, 3390, 3465, 3539, 3614, 3688 },
-//   { 355, 432, 509, 586, 663, 740, 817, 894, 971, 1048, 1124, 1201, 1278, 1355, 1432, 1509, 1586, 1663, 1740, 1817, 1894, 1971, 2048, 2124, 2201, 2278, 2355, 2432, 2509, 2586, 2663, 2740, 2817, 2894, 2971, 3047, 3124, 3201, 3278, 3355, 3432, 3509, 3586, 3663, 3740 },
-//   { 707, 768, 829, 890, 951, 1012, 1073, 1134, 1194, 1255, 1316, 1377, 1438, 1499, 1560, 1621, 1682, 1743, 1804, 1865, 1926, 1987, 2048, 2108, 2169, 2230, 2291, 2352, 2413, 2474, 2535, 2596, 2657, 2718, 2779, 2840, 2901, 2961, 3022, 3083, 3144, 3205, 3266, 3327, 3388 },
-//   { 3624, 3552, 3480, 3409, 3337, 3265, 3194, 3122, 3050, 2979, 2907, 2836, 2764, 2692, 2621, 2549, 2477, 2406, 2334, 2262, 2191, 2119, 2048, 1976, 1904, 1833, 1761, 1689, 1618, 1546, 1474, 1403, 1331, 1259, 1188, 1116, 1045, 973, 901, 830, 758, 686, 615, 543, 471 },
-//   { 1925, 1931, 1936, 1942, 1947, 1953, 1959, 1964, 1970, 1975, 1981, 1986, 1992, 1997, 2003, 2009, 2014, 2020, 2025, 2031, 2036, 2042, 2048, 2053, 2059, 2064, 2070, 2075, 2081, 2086, 2092, 2098, 2103, 2109, 2114, 2120, 2125, 2131, 2136, 2142, 2148, 2153, 2159, 2164, 2170 },
-//   { 2072, 2071, 2070, 2069, 2068, 2067, 2065, 2064, 2063, 2062, 2061, 2060, 2059, 2058, 2056, 2055, 2054, 2053, 2052, 2051, 2050, 2049, 2048, 2046, 2045, 2044, 2043, 2042, 2041, 2040, 2039, 2037, 2036, 2035, 2034, 2033, 2032, 2031, 2030, 2028, 2027, 2026, 2025, 2024, 2023 },
-//   { 2126, 2122, 2119, 2115, 2112, 2108, 2104, 2101, 2097, 2094, 2090, 2087, 2083, 2080, 2076, 2072, 2069, 2065, 2062, 2058, 2055, 2051, 2048, 2044, 2040, 2037, 2033, 2030, 2026, 2023, 2019, 2015, 2012, 2008, 2005, 2001, 1998, 1994, 1991, 1987, 1983, 1980, 1976, 1973, 1969 },
-//   { 2072, 2071, 2070, 2069, 2068, 2067, 2066, 2064, 2063, 2062, 2061, 2060, 2059, 2058, 2057, 2055, 2054, 2053, 2052, 2051, 2050, 2049, 2048, 2046, 2045, 2044, 2043, 2042, 2041, 2040, 2038, 2037, 2036, 2035, 2034, 2033, 2032, 2031, 2029, 2028, 2027, 2026, 2025, 2024, 2023 },
-// };
-// uint8_t background[nLEDs] = { 22, 22, 22, 22, 22, 22, 22, 22 };
-
-// L–M directed, 10% contrast at 2° and 10°
-// int settings[nLEDs][nLevels] = {
-//   { 2483, 2463, 2444, 2424, 2404, 2384, 2364, 2345, 2325, 2305, 2285, 2265, 2246, 2226, 2206, 2186, 2166, 2147, 2127, 2107, 2087, 2067, 2048, 2028, 2008, 1988, 1968, 1948, 1929, 1909, 1889, 1869, 1849, 1830, 1810, 1790, 1770, 1750, 1731, 1711, 1691, 1671, 1651, 1632, 1612 },
-//   { 558, 625, 693, 761, 828, 896, 964, 1032, 1099, 1167, 1235, 1303, 1370, 1438, 1506, 1573, 1641, 1709, 1777, 1844, 1912, 1980, 2048, 2115, 2183, 2251, 2318, 2386, 2454, 2522, 2589, 2657, 2725, 2792, 2860, 2928, 2996, 3063, 3131, 3199, 3267, 3334, 3402, 3470, 3537 },
-//   { 3890, 3806, 3723, 3639, 3555, 3471, 3388, 3304, 3220, 3136, 3053, 2969, 2885, 2801, 2718, 2634, 2550, 2466, 2383, 2299, 2215, 2131, 2048, 1964, 1880, 1796, 1712, 1629, 1545, 1461, 1377, 1294, 1210, 1126, 1042, 959, 875, 791, 707, 624, 540, 456, 372, 289, 205 },
-//   { 473, 544, 616, 688, 759, 831, 902, 974, 1045, 1117, 1189, 1260, 1332, 1403, 1475, 1546, 1618, 1690, 1761, 1833, 1904, 1976, 2048, 2119, 2191, 2262, 2334, 2405, 2477, 2549, 2620, 2692, 2763, 2835, 2906, 2978, 3050, 3121, 3193, 3264, 3336, 3407, 3479, 3551, 3622 },
-//   { 3045, 3000, 2954, 2909, 2864, 2818, 2773, 2728, 2682, 2637, 2592, 2546, 2501, 2456, 2410, 2365, 2320, 2274, 2229, 2184, 2138, 2093, 2048, 2002, 1957, 1911, 1866, 1821, 1775, 1730, 1685, 1639, 1594, 1549, 1503, 1458, 1413, 1367, 1322, 1277, 1231, 1186, 1141, 1095, 1050 },
-//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
-//   { 205, 289, 372, 456, 540, 624, 707, 791, 875, 959, 1042, 1126, 1210, 1294, 1377, 1461, 1545, 1629, 1712, 1796, 1880, 1964, 2048, 2131, 2215, 2299, 2383, 2466, 2550, 2634, 2718, 2801, 2885, 2969, 3053, 3136, 3220, 3304, 3388, 3471, 3555, 3639, 3723, 3806, 3890 },
-//   { 2132, 2128, 2125, 2121, 2117, 2113, 2109, 2105, 2101, 2098, 2094, 2090, 2086, 2082, 2078, 2074, 2071, 2067, 2063, 2059, 2055, 2051, 2048, 2044, 2040, 2036, 2032, 2028, 2024, 2021, 2017, 2013, 2009, 2005, 2001, 1997, 1994, 1990, 1986, 1982, 1978, 1974, 1970, 1967, 1963 },
-// };
-// uint8_t background[nLEDs] = { 22, 22, 22, 22, 22, 22, 22, 22 };
+// Adjust the overall contrast of the modulation between 0 and 1
+float contrast = 1;
 
 // The ledIsActive vector is regenerated whenever the settings or background
 // changes. The idea is to skip updating LEDs if their settings never change
-// from the background.
+// from the background. Set to false initially, but we will check and update
+// this before entering the loop.
 bool ledIsActive[nLEDs] = { false, false, false, false, false, false, false, false };
 
 // Variables that define an amplitude modulation
@@ -242,15 +187,15 @@ float compoundAmps[5] = { 0.5, 1, 1, 0, 0 };            // Relative amplitudes
 float compoundPhases[5] = { 0, 0.7854, 4.3633, 0, 0 };  // Phase delay in radians
 float compoundRange[2] = { 0, 1 };
 
-
 // Timing variables
-uint8_t waveformIndex = 1;                     // Default to sinusoid
-unsigned long cycleDur = round(1e6 / 3.0);     // Initialize at 3 Hz
-unsigned long modulationStartTime = micros();  // Initialize these with the clock
-unsigned long lastLEDUpdateTime = micros();    // Initialize these with the clock
-int blinkDurationMSecs = 100;                  // Default duration of the blink event in msecs
-uint8_t ledCycleIdx = 0;                       // Counter to index our cycle through updating LEDs
-uint8_t ledUpdateOrder[] = { 0, 2, 4, 6, 1, 3, 5, 7 };
+uint8_t waveformIndex = 1;                              // Default to sinusoid
+unsigned long cycleDur = round(1e6 / 3.0);              // Initialize at 3 Hz
+unsigned long modulationStartTime = micros();           // Initialize these with the clock
+unsigned long lastLEDUpdateTime = micros();             // Initialize these with the clock
+int blinkDurationMSecs = 100;                           // Default duration of the blink event in msecs
+uint8_t ledCycleIdx = 0;                                // Counter to index our cycle through updating LEDs
+float phaseOffset = 0;                                  // 0-2pi, used to shift the waveform phase
+uint8_t ledUpdateOrder[] = { 0, 2, 4, 6, 1, 3, 5, 7 };  // The order in which LEDs are updated
 
 // setup
 void setup() {
@@ -323,7 +268,7 @@ void loop() {
 void showModeMenu() {
   switch (deviceState) {
     case CONFIG:
-      Serial.println("= CONFIG mode =");
+      Serial.println("CM");
       // Serial.println("WF: waveform index, FQ: FM freq [Hz]");
       // Serial.println("AM: AM index, V0...Vn: AM vals idx n");
       // Serial.println("L0, L1, .., Ln: Settings for LED n");
@@ -331,12 +276,12 @@ void showModeMenu() {
       // Serial.println("RM: run mode, DM: direct mode");
       break;
     case DIRECT:
-      Serial.println("= DIRECT mode =");
+      Serial.println("DM");
       // Serial.println("LL: settings [0 4095] for LEDs 0-7");
       // Serial.println("RM: run mode, CM: config mode");
       break;
     case RUN:
-      Serial.println("= RUN mode =");
+      Serial.println("RM");
       // Serial.println("GO: go, SP: stop, BL: blink");
       // Serial.println("BG: background, DK: all off");
       // Serial.println("CM: config mode, DM: direct mode");
@@ -348,29 +293,48 @@ void getConfig() {
   // Operate in modal state waiting for input
   waitForNewString();
   if (strncmp(inputString, "WF", 2) == 0) {
-    Serial.println("waveform index: ");
+    // waveformIndex controls the FM modulation form
+    Serial.println("WF:");
     clearInputString();
     waitForNewString();
     waveformIndex = atoi(inputString);
     if (waveformIndex == 0) Serial.println("none");
     if (waveformIndex == 1) Serial.println("sin");
     if (waveformIndex == 2) Serial.println("square");
-    if (waveformIndex == 3) Serial.println("saw on");
-    if (waveformIndex == 4) Serial.println("saw off");
+    if (waveformIndex == 3) Serial.println("sawon");
+    if (waveformIndex == 4) Serial.println("sawoff");
     if (waveformIndex == 5) {
       Serial.println("compound");
       updateCompoundRange();
     }
   }
   if (strncmp(inputString, "FQ", 2) == 0) {
-    Serial.println("frequency in Hz: ");
+    // Carrier modulation frequency (float Hz)
+    Serial.println("FQ:");
     clearInputString();
     waitForNewString();
     cycleDur = 1e6 / atof(inputString);
     Serial.println(atof(inputString));
   }
+  if (strncmp(inputString, "CN", 2) == 0) {
+    // Contrast (0-1 float)
+    Serial.println("CN:");
+    clearInputString();
+    waitForNewString();
+    contrast = atof(inputString);
+    Serial.println(atof(inputString));
+  }
+  if (strncmp(inputString, "PH", 2) == 0) {
+    // Phase offset (0-2pi float)
+    Serial.println("PH:");
+    clearInputString();
+    waitForNewString();
+    phaseOffset = atof(inputString);
+    Serial.println(atof(inputString));
+  }
   if (strncmp(inputString, "AM", 2) == 0) {
-    Serial.println("AM index: ");
+    // Amplitude modulation index
+    Serial.println("AM:");
     clearInputString();
     waitForNewString();
     amplitudeIndex = atoi(inputString);
@@ -379,20 +343,22 @@ void getConfig() {
     if (amplitudeIndex == 2) Serial.println("half-cos");
   }
   if (strncmp(inputString, "AV", 2) == 0) {
-    Serial.println("AM freq [float]: ");
+    // Amplitude modulation values for the current index
+    Serial.println("AV0:");
     clearInputString();
     waitForNewString();
     float newVal = atof(inputString);
     amplitudeVals[amplitudeIndex][0] = newVal;
-    Serial.println("AM 2nd val [float]: ");
+    Serial.println("AV1:");
     clearInputString();
     waitForNewString();
     newVal = atof(inputString);
     amplitudeVals[amplitudeIndex][1] = newVal;
-    Serial.println("done");
+    Serial.println(".");
   }
   if (strncmp(inputString, "CH", 2) == 0) {
-    Serial.println("Enter 5 compound harmonics: ");
+    // Compound modulation, 5 harmonic indices
+    Serial.println("CH:");
     clearInputString();
     for (int ii = 0; ii < 5; ii++) {
       waitForNewString();
@@ -404,7 +370,8 @@ void getConfig() {
     updateCompoundRange();
   }
   if (strncmp(inputString, "CA", 2) == 0) {
-    Serial.println("Enter 5 compound amplitudes: ");
+    // Compound modulation, 5 harmonic amplitudes
+    Serial.println("CA:");
     clearInputString();
     for (int ii = 0; ii < 5; ii++) {
       waitForNewString();
@@ -416,7 +383,8 @@ void getConfig() {
     updateCompoundRange();
   }
   if (strncmp(inputString, "CP", 2) == 0) {
-    Serial.println("Enter 5 compound phases: ");
+    // Compound modulation, 5 harmonic phases
+    Serial.println("CP:");
     clearInputString();
     for (int ii = 0; ii < 5; ii++) {
       waitForNewString();
@@ -428,11 +396,8 @@ void getConfig() {
     updateCompoundRange();
   }
   if (strncmp(inputString, "ST", 2) == 0) {
-    Serial.print("Enter ");
-    Serial.print(nLevels);
-    Serial.print(" levels for the ");
-    Serial.print(nLEDs);
-    Serial.println(" LEDs: ");
+    // Matrix of settings int, 0-1e4
+    Serial.print("ST:");
     clearInputString();
     for (int ii = 0; ii < nLEDs; ii++) {
       for (int jj = 0; jj < nLevels; jj++) {
@@ -445,11 +410,23 @@ void getConfig() {
     }
     identifyActiveLEDs();
   }
+  if (strncmp(inputString, "GP", 2) == 0) {
+    // Matrix of gamma parameters (float)
+    Serial.print("GP:");
+    clearInputString();
+    for (int ii = 0; ii < nLEDs; ii++) {
+      for (int jj = 0; jj < nGammaParams; jj++) {
+        waitForNewString();
+        gammaParams[ii][jj] = atof(inputString);
+        Serial.println(".");
+        clearInputString();
+      }
+    }
+    identifyActiveLEDs();
+  }
   if (strncmp(inputString, "BG", 2) == 0) {
-    Serial.print("Enter ");
-    Serial.print(nLEDs);
-    Serial.print(" background levels:");
-    Serial.println(": ");
+    // Matrix of background settings int, 0-1e4
+    Serial.print("BG:");
     clearInputString();
     for (int ii = 0; ii < nLEDs; ii++) {
       waitForNewString();
@@ -462,15 +439,18 @@ void getConfig() {
     setToBackground();
   }
   if (strncmp(inputString, "PR", 2) == 0) {
+    // Print current settings
     printCurrentSettings();
   }
   if (strncmp(inputString, "RM", 2) == 0) {
+    // Switch to run mode
     modulationState = false;
     deviceState = RUN;
     setToBackground();
     showModeMenu();
   }
   if (strncmp(inputString, "DM", 2) == 0) {
+    // Switch to direct control mode
     modulationState = false;
     deviceState = DIRECT;
     showModeMenu();
@@ -485,12 +465,12 @@ void getDirect() {
   // The primary Direct mode activity: send a
   // vector of settings for the LEDs.
   if (strncmp(inputString, "LL", 2) == 0) {
-    Serial.println("LED settings:");
+    Serial.println("LL:");
     clearInputString();
     for (int ii = 0; ii < nLEDs; ii++) {
       waitForNewString();
       int level = atoi(inputString);
-      Serial.println("ok");
+      Serial.println(".");
       clearInputString();
       if (simulatePrizmatix) {
         pulseWidthModulate(level);
@@ -498,11 +478,11 @@ void getDirect() {
         writeToOneCombiLED(level, ii);
       }
     }
-    Serial.println("done");
+    Serial.println(".");
   }
   if (strncmp(inputString, "DK", 2) == 0) {
     setToOff();
-    Serial.println("off");
+    Serial.println(".");
     modulationState = false;
   }
   if (strncmp(inputString, "RM", 2) == 0) {
@@ -526,30 +506,30 @@ void getRun() {
   if (stringComplete) {
     stringComplete = false;
     if (strncmp(inputString, "GO", 2) == 0) {
-      Serial.println("go");
+      Serial.println(".");
       modulationState = true;
       lastLEDUpdateTime = micros();
       modulationStartTime = micros();
     }
     if (strncmp(inputString, "SP", 2) == 0) {
       setToBackground();
-      Serial.println("stop");
+      Serial.println(".");
       modulationState = false;
     }
     if (strncmp(inputString, "BL", 2) == 0) {
-      Serial.println("blink");
+      Serial.println(".");
       setToOff();
       delay(blinkDurationMSecs);
       setToBackground();
     }
     if (strncmp(inputString, "BG", 2) == 0) {
       setToBackground();
-      Serial.println("background");
+      Serial.println(".");
       modulationState = false;
     }
     if (strncmp(inputString, "DK", 2) == 0) {
       setToOff();
-      Serial.println("off");
+      Serial.println(".");
       modulationState = false;
     }
     if (strncmp(inputString, "DM", 2) == 0) {
@@ -685,15 +665,26 @@ void setToOff() {
 void updateLED(double cyclePhase, int ledIndex) {
   // Check if the current LED is marked as active
   if (ledIsActive[ledIndex]) {
+    // Adjust the cyclePhase for the phaseOffset
+    cyclePhase = cyclePhase + (phaseOffset / (2 * pi));
     // Get the level for the current cyclePhase
     float floatLevel = getFrequencyModulation(cyclePhase);
+    // Get the background level for this LED
+    float offset = background[ledIndex] / settingScale;
+    // Scale according to the contrast value
+    floatLevel = contrast * (floatLevel - offset) + offset;
     // Apply any amplitude modulation
-    floatLevel = applyAmplitudeModulation(floatLevel, ledIndex);
+    floatLevel = applyAmplitudeModulation(floatLevel, offset);
     // Cast the continuous floatLevel to one of the 45 discrete
     // levels.
-    int ledLevel = round((nLevels - 1) * floatLevel);
-    // Get the 12 bit setting from the settings matrix
-    int ledSetting = settings[ledIndex][ledLevel];
+    int discreteLevel = round((nLevels - 1) * floatLevel);
+    // Get the float intensity setting from the settings matrix
+    // for this level
+    float ledSettingFloat = settings[ledIndex][discreteLevel] / settingScale;
+    // gamma correct ledSettingFloat
+    ledSettingFloat = gammaCorrect(ledSettingFloat, ledIndex);
+    // Convert the ledSettingFloat to a 12 bit integer
+    int ledSetting = round(ledSettingFloat / maxLevelVal);
     // Update the LED
     if (simulatePrizmatix) {
       pulseWidthModulate(ledSetting);
@@ -704,7 +695,7 @@ void updateLED(double cyclePhase, int ledIndex) {
 }
 
 
-float getFrequencyModulation(float phase) {
+float getFrequencyModulation(float cyclePhase) {
   // Provides a continuous level, between 0-1, for a given waveform
   // at the specified phase position. We default to a half-on level
   // if not otherwise specified
@@ -712,11 +703,11 @@ float getFrequencyModulation(float phase) {
 
   // Sinusoid
   if (waveformIndex == 1) {
-    level = ((sin(2 * pi * phase) + 1) / 2);
+    level = ((sin(2 * pi * cyclePhase) + 1) / 2);
   }
   // Square wave, off then on
   if (waveformIndex == 2) {
-    if (phase >= 0.5) {
+    if (cyclePhase >= 0.5) {
       level = 1;
     } else {
       level = 0;
@@ -724,17 +715,17 @@ float getFrequencyModulation(float phase) {
   }
   // Saw-tooth, ramping on and then sudden off
   if (waveformIndex == 3) {
-    level = phase;
+    level = cyclePhase;
   }
   // Saw-tooth, ramping off and then sudden on
   if (waveformIndex == 4) {  // saw off
-    level = 1 - phase;
+    level = 1 - cyclePhase;
   }
   // Compound modulation
   if (waveformIndex == 5) {
     level = 0;
     for (int ii = 0; ii < 5; ii++) {
-      level = level + compoundAmps[ii] * sin(compoundHarmonics[ii] * 2 * pi * phase + compoundPhases[ii]);
+      level = level + compoundAmps[ii] * sin(compoundHarmonics[ii] * 2 * pi * cyclePhase + compoundPhases[ii]);
     }
     // Use the pre-computed "compoundRange" to place level in the 0-1 range
     level = (level - compoundRange[0]) / (compoundRange[1] - compoundRange[0]);
@@ -742,8 +733,7 @@ float getFrequencyModulation(float phase) {
   return level;
 }
 
-float applyAmplitudeModulation(float level, int ledIndex) {
-
+float applyAmplitudeModulation(float level, float offset) {
   // Sinusoid amplitude modulation
   if (amplitudeIndex == 1) {
     float AMFrequencyHz = amplitudeVals[amplitudeIndex][0];
@@ -752,7 +742,6 @@ float applyAmplitudeModulation(float level, int ledIndex) {
     float elapsedTimeSecs = (micros() - modulationStartTime) / 1e6;
     float modLevel = AMDepth * (sin(2 * pi * (elapsedTimeSecs / (1 / AMFrequencyHz))) + 1) / 2;
     // center the level around the background
-    float offset = float(settings[ledIndex][background[ledIndex]]) / float(maxLevelVal);
     level = (level - offset) * modLevel + offset;
   }
   // Half-cosine window at block onset and offset
@@ -775,13 +764,19 @@ float applyAmplitudeModulation(float level, int ledIndex) {
       modLevel = (cos(pi * ((elapsedTimeSecs - plateauDur) / rampDur)) + 1) / 2;
     }
     // center the level around the background
-    float offset = float(settings[ledIndex][background[ledIndex]]) / float(maxLevelVal);
     level = (level - offset) * modLevel + offset;
   }
   // ensure that level is within the 0-1 range
   level = max(level, 0);
   level = min(level, 1);
   return level;
+}
+
+float corrected = gammaCorrect(float ledSettingFloat, int ledIndex) {
+  float corrected = 0;
+  for (int ii = 0; ii < nGammaParams; ii++) {
+    corrected = corrected + gammaParams[ledIndex][ii] * ledSettingFloat ^ ((nGammaParams - 1) - ii);
+  }
 }
 
 void pulseWidthModulate(int setting) {
