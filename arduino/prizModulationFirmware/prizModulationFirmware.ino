@@ -271,11 +271,12 @@ void loop() {
       ledCycleIdx++;
       ledCycleIdx = ledCycleIdx % nLEDs;
     }
-    // Check if we have reached the modulation duration
+    // Check if we have exceeded the modulation duration
     if (modulationDurSecs > 0) {
       float elapsedTimeSecs = (currentTime - modulationStartTime) / 1e6;
       if (elapsedTimeSecs > modulationDurSecs) {
-              modulationState = false;
+        modulationState = false;
+        setToBackground();
       }
     }
   }
@@ -332,6 +333,16 @@ void getConfig() {
     clearInputString();
     waitForNewString();
     cycleDur = 1e6 / atof(inputString);
+    Serial.println(atof(inputString));
+  }
+  if (strncmp(inputString, "MD", 2) == 0) {
+    // Modulation duration (float seconds)
+    // Set to zero to have the modulation
+    // continue until stopped
+    Serial.println("MD:");
+    clearInputString();
+    waitForNewString();
+    modulationDurSecs = atof(inputString);
     Serial.println(atof(inputString));
   }
   if (strncmp(inputString, "CN", 2) == 0) {
