@@ -16,17 +16,19 @@
 //  LED6 --   627          19            480
 //  LED7 --   561          15            470
 //
-// Each LED can be set to an intensity with 12 bit depth (0-4095). Practically,
-// we pre-define an ordered set of 45 discrete levels across the LEDs. The 45
-// levels might define a linear change in luminance contrast, or L–M contrast.
-// This is the "settings" matrix.
+// A "settings" matrix specifies the intensity level of each LED between
+// 0 and 1 with 1e-4 precision. An ordered set of 51 discrete levels are
+// provided for each primary. These levels might define a linear change in
+// luminance or L–M contrast, for example. Gamma correction is performed on
+// device, and the resulting floating level is then cast into a 12 bit
+// LED setting
 //
 // Over time, we present a given column of the settings by assigning the
 // values to the LEDs. The particular column that is presented is under the
 // control of a waveform (e.g., sin, square) and a frequency [Hz]. After
 // setup, the code enters a run loop during which each LED is updated
 // sequentially. The waveform is used to define a floating point level (0-1),
-// which is mapped to the discrete levels (0-44). The settings matrix provides
+// which is mapped to the discrete levels (0-51). The settings matrix provides
 // the setting of a given LED at the given level.
 //
 // There is a minimum amount of time required to address an LED (about 250
@@ -36,7 +38,7 @@
 // delays of the waveform. As the waveform frequency is unlikely to be
 // synchronized to the minimum LED refresh rate, this phase delay will precess
 // across waveform cycles. This can cause aliasing of the modulation to lower
-// frequencies. To reduce this, the LEDs are updated in an interleaved order.
+// frequencies. To ameliorate this, the LEDs are updated in an interleaved order.
 //
 // If an LED has settings that never vary from the background, then that LED
 // is marked as "inactive", and skipped in the sequential updating. This allows
@@ -60,7 +62,7 @@
 //                      to write a setting to one LED. We set this minimum address
 //                      time to somewhat longer than this to allow time for
 //                      computation overhead.
-//  settings            8x45 int matrix, all between 0 and 1e4. Each column
+//  settings            8x51 int matrix, all between 0 and 1e4. Each column
 //                      defines the linear settings on the 8 LEDs at each of n
 //                      levels of the modulation. The specified value is divided
 //                      by 1e4 to yield a value between 0 and 1. This value is
@@ -68,6 +70,12 @@
 //                      LED.
 //  background          8x1 int array of value 0-1e4. Specifies the
 //                      background level for each LED.
+//  contrast            Float, between 0 and 1. Defines the contrast of the
+//                      modulation relative to its maximum.
+//  gammaParams         8x6 float matrix. Defines the parameters of a 5th order
+//                      polynomial (plus an offset) that define the conversion
+//                      of the desired intensity level to the corresponding
+//                      device level for each LED.
 //  waveformIndex       Scalar. Defines the waveform profile to be used:
 //                        0 - no modulation (stay at background)
 //                        1 - sinusoid
@@ -76,6 +84,7 @@
 //                        4 - saw-tooth off
 //                        5 - compound modulation
 //  cycleDur            Scalar. The duration in microseconds of the waveform.
+//  phaseOffset         Float, 0-2pi. Used to shift the phase of the waveform.
 //  amplitudeIndex      Scalar. Defines the amplitude modulation profile:
 //                        0 - none
 //                        1 - sinusoid modulation
@@ -130,7 +139,7 @@ bool modulationState = false;       // When we are running, are we modulating?
 
 // Define settings and modulations
 const uint8_t nLEDs = 8;     // the number of LEDs
-const uint8_t nLevels = 45;  // the number of discrete settings that are specified for each LED
+const uint8_t nLevels = 51;  // the number of discrete settings that are specified for each LED
 
 // Define a set of gamma functions. Each gamma function is a 5th order polynomial (plus a
 // constant) that maps an input setting to an output setting
@@ -148,14 +157,14 @@ float gammaParams[nLEDs][nGammaParams] = {
 
 // Light Flux, ~100 % contrast
 int settings[nLEDs][nLevels] = {
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
-  { 0, 93, 186, 279, 372, 465, 558, 651, 745, 838, 931, 1024, 1117, 1210, 1303, 1396, 1489, 1582, 1675, 1768, 1861, 1954, 2048, 2141, 2234, 2327, 2420, 2513, 2606, 2699, 2792, 2885, 2978, 3071, 3164, 3257, 3350, 3444, 3537, 3630, 3723, 3816, 3909, 4002, 4095 },
+  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
+  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
+  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
+  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
+  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
+  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
+  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
+  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
 };
 uint8_t background[nLEDs] = { 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000 };
 
@@ -196,6 +205,9 @@ int blinkDurationMSecs = 100;                           // Default duration of t
 uint8_t ledCycleIdx = 0;                                // Counter to index our cycle through updating LEDs
 float phaseOffset = 0;                                  // 0-2pi, used to shift the waveform phase
 uint8_t ledUpdateOrder[] = { 0, 2, 4, 6, 1, 3, 5, 7 };  // The order in which LEDs are updated
+float modulationDurSecs = 0;                            // Duration of the modulation in secs (0 for continuous)
+int long cycleCount = 0;                                // Num cycles elapsed since modulation start
+
 
 // setup
 void setup() {
@@ -259,9 +271,15 @@ void loop() {
       ledCycleIdx++;
       ledCycleIdx = ledCycleIdx % nLEDs;
     }
+    // Check if we have reached the modulation duration
+    if (modulationDurSecs > 0) {
+      float elapsedTimeSecs = (currentTime - modulationStartTime) / 1e6;
+      if (elapsedTimeSecs > modulationDurSecs) {
+              modulationState = false;
+      }
+    }
   }
 }
-
 
 // Had to comment out the menu details as these serial entries
 // eat up dynamic memory space.
@@ -772,11 +790,12 @@ float applyAmplitudeModulation(float level, float offset) {
   return level;
 }
 
-float corrected = gammaCorrect(float ledSettingFloat, int ledIndex) {
+float gammaCorrect(float ledSettingFloat, int ledIndex) {
   float corrected = 0;
   for (int ii = 0; ii < nGammaParams; ii++) {
-    corrected = corrected + gammaParams[ledIndex][ii] * ledSettingFloat ^ ((nGammaParams - 1) - ii);
+    corrected = corrected + gammaParams[ledIndex][ii] * pow(ledSettingFloat, (nGammaParams - 1) - ii);
   }
+  return corrected;
 }
 
 void pulseWidthModulate(int setting) {
