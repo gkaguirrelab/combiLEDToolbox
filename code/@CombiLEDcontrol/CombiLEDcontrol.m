@@ -10,6 +10,7 @@ classdef CombiLEDcontrol < handle
         nDiscreteLevels = 45;
         baudrate = 57600;
         refreshRate = 10; % Hz
+        nGammaParams = 6;
     end
 
     % Private properties
@@ -30,6 +31,9 @@ classdef CombiLEDcontrol < handle
 
         % Verbosity
         verbose
+
+        % Properties of the gamma correction
+        gammaFitTol = 0.03;
 
     end
 
@@ -55,12 +59,15 @@ classdef CombiLEDcontrol < handle
         startModulation(obj)
         stopModulation(ob)
         setFrequency(obj,frequency)
+        setContrast(obj,contrast)
+        setPhaseOffset(obj,phaseOffset)
         setSettings(obj,settings)
         setBackground(obj,background)
         setAMIndex(obj,amplitudeIndex)
         setAMValues(obj,amplitudeVals)
         setCompoundModulation(obj,compoundHarmonics,compoundAmplitudes,compoundPhases)
         setWaveformIndex(obj,waveformIndex)
-        
+        setGamma(obj,gammaTable)
+
     end
 end
