@@ -1,5 +1,5 @@
-function [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast] = ...
-    selectModulationDirection(whichDirection)
+function [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,x0Background] = ...
+    modDirectionDictionary(whichDirection)
 
 %% Define the receptor sets to isolate
 % I consider the following modulations:
@@ -16,54 +16,49 @@ function [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast] = ...
 %           concert with occlusion of the macular region of the stimulus.
 %   SnoMel- S modulation in the periphery that silences melanopsin.
 
+x0Background = repmat(0.5,8,1);
+
 switch whichDirection
     case 'LminusM_wide'
         whichReceptorsToTarget = [1 2 4 5];
-        whichReceptorsToIgnore = 10;
+        whichReceptorsToIgnore = 7;
         desiredContrast = [1 -1 1 -1];
     case 'LminusM_foveal'
         whichReceptorsToTarget = [1 2];
-        whichReceptorsToIgnore = [4 5 7 8 9 10];
+        whichReceptorsToIgnore = [4 5 7];
         desiredContrast = [1 -1];
     case 'L_wide'
         whichReceptorsToTarget = [1 4];
-        whichReceptorsToIgnore = [7 8 9 10];
+        whichReceptorsToIgnore = [7];
         desiredContrast = [1 1];
     case 'L_foveal'
         whichReceptorsToTarget = [1];
-        whichReceptorsToIgnore = [4 5 7 8 9 10];
+        whichReceptorsToIgnore = [4 5 6 7];
         desiredContrast = [1];
-    case 'M'
+    case 'M_wide'
         whichReceptorsToTarget = [2 5];
-        whichReceptorsToIgnore = [7 8 9 10];
+        whichReceptorsToIgnore = [7];
         desiredContrast = [1 1];
     case 'S_wide'
         whichReceptorsToTarget = [3 6];
-        whichReceptorsToIgnore = [7 8 9 10];
+        whichReceptorsToIgnore = [7];
         desiredContrast = [1 1];
     case 'S_foveal'
         whichReceptorsToTarget = [3];
-        whichReceptorsToIgnore = [6 7 8 9 10];
+        whichReceptorsToIgnore = [6 7];
         desiredContrast = [1];
-    case 'PenumbralLuminance'
-        whichReceptorsToTarget = [4 5 7 8];
-        whichReceptorsToIgnore = [10];
-        desiredContrast = [-1 -1 1 1];
-    case 'CenterPeriphery'
-        whichReceptorsToTarget = [1 2 3 4 5 6];
-        whichReceptorsToIgnore = [7 8 9 10];
-        desiredContrast = [-1 -1 -1 1 1 1];
-    case 'LMS'
-        whichReceptorsToTarget = [1 2 3 4 5 6];
-        whichReceptorsToIgnore = [7 8 9 10];
-        desiredContrast = [1 1 1 1 1 1];
+    case 'LMSnoMel'
+        whichReceptorsToTarget = [4 5 6];
+        whichReceptorsToIgnore = [1 2 3];
+        desiredContrast = [1 1 1];
     case 'Mel'
-        whichReceptorsToTarget = 10;
-        whichReceptorsToIgnore = [1 2 3 7 8 9];
+        whichReceptorsToTarget = 7;
+        whichReceptorsToIgnore = [1 2 3];
         desiredContrast = 1;
+        x0Background = [ 0.2790    0.0000    0.0258    0.4852    0.1005    0.5000    0.3098    0.5013 ]';
     case 'SnoMel'
-        whichReceptorsToTarget = 6;
-        whichReceptorsToIgnore = [1 2 3 7 8 9];
+        whichReceptorsToTarget = [3 6];
+        whichReceptorsToIgnore = [];
         desiredContrast = 1;
 end
 

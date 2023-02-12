@@ -124,6 +124,12 @@ for ii = 1:length(vub)
     end
 end
 
+warningState = warning;
+warning('off','MATLAB:rankDeficientMatrix');
+
+
+
+
 myObj = @(x) IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrastVector,matchConstraint);
 
 %% Optimize.
@@ -132,6 +138,10 @@ myObj = @(x) IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptor
 options = optimset('fmincon');
 options = optimset(options,'Diagnostics','off','Display','off','LargeScale','on','Algorithm','interior-point', 'MaxFunEvals', 100000, 'TolFun', 1e-10, 'TolCon', 1e-10, 'TolX', 1e-10);
 x = fmincon(myObj,x,[],[],Aeq,beq,vlb,vub,[],options);
+
+% Restore the warning state
+warning(warningState);
+
 
 % Extract the output arguments to be passed back.
 % This enforces a sanity check on the primaries.

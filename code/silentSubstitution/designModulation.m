@@ -35,42 +35,46 @@ function modResult = designModulation(whichDirection,varargin)
 % Examples:
 
 % Save the ToolboxToolbox verbosity pref, and set it to false
-tbtbVerbose = getpref('ToolboxToolbox','verbose');
-setpref('ToolboxToolbox','verbose',false);
+% tbtbVerbose = getpref('ToolboxToolbox','verbose');
+% setpref('ToolboxToolbox','verbose',false);
 
 %% Parse input
 p = inputParser;
 p.addRequired('whichDirection',@ischar)
 p.addParameter('calLocalData',fullfile(tbLocateProject('prizmatixDesign'),'cal','CombiLED.mat'),@ischar);
+p.addParameter('searchBackground',true,@islogical)
 p.addParameter('matchConstraint',1,@isscalar)
 p.addParameter('primaryHeadRoom',0.00,@isscalar)
 p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
 p.addParameter('searchOverBackgrounds',false,@islogical)
-p.addParameter('verbose',false,@islogical)
-p.addParameter('makePlots',false,@islogical)
+p.addParameter('verbose',true,@islogical)
+p.addParameter('makePlots',true,@islogical)
 p.parse(whichDirection,varargin{:});
 
 % Restore the TbTb verbosity pref
-setpref('ToolboxToolbox','verbose',tbtbVerbose);
+% setpref('ToolboxToolbox','verbose',tbtbVerbose);
+
+% Pull some variables out of the Results for code clarity
+matchConstraint = p.Results.matchConstraint;
+primaryHeadRoom = p.Results.primaryHeadRoom;
+verbose = p.Results.verbose;
 
 % Load the calibration
 load(p.Results.calLocalData,'cals');
 cal = cals{end};
 
+% Pull out some information from the calibration
 S = cal.rawData.S;
 B_primary = cal.processedData.P_device;
 ambientSpd = cal.processedData.P_ambient;
+nPrimaries = size(B_primary,2);
 
-matchConstraint = p.Results.matchConstraint;
-
-%% Get the photoreceptors
 % Define photoreceptor classes that we'll consider.
 photoreceptorClasses = {...
     'LConeTabulatedAbsorbance2Deg', 'MConeTabulatedAbsorbance2Deg', 'SConeTabulatedAbsorbance2Deg',...
     'LConeTabulatedAbsorbance10Deg', 'MConeTabulatedAbsorbance10Deg', 'SConeTabulatedAbsorbance10Deg',...
-    'LConeTabulatedAbsorbancePenumbral', 'MConeTabulatedAbsorbancePenumbral', 'SConeTabulatedAbsorbancePenumbral', ...
     'Melanopsin'};
 photoreceptorClassNames = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel'};
 
@@ -79,34 +83,58 @@ photoreceptorClassNames = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10d
 % entry of the cell array photoreceptorClasses. The last two arguments are
 % the oxygenation fraction and the vessel thickness. We set them to be
 % empty here.
+fractionBleached = [];
 oxygenationFraction = [];
 vesselThickness = [];
-fractionBleached = [];
 T_receptors = GetHumanPhotoreceptorSS(S, photoreceptorClasses, p.Results.fieldSizeDegrees, p.Results.observerAgeInYears, p.Results.pupilDiameterMm, [], fractionBleached, oxygenationFraction, vesselThickness);
 
 % Define the modulation direction
-[whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast] = ...
-    selectModulationDirection(whichDirection);
+[whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,x0Background] = ...
+    modDirectionDictionary(whichDirection);
 
-primaryHeadRoom = p.Results.primaryHeadRoom;
-
-% Perform the search with a mid-point background
-backgroundPrimary = repmat(0.5,size(B_primary,2),1);
-
-x0Primary = backgroundPrimary;
-
-modulationPrimary = isolateReceptors(T_receptors,whichReceptorsToTarget, ...
-    whichReceptorsToIgnore, B_primary,backgroundPrimary,x0Primary, ...
+% Define the isolation operation as a function of the background. Always
+% use the background as the starting point of the modulation search
+modulationPrimaryFunc = @(backgroundPrimary) ...
+    isolateReceptors(T_receptors,whichReceptorsToTarget, ...
+    whichReceptorsToIgnore, B_primary,backgroundPrimary,backgroundPrimary, ...
     primaryHeadRoom,desiredContrast,ambientSpd,matchConstraint);
 
-% Obtain the isomerization rate for the receptors by the background
-backgroundReceptors = T_receptors*(B_primary*backgroundPrimary + ambientSpd);
+% Define a function that returns the contrast on the targeted
+% photoreceptors
+contrastReceptorsFunc = @(modulationPrimary,backgroundPrimary) ...
+    calcContrastReceptors(modulationPrimary,backgroundPrimary,T_receptors,B_primary,ambientSpd);
 
-% Calculate the positive receptor contrast and the differences
-% between the targeted receptor sets
+% Handle searching over backgrounds
+if p.Results.searchBackground
+    lb = zeros(1,nPrimaries)+primaryHeadRoom;
+    plb = zeros(1,nPrimaries)+primaryHeadRoom;
+    pub = ones(1,nPrimaries)-primaryHeadRoom;
+    ub = ones(1,nPrimaries)-primaryHeadRoom;
+    if verbose
+        optionsBADS.Display = 'iter';
+    else
+        optionsBADS.Display = 'off';
+    end
+    % The optimization toolbox is currently not available for Matlab running
+    % under Apple silicon. Detect this case and tell BADS so that it doesn't
+    % issue a warning
+    V = ver;
+    if ~any(strcmp({V.Name}, 'Optimization Toolbox'))
+        optionsBADS.OptimToolbox = 0;
+    end
+    % Set up an objective, which is attempting to maximize the contrast
+    % provided on the targeted photoreceptor
+    myObj = @(x) 1 - norm(contrastReceptorsFunc(modulationPrimaryFunc(x'),x'));
+    backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,[],optionsBADS)'
+else
+    backgroundPrimary = repmat(0.5,size(B_primary,2),1);
+end
 
-modulationReceptors = T_receptors*B_primary*(modulationPrimary - backgroundPrimary);
-contrastReceptors = modulationReceptors ./ backgroundReceptors
+% Perform the search with background background
+modulationPrimary = modulationPrimaryFunc(backgroundPrimary);
+
+% Get the contrast results
+contrastReceptors = contrastReceptorsFunc(modulationPrimary,backgroundPrimary);
 
 positiveModulationSPD = B_primary*modulationPrimary;
 negativeModulationSPD = B_primary*(backgroundPrimary-(modulationPrimary - backgroundPrimary));
@@ -116,7 +144,7 @@ wavelengthsNm = SToWls(S);
 if p.Results.makePlots
 
     % Create a figure with an appropriate title
-    fighandle = figure('Name',sprintf([whichDirection ': contrast = %2.2f'],contrastReceptors(1)));
+    fighandle = figure('Name',sprintf([whichDirection ': contrast = %2.2f'],contrastReceptors(whichReceptorsToTarget(1))));
 
     % Modulation spectra
     subplot(1,2,1)
@@ -161,3 +189,15 @@ modResult.settings = settings;
 
 end
 
+%% LOCAL FUNCTIONS
+function contrastReceptors = calcContrastReceptors(modulationPrimary,backgroundPrimary,T_receptors,B_primary,ambientSpd)
+
+% Obtain the isomerization rate for the receptors by the background
+backgroundReceptors = T_receptors*(B_primary*backgroundPrimary + ambientSpd);
+
+% Calculate the positive receptor contrast and the differences
+% between the targeted receptor sets
+modulationReceptors = T_receptors*B_primary*(modulationPrimary - backgroundPrimary);
+contrastReceptors = modulationReceptors ./ backgroundReceptors;
+
+end
