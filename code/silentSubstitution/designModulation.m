@@ -48,8 +48,7 @@ p.addParameter('primaryHeadRoom',0.00,@isscalar)
 p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
-p.addParameter('searchOverBackgrounds',false,@islogical)
-p.addParameter('verbose',true,@islogical)
+p.addParameter('verbose',false,@islogical)
 p.addParameter('makePlots',true,@islogical)
 p.parse(whichDirection,varargin{:});
 
@@ -124,8 +123,10 @@ if p.Results.searchBackground
     end
     % Set up an objective, which is attempting to maximize the contrast
     % provided on the targeted photoreceptor
-    myObj = @(x) 1 - norm(contrastReceptorsFunc(modulationPrimaryFunc(x'),x'));
-    backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,[],optionsBADS)'
+    relevantContrast = @(contrastReceptors) contrastReceptors(whichReceptorsToTarget);
+    myObj = @(x) -mean(relevantContrast(contrastReceptorsFunc(modulationPrimaryFunc(x'),x')).* (desiredContrast'));
+   % backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,[],optionsBADS)';
+    backgroundPrimary = x0Background;
 else
     backgroundPrimary = repmat(0.5,size(B_primary,2),1);
 end
@@ -147,7 +148,7 @@ if p.Results.makePlots
     fighandle = figure('Name',sprintf([whichDirection ': contrast = %2.2f'],contrastReceptors(whichReceptorsToTarget(1))));
 
     % Modulation spectra
-    subplot(1,2,1)
+    subplot(1,3,1)
     hold on
     plot(wavelengthsNm,positiveModulationSPD,'k','LineWidth',2);
     plot(wavelengthsNm,negativeModulationSPD,'r','LineWidth',2);
@@ -159,7 +160,7 @@ if p.Results.makePlots
     legend({'Positive', 'Negative', 'Background'},'Location','NorthEast');
 
     % Primaries
-    subplot(1,2,2)
+    subplot(1,3,2)
     c = 0:7;
     hold on
     plot(c,modulationPrimary,'*k');
@@ -170,6 +171,22 @@ if p.Results.makePlots
     ylim([0 1]);
     xlabel('Primary');
     ylabel('Setting');
+
+    subplot(1,3,3)
+    c = 1:length(photoreceptorClassNames);
+    hold on
+    bar(c(whichReceptorsToTarget),contrastReceptors(whichReceptorsToTarget),...
+        'FaceColor',[0.5 0.5 0.5],'EdgeColor','none');
+    hold on
+    bar(c(whichReceptorsToIgnore),contrastReceptors(whichReceptorsToIgnore),...
+        'FaceColor','w','EdgeColor','k');
+    c(whichReceptorsToIgnore)=nan; c(whichReceptorsToTarget)=nan;
+    whichReceptorsToSilence = c(~isnan(c));
+    bar(c(whichReceptorsToSilence),contrastReceptors(whichReceptorsToSilence),...
+        'FaceColor','none','EdgeColor','r');
+    set(gca,'TickLabelInterpreter','none');
+    title('Contrast');
+    ylabel('Contrast');
 end
 
 for ii = 1:8
@@ -199,5 +216,22 @@ backgroundReceptors = T_receptors*(B_primary*backgroundPrimary + ambientSpd);
 % between the targeted receptor sets
 modulationReceptors = T_receptors*B_primary*(modulationPrimary - backgroundPrimary);
 contrastReceptors = modulationReceptors ./ backgroundReceptors;
+
+end
+
+
+function contrastReceptors = calcUnipolarContrastReceptors(modulationPrimary,backgroundPrimary,T_receptors,B_primary,ambientSpd)
+
+% For the unipolar case, the "background" is the negative primary
+negativePrimary = (backgroundPrimary-(modulationPrimary - backgroundPrimary));
+
+
+% Obtain the isomerization rate for the receptors by the background
+negativeReceptors = T_receptors*(B_primary*negativePrimary + ambientSpd);
+
+% Calculate the positive receptor contrast and the differences
+% between the targeted receptor sets
+modulationReceptors = T_receptors*B_primary*modulationPrimary;
+contrastReceptors = modulationReceptors ./ negativeReceptors;
 
 end
