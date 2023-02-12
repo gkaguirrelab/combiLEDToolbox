@@ -7,7 +7,7 @@ classdef CombiLEDcontrol < handle
     properties (Constant)
 
         nPrimaries = 8;
-        nDiscreteLevels = 45;
+        nDiscreteLevels = 51;
         baudrate = 57600;
         refreshRate = 10; % Hz
         nGammaParams = 6;
@@ -30,7 +30,7 @@ classdef CombiLEDcontrol < handle
     properties (SetAccess=public)
 
         % Verbosity
-        verbose
+        verbose = false;
 
         % Properties of the gamma correction
         gammaFitTol = 0.03;
