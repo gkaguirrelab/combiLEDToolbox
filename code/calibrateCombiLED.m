@@ -25,8 +25,20 @@ function calibrateCombiLED
 calLocalData = fullfile(tbLocateProject('prizmatixDesign'),'cal');
 setpref('BrainardLabToolbox','CalDataFolder',calLocalData);
 
+% Ask the user about the measurement conditions
+fprintf('Information regarding the device configuration:')
+cableType = GetWithDefault('Fiber optic cable type','shortLLG');
+eyePieceType = GetWithDefault('Eye piece type','classic');
+ndfValue = GetWithDefault('NDF','0');
+
+% Replace any decimal points in the ndfValue with "x"
+ndfValue = strrep(ndfValue,'.','x');
+
+% Create a default calibration file name
+defaultName = ['CombiLED_' cableType '_' eyePieceType '_ND' ndfValue ];
+
 % Ask the user to provide a name for the calibration file
-calFileName = GetWithDefault('Name for the cal file','CombiLED_shortCable_0ND_classicEyePiece');
+calFileName = GetWithDefault('Name for the cal file',defaultName);
 
 % Generate calibration options and settings
 [displaySettings, calibratorOptions] = generateConfigurationForCombiLED(calFileName);
@@ -59,26 +71,26 @@ end
 
 function [displaySettings, calibratorOptions] = generateConfigurationForCombiLED(calFileName)
 
-% Specify the @Calibrator's initialization params.
-% Users should tailor these according to their hardware specs.
-% These can be set once only, at the time the @Calibrator object is instantiated.
+% Specify the @Calibrator's initialization params. Users should tailor
+% these according to their hardware specs. These can be set once only, at
+% the time the @Calibrator object is instantiated.
 displayPrimariesNum = 8;
 displaySettings = { ...
     'screenToCalibrate',        2, ...                          % which display to calibrate. main screen = 1, second display = 2
-    'desiredScreenSizePixel',   [1920 1080], ...                % pixels along the width and height of the display to be calibrated
+    'desiredScreenSizePixel',   [1 1], ...                      % pixels along the width and height of the display to be calibrated
     'desiredRefreshRate',       120, ...                        % refresh rate in Hz
     'displayPrimariesNum',      displayPrimariesNum, ...        % for regular displays this is always 3 (RGB)
     'displayDeviceType',        'monitor', ...                  % this should always be set to 'monitor' for now
-    'displayDeviceName',        'CombiLED', ...                     % a name for the display been calibrated
-    'calibrationFile',          calFileName, ...                     % name of calibration file to be generated
-    'comment',                  'The CombiLED light engine' ...          % some comment, could be anything
+    'displayDeviceName',        'CombiLED', ...                 % a name for the display been calibrated
+    'calibrationFile',          calFileName, ...                % name of calibration file to be generated
+    'comment',                  'The CombiLED light engine' ... % some comment, could be anything
     };
 
 % Specify the @Calibrator's optional params using a CalibratorOptions object
 % To see what options are available type: doc CalibratorOptions
 % Users should tailor these according to their experimental needs.
 calibratorOptions = CalibratorOptions( ...
-    'verbosity',                        2, ...
+    'verbosity',                        0, ...
     'whoIsDoingTheCalibration',         'CombiLED user', ...
     'emailAddressForDoneNotification',  '', ...
     'blankOtherScreen',                 0, ...                          % whether to blank other displays attached to the host computer (1=yes, 0 = no), ...
@@ -91,9 +103,9 @@ calibratorOptions = CalibratorOptions( ...
     'nAverage',                         3, ...                          % number of repeated measurements for averaging
     'nMeas',                            15, ...                         % samples along gamma curve
     'nDevices',                         displayPrimariesNum, ...        % number of primaries
-    'boxSize',                          600, ...                        % size of calibration stimulus in pixels
+    'boxSize',                          1, ...                          % size of calibration stimulus in pixels
     'boxOffsetX',                       0, ...                          % x-offset from center of screen (neg: leftwards, pos:rightwards)
-    'boxOffsetY',                       0, ...                           % y-offset from center of screen (neg: upwards, pos: downwards)
+    'boxOffsetY',                       0, ...                          % y-offset from center of screen (neg: upwards, pos: downwards)
     'skipLinearityTest',                true, ...
     'skipAmbientLightMeasurement',      false, ...
     'skipBackgroundDependenceTest',     true ...

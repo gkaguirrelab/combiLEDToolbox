@@ -48,6 +48,10 @@ end
 
 obj.startModulation;
 
+%{
+obj.stopModulation;
+obj.serialClose;
+%}
 
 
 % Send some values to set up that define a compound L-cone modulation described in
@@ -83,21 +87,12 @@ end
 function riderStockmanDemo(obj)
     modResult = designModulation('L_foveal');
     obj.setSettings(modResult.settings);
-    obj.setWaveformIndex(1);
+    obj.setWaveformIndex(5);
     obj.setFrequency(5);
     obj.setAMIndex(1);
-    obj.setAMValues([0.33,0.5]);
+    obj.setAMValues([0.33,1]);
     compoundHarmonics=[1,3,4,0,0];
     compoundAmplitudes=[0.5,1,1,0,0];
     compoundPhases=deg2rad([0,333,226,0,0]);
     obj.setCompoundModulation(compoundHarmonics,compoundAmplitudes,compoundPhases)
-end
-
-function penumbralConeFlicker(obj)
-    modResult = designModulation('PenumbralLuminance','matchConstraint',0,'observerAgeInYears',53);
-    obj.setSettings(modResult.settings);
-    obj.setWaveformIndex(1);
-    obj.setFrequency(16);
-    obj.setAMIndex(1);
-    obj.setAMValues([0.5,1]);
 end

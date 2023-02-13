@@ -41,6 +41,7 @@ function modResult = designModulation(whichDirection,varargin)
 %% Parse input
 p = inputParser;
 p.addRequired('whichDirection',@ischar)
+p.addParameter('nLevels',51,@isscalar)
 p.addParameter('calLocalData',fullfile(tbLocateProject('prizmatixDesign'),'cal','CombiLED.mat'),@ischar);
 p.addParameter('searchBackground',true,@islogical)
 p.addParameter('matchConstraint',1,@isscalar)
@@ -59,6 +60,7 @@ p.parse(whichDirection,varargin{:});
 matchConstraint = p.Results.matchConstraint;
 primaryHeadRoom = p.Results.primaryHeadRoom;
 verbose = p.Results.verbose;
+nLevels = p.Results.nLevels;
 
 % Load the calibration
 load(p.Results.calLocalData,'cals');
@@ -189,17 +191,12 @@ if p.Results.makePlots
     ylabel('Contrast');
 end
 
-for ii = 1:8
-    str = '{ ';
-    for bb = -22:1:22
-        level = round(4095 * (backgroundPrimary(ii)+ (bb/22)*(-(modulationPrimary(ii)-backgroundPrimary(ii)))));
-        val = round(4095 * cal.processedData.gammaTable(level+1,ii));
-        settings(ii,bb+23) = val;
-        str = [str sprintf('%d, ',val)];
+halfSet = (nLevels-1)/2;
+for ii = 1:nPrimaries
+    for bb = -halfSet:1:halfSet
+        level = backgroundPrimary(ii)+ (bb/halfSet)*(-(modulationPrimary(ii)-backgroundPrimary(ii)));
+        settings(ii,bb+halfSet+1) = level;
     end
-    str = str(1:end-2);
-    str = [str ' },\n'];
-    %    fprintf(str);
 end
 
 modResult.settings = settings;
