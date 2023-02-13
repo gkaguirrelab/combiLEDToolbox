@@ -1,4 +1,4 @@
-function modResult = designModulation(whichDirection,varargin)
+function [modResult] = designModulation(whichDirection,varargin)
 % Nominal primaries and SPDs for isolating post-receptoral mechanisms
 %
 % Syntax:
@@ -87,7 +87,10 @@ photoreceptorClassNames = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10d
 fractionBleached = [];
 oxygenationFraction = [];
 vesselThickness = [];
-T_receptors = GetHumanPhotoreceptorSS(S, photoreceptorClasses, p.Results.fieldSizeDegrees, p.Results.observerAgeInYears, p.Results.pupilDiameterMm, [], fractionBleached, oxygenationFraction, vesselThickness);
+T_receptors = GetHumanPhotoreceptorSS(S, photoreceptorClasses, ...
+    p.Results.fieldSizeDegrees, p.Results.observerAgeInYears, ...
+    p.Results.pupilDiameterMm, ...
+    [], fractionBleached, oxygenationFraction, vesselThickness);
 
 % Define the modulation direction
 [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,x0Background] = ...
@@ -100,54 +103,63 @@ modulationPrimaryFunc = @(backgroundPrimary) ...
     whichReceptorsToIgnore, B_primary,backgroundPrimary,backgroundPrimary, ...
     primaryHeadRoom,desiredContrast,ambientSpd,matchConstraint);
 
-% Define a function that returns the contrast on the targeted
-% photoreceptors
+% Define a function that returns the contrast on all photoreceptors
 contrastReceptorsFunc = @(modulationPrimary,backgroundPrimary) ...
-    calcContrastReceptors(modulationPrimary,backgroundPrimary,T_receptors,B_primary,ambientSpd);
+    calcBipolarContrastReceptors(modulationPrimary,backgroundPrimary,T_receptors,B_primary,ambientSpd);
+
+% And a function that returns the contrast on just the targeted
+% photoreceptors
+contrastOnTargeted = @(contrastReceptors) contrastReceptors(whichReceptorsToTarget);
 
 % Handle searching over backgrounds
 if p.Results.searchBackground
+    % Set the bounds within the primary headroom
     lb = zeros(1,nPrimaries)+primaryHeadRoom;
     plb = zeros(1,nPrimaries)+primaryHeadRoom;
     pub = ones(1,nPrimaries)-primaryHeadRoom;
     ub = ones(1,nPrimaries)-primaryHeadRoom;
+    % Set BADS verbosity
     if verbose
         optionsBADS.Display = 'iter';
     else
         optionsBADS.Display = 'off';
     end
-    % The optimization toolbox is currently not available for Matlab running
-    % under Apple silicon. Detect this case and tell BADS so that it doesn't
-    % issue a warning
+    % The optimization toolbox is currently not available for Matlab
+    % running under Apple silicon. Detect this case and tell BADS so that
+    % it doesn't issue a warning
     V = ver;
     if ~any(strcmp({V.Name}, 'Optimization Toolbox'))
         optionsBADS.OptimToolbox = 0;
     end
-    % Set up an objective, which is attempting to maximize the contrast
-    % provided on the targeted photoreceptor
-    relevantContrast = @(contrastReceptors) contrastReceptors(whichReceptorsToTarget);
-    myObj = @(x) -mean(relevantContrast(contrastReceptorsFunc(modulationPrimaryFunc(x'),x')).* (desiredContrast'));
-   % backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,[],optionsBADS)';
+    % Set up an objective, which is just the negative of the mean contrast
+    % on the targeted photoreceptors, accounting for the sign of the
+    % desired contrast
+    myObj = @(x) -mean(contrastOnTargeted(contrastReceptorsFunc(modulationPrimaryFunc(x'),x')).*(desiredContrast'));
+    % backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,[],optionsBADS)';
     backgroundPrimary = x0Background;
 else
-    backgroundPrimary = repmat(0.5,size(B_primary,2),1);
+    % If we are not searching across backgrounds, use the half-on
+    backgroundPrimary = repmat(0.5,nPrimaries,1);
 end
 
-% Perform the search with background background
+% Perform the search with resulting background background
 modulationPrimary = modulationPrimaryFunc(backgroundPrimary);
 
 % Get the contrast results
-contrastReceptors = contrastReceptorsFunc(modulationPrimary,backgroundPrimary);
+contrastReceptorsBipolar = contrastReceptorsFunc(modulationPrimary,backgroundPrimary);
+contrastReceptorsUnipolar = calcUnipolarContrastReceptors(modulationPrimary,backgroundPrimary);
 
+% Obtain the SPDs and wavelength support
+backgroundSPD = B_primary*backgroundPrimary;
 positiveModulationSPD = B_primary*modulationPrimary;
 negativeModulationSPD = B_primary*(backgroundPrimary-(modulationPrimary - backgroundPrimary));
-backgroundSPD = B_primary*backgroundPrimary;
 wavelengthsNm = SToWls(S);
 
+% Create a plot if requested
 if p.Results.makePlots
 
     % Create a figure with an appropriate title
-    fighandle = figure('Name',sprintf([whichDirection ': contrast = %2.2f'],contrastReceptors(whichReceptorsToTarget(1))));
+    figure('Name',sprintf([whichDirection ': contrast = %2.2f'],contrastReceptorsBipolar(whichReceptorsToTarget(1))));
 
     % Modulation spectra
     subplot(1,3,1)
@@ -155,7 +167,7 @@ if p.Results.makePlots
     plot(wavelengthsNm,positiveModulationSPD,'k','LineWidth',2);
     plot(wavelengthsNm,negativeModulationSPD,'r','LineWidth',2);
     plot(wavelengthsNm,backgroundSPD,'Color',[0.5 0.5 0.5],'LineWidth',2);
-    title(sprintf('Modulation spectra [%2.2f]',contrastReceptors(whichReceptorsToTarget(1))));
+    title(sprintf('Modulation spectra [%2.2f]',contrastReceptorsBipolar(whichReceptorsToTarget(1))));
     xlim([300 800]);
     xlabel('Wavelength');
     ylabel('Power');
@@ -174,23 +186,26 @@ if p.Results.makePlots
     xlabel('Primary');
     ylabel('Setting');
 
+    % Contrasts
     subplot(1,3,3)
     c = 1:length(photoreceptorClassNames);
     hold on
-    bar(c(whichReceptorsToTarget),contrastReceptors(whichReceptorsToTarget),...
+    bar(c(whichReceptorsToTarget),contrastReceptorsBipolar(whichReceptorsToTarget),...
         'FaceColor',[0.5 0.5 0.5],'EdgeColor','none');
     hold on
-    bar(c(whichReceptorsToIgnore),contrastReceptors(whichReceptorsToIgnore),...
+    bar(c(whichReceptorsToIgnore),contrastReceptorsBipolar(whichReceptorsToIgnore),...
         'FaceColor','w','EdgeColor','k');
     c(whichReceptorsToIgnore)=nan; c(whichReceptorsToTarget)=nan;
     whichReceptorsToSilence = c(~isnan(c));
-    bar(c(whichReceptorsToSilence),contrastReceptors(whichReceptorsToSilence),...
+    bar(c(whichReceptorsToSilence),contrastReceptorsBipolar(whichReceptorsToSilence),...
         'FaceColor','none','EdgeColor','r');
     set(gca,'TickLabelInterpreter','none');
     title('Contrast');
     ylabel('Contrast');
+
 end
 
+% Compute the primary settings matrix for the ComiLED
 halfSet = (nLevels-1)/2;
 for ii = 1:nPrimaries
     for bb = -halfSet:1:halfSet
@@ -199,12 +214,28 @@ for ii = 1:nPrimaries
     end
 end
 
+% Create a structure to return the results
+modResult.meta.whichDirection = whichDirection;
+modResult.meta.p = p.Results;
+modResult.backgroundSPD = backgroundSPD;
+modResult.meta.photoreceptorClasses = photoreceptorClasses;
+modResult.meta.photoreceptorClassNames = photoreceptorClassNames;
+modResult.contrastReceptorsBipolar = contrastReceptorsBipolar;
+modResult.contrastReceptorsUnipolar = contrastReceptorsUnipolar;
+modResult.positiveModulationSPD = positiveModulationSPD;
+modResult.negativeModulationSPD = negativeModulationSPD;
+modResult.wavelengthsNm = wavelengthsNm;
+modResult.backgroundPrimary = backgroundPrimary;
+modResult.modulationPrimary = modulationPrimary;
 modResult.settings = settings;
 
 end
 
+
+
 %% LOCAL FUNCTIONS
-function contrastReceptors = calcContrastReceptors(modulationPrimary,backgroundPrimary,T_receptors,B_primary,ambientSpd)
+
+function contrastReceptors = calcBipolarContrastReceptors(modulationPrimary,backgroundPrimary,T_receptors,B_primary,ambientSpd)
 
 % Obtain the isomerization rate for the receptors by the background
 backgroundReceptors = T_receptors*(B_primary*backgroundPrimary + ambientSpd);
@@ -221,7 +252,6 @@ function contrastReceptors = calcUnipolarContrastReceptors(modulationPrimary,bac
 
 % For the unipolar case, the "background" is the negative primary
 negativePrimary = (backgroundPrimary-(modulationPrimary - backgroundPrimary));
-
 
 % Obtain the isomerization rate for the receptors by the background
 negativeReceptors = T_receptors*(B_primary*negativePrimary + ambientSpd);
