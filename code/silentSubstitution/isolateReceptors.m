@@ -169,12 +169,12 @@ backgroundSpd = B_primary*backgroundPrimary + ambientSpd;
 modulationSpd = B_primary*(x-backgroundPrimary);
 isolateContrasts = T_receptors(whichReceptorsToIsolate,:)*modulationSpd ./ (T_receptors(whichReceptorsToIsolate,:)*backgroundSpd);
 
-if length(isolateContrasts)==1
-    fVal = norm(abs(isolateContrasts)-1);
-else
+fVal = -mean(isolateContrasts.*desiredContrasts');
+
+if length(isolateContrasts)>1
     beta = isolateContrasts\desiredContrasts';
     scaledContrasts = beta*isolateContrasts;
-    fVal = norm(abs(isolateContrasts)-1) + (10^matchConstraint)*norm(scaledContrasts-desiredContrasts');
+    fVal = fVal + matchConstraint* (norm(scaledContrasts-desiredContrasts'));
 end
 
 end

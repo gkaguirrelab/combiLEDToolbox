@@ -6,17 +6,8 @@ if length(background) ~= obj.nPrimaries
     return
 end
 
-% Check that the settings is an integer vector
-if any(floor(background)~=background)
-    warning('The settings must be integers')
-    return
-end
-
 % Sanity check the background range
-if any(background>(obj.nDiscreteLevels-1)) || any(background<0)
-    warning('The settings must be 0 and then number of discrete levels')
-    return
-end
+mustBeInRange(background,0,1);
 
 % Check that we have an open connection
 if isempty(obj.serialObj)
@@ -39,10 +30,12 @@ readline(obj.serialObj);
 
 % Loop over the primaries and send the settings
 for ii = 1:obj.nPrimaries
-    for ll= 1:obj.nDiscreteLevels
-        writeline(obj.serialObj,num2str(background(ii)));
-        readline(obj.serialObj);
-    end
+    % Each setting is sent as an integer, in the range of 0 to 1e4.
+    % This is a specification of the fractional settings with a
+    % precision to the fourth decimal place
+    valToSend = round(background(ii) * 1e4);
+    writeline(obj.serialObj,num2str(valToSend));
+    readline(obj.serialObj);
 end
 
 if obj.verbose

@@ -6,7 +6,7 @@ if size(settings,1) ~= obj.nPrimaries
     return
 end
 
-% And that we have levels equal to the number ofo discrete levels
+% And that we have levels equal to the number of discrete levels
 if size(settings,2) ~= obj.nDiscreteLevels
     warning('Second dimension of settings must match number of discrete levels')
     return

@@ -44,6 +44,8 @@ switch idx
         penumbralConeFlicker(obj)
     case 5
         lightFluxFlicker(obj)
+    case 6
+        slowLminusM(obj)
 end
 
 obj.startModulation;
@@ -95,4 +97,12 @@ function riderStockmanDemo(obj)
     compoundAmplitudes=[0.5,1,1,0,0];
     compoundPhases=deg2rad([0,333,226,0,0]);
     obj.setCompoundModulation(compoundHarmonics,compoundAmplitudes,compoundPhases)
+end
+
+function slowLminusM(obj)
+    modResult = designModulation('LminusM_wide','searchBackground',false);
+    obj.setSettings(modResult.settings);
+    obj.setBackground(modResult.backgroundPrimary);
+    obj.setWaveformIndex(1);
+    obj.setFrequency(1);
 end

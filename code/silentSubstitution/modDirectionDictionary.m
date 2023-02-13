@@ -1,5 +1,5 @@
-function [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,x0Background] = ...
-    modDirectionDictionary(whichDirection)
+function [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,...
+    x0Background, matchConstraint] = modDirectionDictionary(whichDirection)
 
 %% Define the receptor sets to isolate
 % I consider the following modulations:
@@ -17,16 +17,19 @@ function [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,x0Backgr
 %   SnoMel- S modulation in the periphery that silences melanopsin.
 
 x0Background = repmat(0.5,8,1);
+matchConstraint = 0;
 
 switch whichDirection
     case 'LminusM_wide'
         whichReceptorsToTarget = [1 2 4 5];
         whichReceptorsToIgnore = 7;
         desiredContrast = [1 -1 1 -1];
+        x0Background = [ 0.8418    0.1812    0.0923    0.0017    0.0541    0.1092    0.2757    0.5380 ]';
     case 'LminusM_foveal'
         whichReceptorsToTarget = [1 2];
-        whichReceptorsToIgnore = [4 5 7];
+        whichReceptorsToIgnore = [4 5 6 7];
         desiredContrast = [1 -1];
+        matchConstraint = -5;
     case 'L_wide'
         whichReceptorsToTarget = [1 4];
         whichReceptorsToIgnore = [7];
@@ -51,22 +54,23 @@ switch whichDirection
         whichReceptorsToTarget = [4 5 6 7];
         whichReceptorsToIgnore = [1 2 3];
         desiredContrast = [1 1 1 1];
-        x0Background = [ 0.2500    0.4998    0.5000    0.5000    0.5000    0.5000    0.5000    0.5000 ]';
+        x0Background = [ 0.5000    0.5000    0.5000    0.5000    0.5000    0.5000    0.5000    0.5000 ]';
     case 'LMSnoMel'
         whichReceptorsToTarget = [4 5 6];
         whichReceptorsToIgnore = [1 2 3];
         desiredContrast = [1 1 1];
-        x0Background = [ 0.3682    0.2689    0.0823    0.2973    0.2550    0.4806    0.1355    0.3459 ]';
+        x0Background = [ 0.4939    0.4804    0.1059    0.4419    0.3873    0.3524    0.8411    0.6647 ]';
+        matchConstraint = 1;
     case 'Mel'
         whichReceptorsToTarget = 7;
         whichReceptorsToIgnore = [1 2 3];
         desiredContrast = 1;
-        x0Background = [ 0.4991    0    0.4543    0.4996    0.1784    0.4361    0.5116    0.0176 ]';
+        x0Background = [ 0.4990    0.2744    0.2796    0.4404    0.1324    0.5010    0.1173    0.4995 ]';
     case 'SnoMel'
         whichReceptorsToTarget = [6];
         whichReceptorsToIgnore = [1 2 3];
         desiredContrast = 1;        
-        x0Background = [ 0.4755    0.3667    0.0001    0.2094    0.4131    0.2544    0.0000    0.4493 ]';
+        x0Background = [ 0.4864    0.2112         0    0.0981    0.0059    0.5038    0.2816    0.4377 ]';
 end
 
 end

@@ -42,14 +42,13 @@ function [modResult] = designModulation(whichDirection,varargin)
 p = inputParser;
 p.addRequired('whichDirection',@ischar)
 p.addParameter('nLevels',51,@isscalar)
-p.addParameter('calLocalData',fullfile(tbLocateProject('prizmatixDesign'),'cal','CombiLED.mat'),@ischar);
-p.addParameter('searchBackground',true,@islogical)
-p.addParameter('matchConstraint',1,@isscalar)
+p.addParameter('calLocalData',fullfile(tbLocateProject('prizmatixDesign'),'cal','CombiLED_shortCable_2x5ND_classicEyePiece.mat'),@ischar);
+p.addParameter('searchBackground',false,@islogical)
 p.addParameter('primaryHeadRoom',0.00,@isscalar)
 p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
-p.addParameter('verbose',false,@islogical)
+p.addParameter('verbose',true,@islogical)
 p.addParameter('makePlots',true,@islogical)
 p.parse(whichDirection,varargin{:});
 
@@ -57,7 +56,6 @@ p.parse(whichDirection,varargin{:});
 % setpref('ToolboxToolbox','verbose',tbtbVerbose);
 
 % Pull some variables out of the Results for code clarity
-matchConstraint = p.Results.matchConstraint;
 primaryHeadRoom = p.Results.primaryHeadRoom;
 verbose = p.Results.verbose;
 nLevels = p.Results.nLevels;
@@ -78,6 +76,7 @@ photoreceptorClasses = {...
     'LConeTabulatedAbsorbance10Deg', 'MConeTabulatedAbsorbance10Deg', 'SConeTabulatedAbsorbance10Deg',...
     'Melanopsin'};
 photoreceptorClassNames = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel'};
+nPhotoClasses = length(photoreceptorClassNames);
 
 % Get spectral sensitivities. Each row of the matrix T_receptors provides
 % the spectral sensitivity of the photoreceptor class in the corresponding
@@ -92,8 +91,9 @@ T_receptors = GetHumanPhotoreceptorSS(S, photoreceptorClasses, ...
     p.Results.pupilDiameterMm, ...
     [], fractionBleached, oxygenationFraction, vesselThickness);
 
-% Define the modulation direction
-[whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,x0Background] = ...
+% Get the design parameters from the modulation dictionary
+[whichReceptorsToTarget,whichReceptorsToIgnore,...
+    desiredContrast,x0Background,matchConstraint] = ...
     modDirectionDictionary(whichDirection);
 
 % Define the isolation operation as a function of the background. Always
@@ -135,8 +135,8 @@ if p.Results.searchBackground
     % on the targeted photoreceptors, accounting for the sign of the
     % desired contrast
     myObj = @(x) -mean(contrastOnTargeted(contrastReceptorsFunc(modulationPrimaryFunc(x'),x')).*(desiredContrast'));
-    % backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,[],optionsBADS)';
-    backgroundPrimary = x0Background;
+    backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,[],optionsBADS)';
+   % backgroundPrimary = x0Background;
 else
     % If we are not searching across backgrounds, use the half-on
     backgroundPrimary = repmat(0.5,nPrimaries,1);
@@ -147,7 +147,7 @@ modulationPrimary = modulationPrimaryFunc(backgroundPrimary);
 
 % Get the contrast results
 contrastReceptorsBipolar = contrastReceptorsFunc(modulationPrimary,backgroundPrimary);
-contrastReceptorsUnipolar = calcUnipolarContrastReceptors(modulationPrimary,backgroundPrimary);
+contrastReceptorsUnipolar = calcUnipolarContrastReceptors(modulationPrimary,backgroundPrimary,T_receptors,B_primary,ambientSpd);
 
 % Obtain the SPDs and wavelength support
 backgroundSPD = B_primary*backgroundPrimary;
@@ -188,18 +188,24 @@ if p.Results.makePlots
 
     % Contrasts
     subplot(1,3,3)
-    c = 1:length(photoreceptorClassNames);
+    c = 1:nPhotoClasses;
+    barVec = zeros(1,nPhotoClasses);
+    thisBar = barVec;
+    thisBar(whichReceptorsToTarget) = contrastReceptorsBipolar(whichReceptorsToTarget);
+    bar(c,thisBar,'FaceColor',[0.5 0.5 0.5],'EdgeColor','none');
     hold on
-    bar(c(whichReceptorsToTarget),contrastReceptorsBipolar(whichReceptorsToTarget),...
-        'FaceColor',[0.5 0.5 0.5],'EdgeColor','none');
-    hold on
-    bar(c(whichReceptorsToIgnore),contrastReceptorsBipolar(whichReceptorsToIgnore),...
-        'FaceColor','w','EdgeColor','k');
-    c(whichReceptorsToIgnore)=nan; c(whichReceptorsToTarget)=nan;
-    whichReceptorsToSilence = c(~isnan(c));
-    bar(c(whichReceptorsToSilence),contrastReceptorsBipolar(whichReceptorsToSilence),...
-        'FaceColor','none','EdgeColor','r');
+    thisBar = barVec;
+    thisBar(whichReceptorsToIgnore) = contrastReceptorsBipolar(whichReceptorsToIgnore);
+    bar(c,thisBar,'FaceColor','w','EdgeColor','k');
+    thisBar = contrastReceptorsBipolar;
+    thisBar(whichReceptorsToTarget) = nan;
+    thisBar(whichReceptorsToIgnore) = nan;
+    bar(c,thisBar,'FaceColor','none','EdgeColor','r');
     set(gca,'TickLabelInterpreter','none');
+    a = gca;
+    a.XTick=1:nPhotoClasses;
+    a.XTickLabel = photoreceptorClassNames;
+    xlim([0.5 nPhotoClasses+0.5]);
     title('Contrast');
     ylabel('Contrast');
 
@@ -216,6 +222,8 @@ end
 
 % Create a structure to return the results
 modResult.meta.whichDirection = whichDirection;
+modResult.meta.x0Background = x0Background;
+modResult.meta.matchConstraint = matchConstraint;
 modResult.meta.p = p.Results;
 modResult.backgroundSPD = backgroundSPD;
 modResult.meta.photoreceptorClasses = photoreceptorClasses;
