@@ -115,9 +115,25 @@
 bool simulatePrizmatix = false;
 /////////////////////////////////////////////////////////////////////
 
+
+///////////////////// DIRECT MODE BEHAVIOR //////////////////////////
+// Direct mode is used to calibrate the device. This flag controls
+// if the settings that are sent in direct mode are subjected to the
+// on-board gamma correction. If the device is being calibrated, we
+// generally do not want to gamma correct, as part of the purpose of
+// calibration is to measure the gamma table.
+//
+bool gammaCorrectInDirectMode = true;
+/////////////////////////////////////////////////////////////////////
+
+
+
 // Fixed hardware values
 const int maxLevelVal = 4095;       // maximum setting value for the prizmatix LEDs
 const int minLEDAddressTime = 300;  // the time, in microseconds, required to send an LED setting
+//const unsigned long minLEDAddressTime = 1e6;  // the time, in microseconds, required to send an LED setting
+
+
 
 // Fixed reality values
 const float pi = 3.1415927;
@@ -145,14 +161,14 @@ const uint8_t nLevels = 51;  // the number of discrete settings that are specifi
 // constant) that maps an input setting to an output setting
 const int nGammaParams = 6;
 float gammaParams[nLEDs][nGammaParams] = {
-  { 0.3241, -0.9178, 0.9954, -0.8699, 1.4695, -0.0033 },
-  { 3.4026, -9.9485, 11.0843, -6.1732, 2.6318, 0.0054 },
-  { -4.6673, 12.4840, -11.6360, 3.6100, 1.2128, -0.0077 },
-  { 2.0584, -5.7416, 6.2709, -3.9664, 2.3784, 0.0012 },
-  { 1.5879, -4.5637, 4.9856, -2.8691, 1.8582, 0.0017 },
-  { 2.0232, -5.3562, 4.9171, -2.1851, 1.5988, 0.0041 },
-  { 0.6844, -1.9140, 1.6533, -0.8179, 1.3934, -0.0008 },
-  { 1.3413, -3.8755, 4.0251, -1.8342, 1.3422, 0.0016 },
+  { 0.4926, -1.0036, 0.8240, -0.0330, 0.7225, 0.0017 },
+  { -0.6430, 1.9306, -2.1050, 1.6427, 0.1740, -0.0001 },
+  { 3.4778, -8.7622, 8.5862, -3.3875, 1.0847, 0.0018 },
+  { -0.0841, 1.0015, -1.1905, 0.9454, 0.3296, 0.0003 },
+  { -0.5600, 1.7310, -1.8954, 1.2862, 0.4387, -0.0000 },
+  { -0.9650, 3.3443, -3.6143, 1.7453, 0.4884, -0.0011 },
+  { 1.5295, -2.8669, 1.9364, -0.3914, 0.7950, -0.0003 },
+  { -1.1093, 3.3198, -3.5685, 1.6895, 0.6688, -0.0007 },
 };
 
 // Light Flux, ~100 % contrast
@@ -166,7 +182,7 @@ int settings[nLEDs][nLevels] = {
   { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
   { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
 };
-uint8_t background[nLEDs] = { 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000 };
+int background[nLEDs] = { 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000 };
 
 // Adjust the overall contrast of the modulation between 0 and 1
 float contrast = 1;
@@ -198,7 +214,7 @@ float compoundRange[2] = { 0, 1 };
 
 // Timing variables
 uint8_t waveformIndex = 1;                              // Default to sinusoid
-unsigned long cycleDur = round(1e6 / 3.0);              // Initialize at 3 Hz
+unsigned long cycleDur = round(1e6 / 3);                // Initialize at 3 Hz
 unsigned long modulationStartTime = micros();           // Initialize these with the clock
 unsigned long lastLEDUpdateTime = micros();             // Initialize these with the clock
 int blinkDurationMSecs = 100;                           // Default duration of the blink event in msecs
@@ -426,7 +442,7 @@ void getConfig() {
   }
   if (strncmp(inputString, "ST", 2) == 0) {
     // Matrix of settings int, 0-1e4
-    Serial.print("ST:");
+    Serial.println("ST:");
     clearInputString();
     for (int ii = 0; ii < nLEDs; ii++) {
       for (int jj = 0; jj < nLevels; jj++) {
@@ -441,7 +457,7 @@ void getConfig() {
   }
   if (strncmp(inputString, "GP", 2) == 0) {
     // Matrix of gamma parameters (float)
-    Serial.print("GP:");
+    Serial.println("GP:");
     clearInputString();
     for (int ii = 0; ii < nLEDs; ii++) {
       for (int jj = 0; jj < nGammaParams; jj++) {
@@ -455,7 +471,7 @@ void getConfig() {
   }
   if (strncmp(inputString, "BG", 2) == 0) {
     // Matrix of background settings int, 0-1e4
-    Serial.print("BG:");
+    Serial.println("BG:");
     clearInputString();
     for (int ii = 0; ii < nLEDs; ii++) {
       waitForNewString();
@@ -501,13 +517,18 @@ void getDirect() {
       int level = atoi(inputString);
       Serial.println(".");
       clearInputString();
+      // Convert 1e4 level to a 0-1 float level
+      float ledSettingFloat = float(level) / float(settingScale);
+      // gamma correct ledSettingFloat
+      if (gammaCorrectInDirectMode) ledSettingFloat = gammaCorrect(ledSettingFloat, ii);
+      // Convert the ledSettingFloat to a 12 bit integer
+      int ledSetting = round(ledSettingFloat * maxLevelVal);
       if (simulatePrizmatix) {
-        pulseWidthModulate(level);
+        pulseWidthModulate(ledSetting);
       } else {
-        writeToOneCombiLED(level, ii);
+        writeToOneCombiLED(ledSetting, ii);
       }
     }
-    Serial.println(".");
   }
   if (strncmp(inputString, "DK", 2) == 0) {
     setToOff();
@@ -661,19 +682,20 @@ void identifyActiveLEDs() {
 }
 
 void setToBackground() {
-  if (simulatePrizmatix) {
-    // Use the built in arduino LED, which has a binary state
-    int ii = 0;
-    int ledSetting = settings[ii][background[ii]];
-    if (ledSetting > (maxLevelVal / 2)) {
-      digitalWrite(LED_BUILTIN, HIGH);
+  for (int ii = 0; ii < nLEDs; ii++) {
+    // Get the setting for this LED
+    float ledSettingFloat = float(background[ii]) / float(settingScale);
+    // gamma correct ledSettingFloat
+    ledSettingFloat = gammaCorrect(ledSettingFloat, ii);
+    // Convert the ledSettingFloat to a 12 bit integer
+    int ledSetting = round(ledSettingFloat * maxLevelVal);
+    if (simulatePrizmatix) {
+      if (ledSetting > (maxLevelVal / 2)) {
+        digitalWrite(LED_BUILTIN, HIGH);
+      } else {
+        digitalWrite(LED_BUILTIN, LOW);
+      }
     } else {
-      digitalWrite(LED_BUILTIN, LOW);
-    }
-  } else {
-    for (int ii = 0; ii < nLEDs; ii++) {
-      // Get the setting for this LED
-      int ledSetting = settings[ii][background[ii]];
       writeToOneCombiLED(ledSetting, ii);
     }
   }
@@ -699,7 +721,7 @@ void updateLED(double cyclePhase, int ledIndex) {
     // Get the level for the current cyclePhase
     float floatLevel = getFrequencyModulation(cyclePhase);
     // Get the background level for this LED
-    float offset = background[ledIndex] / settingScale;
+    float offset = float(background[ledIndex]) / float(settingScale);
     // Scale according to the contrast value
     floatLevel = contrast * (floatLevel - offset) + offset;
     // Apply any amplitude modulation
@@ -709,11 +731,11 @@ void updateLED(double cyclePhase, int ledIndex) {
     int discreteLevel = round((nLevels - 1) * floatLevel);
     // Get the float intensity setting from the settings matrix
     // for this level
-    float ledSettingFloat = settings[ledIndex][discreteLevel] / settingScale;
+    float ledSettingFloat = float(settings[ledIndex][discreteLevel]) / float(settingScale);
     // gamma correct ledSettingFloat
     ledSettingFloat = gammaCorrect(ledSettingFloat, ledIndex);
     // Convert the ledSettingFloat to a 12 bit integer
-    int ledSetting = round(ledSettingFloat / maxLevelVal);
+    int ledSetting = round(ledSettingFloat * maxLevelVal);
     // Update the LED
     if (simulatePrizmatix) {
       pulseWidthModulate(ledSetting);
