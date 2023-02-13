@@ -121,9 +121,12 @@ bool simulatePrizmatix = false;
 // if the settings that are sent in direct mode are subjected to the
 // on-board gamma correction. If the device is being calibrated, we
 // generally do not want to gamma correct, as part of the purpose of
-// calibration is to measure the gamma table.
+// calibration is to measure the gamma table. The primary use of this
+// flag is to conduct a test to confirm that the on-board gamma
+// correction yields a linear-appearing set of responses in a
+// calibration measure that uses this correction.
 //
-bool gammaCorrectInDirectMode = true;
+bool gammaCorrectInDirectMode = false;
 /////////////////////////////////////////////////////////////////////
 
 
@@ -131,9 +134,6 @@ bool gammaCorrectInDirectMode = true;
 // Fixed hardware values
 const int maxLevelVal = 4095;       // maximum setting value for the prizmatix LEDs
 const int minLEDAddressTime = 300;  // the time, in microseconds, required to send an LED setting
-//const unsigned long minLEDAddressTime = 1e6;  // the time, in microseconds, required to send an LED setting
-
-
 
 // Fixed reality values
 const float pi = 3.1415927;
