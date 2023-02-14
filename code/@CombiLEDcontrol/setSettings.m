@@ -1,19 +1,22 @@
-function setSettings(obj,settings)
+function setSettings(obj,modResult)
+
+% Extract the background, hi, and low settings
+settingsLow = modResult.settingsLow;
+settingsHigh = modResult.settingsHigh;
 
 % Check that the settings match the number of primaries
-if size(settings,1) ~= obj.nPrimaries
-    warning('First dimension of settings must match number of primaries')
+if size(settingsLow,1) ~= obj.nPrimaries
+    warning('First dimension of settingsLow must match number of primaries')
     return
 end
-
-% And that we have levels equal to the number of discrete levels
-if size(settings,2) ~= obj.nDiscreteLevels
-    warning('Second dimension of settings must match number of discrete levels')
+if size(settingsHigh,1) ~= obj.nPrimaries
+    warning('First dimension of settingsHigh must match number of primaries')
     return
 end
 
 % Sanity check the settings range
-mustBeInRange(settings,0,1);
+mustBeInRange(settingsLow,0,1);
+mustBeInRange(settingsHigh,0,1);
 
 % Check that we have an open connection
 if isempty(obj.serialObj)
@@ -34,20 +37,28 @@ end
 writeline(obj.serialObj,'ST');
 readline(obj.serialObj);
 
-% Loop over the primaries and send the settings
+% Send the settingsLow
 for ii = 1:obj.nPrimaries
-    for jj= 1:obj.nDiscreteLevels
-        % Each setting is sent as an integer, in the range of 0 to 1e4.
-        % This is a specification of the fractional settings with a
-        % precision to the fourth decimal place
-        valToSend = round(settings(ii,jj) * 1e4);
-        writeline(obj.serialObj,num2str(valToSend));
-        readline(obj.serialObj);
-    end
+    % Each setting is sent as an integer, in the range of 0 to 1e4.
+    % This is a specification of the fractional settings with a
+    % precision to the fourth decimal place
+    valToSend = round(settingsLow(ii) * 1e4);
+    writeline(obj.serialObj,num2str(valToSend));
+    readline(obj.serialObj);
+end
+
+% Send the settingsHigh
+for ii = 1:obj.nPrimaries
+    % Each setting is sent as an integer, in the range of 0 to 1e4.
+    % This is a specification of the fractional settings with a
+    % precision to the fourth decimal place
+    valToSend = round(settingsHigh(ii) * 1e4);
+    writeline(obj.serialObj,num2str(valToSend));
+    readline(obj.serialObj);
 end
 
 if obj.verbose
-    fprintf('Settings matrix sent\n');
+    fprintf('Settings and background sent\n');
 end
 
 end

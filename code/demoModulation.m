@@ -5,6 +5,10 @@ obj = CombiLEDcontrol();
 % Establish a serial connection
 obj.serialOpen;
 
+% Get observer properties
+observerAgeInYears = str2double(GetWithDefault('Age in years','30'));
+pupilDiameterMm = str2double(GetWithDefault('Pupil diameter in mm','3'));
+
 % Modulation demos
 modDemos = {...
     'melanopsin pulses', ...
@@ -35,17 +39,17 @@ end
 
 switch idx
     case 1
-        melDemo(obj)
+        modResult = melPulses(obj,observerAgeInYears,pupilDiameterMm);
     case 2
-        riderStockmanDemo(obj)
+        modResult = riderStockmanDistortion(obj,observerAgeInYears,pupilDiameterMm);
     case 3
-        SConeDistortion(obj)
+        modResult = SConeDistortion(obj,observerAgeInYears,pupilDiameterMm);
     case 4
-        penumbralConeFlicker(obj)
+        modResult = penumbralConeFlicker(obj,observerAgeInYears,pupilDiameterMm);
     case 5
-        lightFluxFlicker(obj)
+        modResult = lightFluxFlicker(obj,observerAgeInYears,pupilDiameterMm);
     case 6
-        slowLminusM(obj)
+        modResult = slowLminusM(obj,observerAgeInYears,pupilDiameterMm);
 end
 
 obj.startModulation;
@@ -59,50 +63,57 @@ obj.serialClose;
 % Send some values to set up that define a compound L-cone modulation described in
 % Rider & Stockman 2018 PNAS
 
-function melDemo(obj)
-    modResult = designModulation('Mel','observerAgeInYears',53);
-    obj.setSettings(modResult.settings);
+function modResult = melPulses(obj,observerAgeInYears,pupilDiameterMm)
+    modResult = designModulation('Mel','observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+    obj.setSettings(modResult);
+    obj.setBackground(modResult.settingsLow);
     obj.setWaveformIndex(2);
-    obj.setFrequency(0.2);
+    obj.setFrequency(0.1);
     obj.setAMIndex(2);
-    obj.setAMValues([0.2,0.5]);
+    obj.setAMValues([0.1,0.5]);
 end
 
-function lightFluxFlicker(obj)
-    modResult = designModulation('LMS');
-    obj.setSettings(modResult.settings);
+function modResult = lightFluxFlicker(obj,observerAgeInYears,pupilDiameterMm)
+    modResult = designModulation('LightFlux','observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+    obj.setSettings(modResult);
+    obj.setBackground(modResult.settingsBackground);
     obj.setWaveformIndex(1);
     obj.setFrequency(48);
     obj.setAMIndex(1);
     obj.setAMValues([1,1]);
 end
 
-function SConeDistortion(obj)
-    modResult = designModulation('S_foveal');
-    obj.setSettings(modResult.settings);
+function modResult = SConeDistortion(obj,observerAgeInYears,pupilDiameterMm)
+    modResult = designModulation('S_foveal','observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+    obj.setSettings(modResult);
+    obj.setBackground(modResult.settingsBackground);
     obj.setWaveformIndex(1);
     obj.setFrequency(30);
     obj.setAMIndex(1);
     obj.setAMValues([1,1]);
 end
 
-function riderStockmanDemo(obj)
-    modResult = designModulation('L_foveal');
-    obj.setSettings(modResult.settings);
+function modResult = riderStockmanDistortion(obj,observerAgeInYears,pupilDiameterMm)
+    modResult = designModulation('L_foveal','observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+    obj.setSettings(modResult);
+    obj.setBackground(modResult.settingsBackground);
     obj.setWaveformIndex(5);
     obj.setFrequency(5);
     obj.setAMIndex(1);
-    obj.setAMValues([0.33,1]);
+    obj.setAMValues([0.333,1]);
     compoundHarmonics=[1,3,4,0,0];
     compoundAmplitudes=[0.5,1,1,0,0];
-    compoundPhases=deg2rad([0,333,226,0,0]);
+    compoundPhases=deg2rad([0,333,226,0,0]); % Should look red
+    %{
+    compoundPhases=deg2rad([0,333,46,0,0]); % Should look green
+    %}
     obj.setCompoundModulation(compoundHarmonics,compoundAmplitudes,compoundPhases)
 end
 
-function slowLminusM(obj)
-    modResult = designModulation('LminusM_wide','searchBackground',false);
-    obj.setSettings(modResult.settings);
-    obj.setBackground(modResult.backgroundPrimary);
+function modResult = slowLminusM(obj,observerAgeInYears,pupilDiameterMm)
+    modResult = designModulation('LminusM_wide','observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+    obj.setSettings(modResult);
+    obj.setBackground(modResult.settingsBackground);
     obj.setWaveformIndex(1);
     obj.setFrequency(1);
 end

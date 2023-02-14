@@ -48,7 +48,6 @@ p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
 p.addParameter('pupilDiameterMm',2,@isscalar)
 p.addParameter('verbose',true,@islogical)
-p.addParameter('makePlots',true,@islogical)
 p.parse(whichDirection,varargin{:});
 
 % Restore the TbTb verbosity pref
@@ -165,70 +164,10 @@ positiveModulationSPD = B_primary*modulationPrimary;
 negativeModulationSPD = B_primary*(backgroundPrimary-(modulationPrimary - backgroundPrimary));
 wavelengthsNm = SToWls(S);
 
-% Create a plot if requested
-if p.Results.makePlots
-
-    % Create a figure with an appropriate title
-    figure('Name',sprintf([whichDirection ': contrast = %2.2f'],contrastReceptorsBipolar(whichReceptorsToTarget(1))));
-
-    % Modulation spectra
-    subplot(1,3,1)
-    hold on
-    plot(wavelengthsNm,positiveModulationSPD,'k','LineWidth',2);
-    plot(wavelengthsNm,negativeModulationSPD,'r','LineWidth',2);
-    plot(wavelengthsNm,backgroundSPD,'Color',[0.5 0.5 0.5],'LineWidth',2);
-    title(sprintf('Modulation spectra [%2.2f]',contrastReceptorsBipolar(whichReceptorsToTarget(1))));
-    xlim([300 800]);
-    xlabel('Wavelength');
-    ylabel('Power');
-    legend({'Positive', 'Negative', 'Background'},'Location','NorthEast');
-
-    % Primaries
-    subplot(1,3,2)
-    c = 0:7;
-    hold on
-    plot(c,modulationPrimary,'*k');
-    plot(c,backgroundPrimary+(-(modulationPrimary-backgroundPrimary)),'*r');
-    plot(c,backgroundPrimary,'-*','Color',[0.5 0.5 0.5]);
-    set(gca,'TickLabelInterpreter','none');
-    title('Primary settings');
-    ylim([0 1]);
-    xlabel('Primary');
-    ylabel('Setting');
-
-    % Contrasts
-    subplot(1,3,3)
-    c = 1:nPhotoClasses;
-    barVec = zeros(1,nPhotoClasses);
-    thisBar = barVec;
-    thisBar(whichReceptorsToTarget) = contrastReceptorsBipolar(whichReceptorsToTarget);
-    bar(c,thisBar,'FaceColor',[0.5 0.5 0.5],'EdgeColor','none');
-    hold on
-    thisBar = barVec;
-    thisBar(whichReceptorsToIgnore) = contrastReceptorsBipolar(whichReceptorsToIgnore);
-    bar(c,thisBar,'FaceColor','w','EdgeColor','k');
-    thisBar = contrastReceptorsBipolar;
-    thisBar(whichReceptorsToTarget) = nan;
-    thisBar(whichReceptorsToIgnore) = nan;
-    bar(c,thisBar,'FaceColor','none','EdgeColor','r');
-    set(gca,'TickLabelInterpreter','none');
-    a = gca;
-    a.XTick=1:nPhotoClasses;
-    a.XTickLabel = photoreceptorClassNames;
-    xlim([0.5 nPhotoClasses+0.5]);
-    title('Contrast');
-    ylabel('Contrast');
-
-end
-
-% Compute the primary settings matrix for the ComiLED
-halfSet = (nLevels-1)/2;
-for ii = 1:nPrimaries
-    for bb = -halfSet:1:halfSet
-        level = backgroundPrimary(ii)+ (bb/halfSet)*(-(modulationPrimary(ii)-backgroundPrimary(ii)));
-        settings(ii,bb+halfSet+1) = level;
-    end
-end
+% Create vectors of the primaries with informative names
+settingsLow = backgroundPrimary+(-(modulationPrimary-backgroundPrimary));
+settingsHigh = modulationPrimary;
+settingsBackground = backgroundPrimary;
 
 % Create a structure to return the results
 modResult.meta.whichDirection = whichDirection;
@@ -239,14 +178,16 @@ modResult.meta.p = p.Results;
 modResult.backgroundSPD = backgroundSPD;
 modResult.meta.photoreceptorClasses = photoreceptorClasses;
 modResult.meta.photoreceptorClassNames = photoreceptorClassNames;
+modResult.meta.whichReceptorsToTarget = whichReceptorsToTarget;
+modResult.meta.whichReceptorsToIgnore = whichReceptorsToIgnore;
 modResult.contrastReceptorsBipolar = contrastReceptorsBipolar;
 modResult.contrastReceptorsUnipolar = contrastReceptorsUnipolar;
 modResult.positiveModulationSPD = positiveModulationSPD;
 modResult.negativeModulationSPD = negativeModulationSPD;
 modResult.wavelengthsNm = wavelengthsNm;
-modResult.backgroundPrimary = backgroundPrimary;
-modResult.modulationPrimary = modulationPrimary;
-modResult.settings = settings;
+modResult.settingsBackground = settingsBackground;
+modResult.settingsLow = settingsLow;
+modResult.settingsHigh = settingsHigh;
 
 end
 

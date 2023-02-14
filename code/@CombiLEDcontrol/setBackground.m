@@ -1,13 +1,13 @@
-function setBackground(obj,background)
+function setBackground(obj,settingsBackground)
 
 % Check that the background match the number of primaries
-if length(background) ~= obj.nPrimaries
+if length(settingsBackground) ~= obj.nPrimaries
     warning('The background vector must match number of primaries')
     return
 end
 
 % Sanity check the background range
-mustBeInRange(background,0,1);
+mustBeInRange(settingsBackground,0,1);
 
 % Check that we have an open connection
 if isempty(obj.serialObj)
@@ -33,7 +33,7 @@ for ii = 1:obj.nPrimaries
     % Each setting is sent as an integer, in the range of 0 to 1e4.
     % This is a specification of the fractional settings with a
     % precision to the fourth decimal place
-    valToSend = round(background(ii) * 1e4);
+    valToSend = round(settingsBackground(ii) * 1e4);
     writeline(obj.serialObj,num2str(valToSend));
     readline(obj.serialObj);
 end

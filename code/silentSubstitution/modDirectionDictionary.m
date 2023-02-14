@@ -61,11 +61,11 @@ switch whichDirection
         matchConstraint = 5;
         searchBackground = true;
     case 'Mel'
-        % 63% contrast on Mel
+        % 90% contrast on Mel
         whichReceptorsToTarget = 7;
         whichReceptorsToIgnore = [1 2 3];
         desiredContrast = 1;
-        x0Background = [ 0.4553    0.0000    0.0269    0.3823    0.0735    0.5012    0.1829    0.4890 ]';
+        x0Background = [ 0.0823    0.0000    0.0000    0.0655    0.0007    0.3248    0.5499    0.4275 ]';
         searchBackground = true;
     case 'SnoMel'
         % 91% contrast on peripheral S-cones

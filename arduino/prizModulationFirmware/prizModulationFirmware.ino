@@ -16,20 +16,18 @@
 //  LED6 --   627          19            480
 //  LED7 --   561          15            470
 //
-// A "settings" matrix specifies the intensity level of each LED between
-// 0 and 1 with 1e-4 precision. An ordered set of 51 discrete levels are
-// provided for each primary. These levels might define a linear change in
-// luminance or L–M contrast, for example. Gamma correction is performed on
-// device, and the resulting floating level is then cast into a 12 bit
-// LED setting
+// The "settings" vectors specifies the highest and lowest intensity level
+// of each LED between 0 and 1 with 1e-4 precision. Over time, a waveform
+// defines a linear transition between the high and the low state,
+// producing (for example) a linear change in luminance or L–M contrast,
+// for example. Gamma correction is performed on device, and the resulting
+// floating level is then cast into a 12 bit LED setting
 //
-// Over time, we present a given column of the settings by assigning the
-// values to the LEDs. The particular column that is presented is under the
-// control of a waveform (e.g., sin, square) and a frequency [Hz]. After
+// The modulation is under the control of a waveform (e.g., sin, square) and
+// a frequency [Hz]. After
 // setup, the code enters a run loop during which each LED is updated
 // sequentially. The waveform is used to define a floating point level (0-1),
-// which is mapped to the discrete levels (0-51). The settings matrix provides
-// the setting of a given LED at the given level.
+// which is mapped between the low an high settings values.
 //
 // There is a minimum amount of time required to address an LED (about 250
 // microseconds). The program clock advances and, at this interval, determines
@@ -62,9 +60,9 @@
 //                      to write a setting to one LED. We set this minimum address
 //                      time to somewhat longer than this to allow time for
 //                      computation overhead.
-//  settings            8x51 int matrix, all between 0 and 1e4. Each column
-//                      defines the linear settings on the 8 LEDs at each of n
-//                      levels of the modulation. The specified value is divided
+//  settingsHigh, settingsLow 8x1 int matrix, all between 0 and 1e4. Each value
+//                      defines the high or low setting for each of the 8 LEDs.
+//                      The specified value is divided
 //                      by 1e4 to yield a value between 0 and 1. This value is
 //                      subject to gamma correction prior to being passed to the
 //                      LED.
@@ -154,8 +152,7 @@ bool stringComplete = false;        // whether the input string is complete
 bool modulationState = false;       // When we are running, are we modulating?
 
 // Define settings and modulations
-const uint8_t nLEDs = 8;     // the number of LEDs
-const uint8_t nLevels = 51;  // the number of discrete settings that are specified for each LED
+const uint8_t nLEDs = 8;  // the number of LEDs
 
 // Define a set of gamma functions. Each gamma function is a 5th order polynomial (plus a
 // constant) that maps an input setting to an output setting
@@ -172,16 +169,8 @@ float gammaParams[nLEDs][nGammaParams] = {
 };
 
 // Light Flux, ~100 % contrast
-int settings[nLEDs][nLevels] = {
-  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
-  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
-  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
-  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
-  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
-  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
-  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
-  { 0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200, 5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000 },
-};
+int settingsLow[nLEDs] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+int settingsHigh[nLEDs] = { 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000 };
 int background[nLEDs] = { 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000 };
 
 // Adjust the overall contrast of the modulation between 0 and 1
@@ -195,10 +184,11 @@ bool ledIsActive[nLEDs] = { false, false, false, false, false, false, false, fal
 
 // Variables that define an amplitude modulation
 uint8_t amplitudeIndex = 0;  // Default to no amplitude modulation
-float amplitudeVals[3][2] = {
+float amplitudeVals[4][2] = {
   { 0.0, 0.0 },  // unused entries for no amplitude modulation
   { 0.1, 1.0 },  // AM modulation: frequency Hz, AM depth
   { 0.1, 1.5 },  // Half-cosine window: block frequency Hz, window duration seconds
+  { 0.1, 2 },    // Modulate the phase of the index 2 harmonic of the compound modulation
 };
 
 // Variables the define compound modulations. Support is provided for a compound modulation
@@ -225,6 +215,7 @@ float modulationDurSecs = 0;                            // Duration of the modul
 int long cycleCount = 0;                                // Num cycles elapsed since modulation start
 
 
+
 // setup
 void setup() {
   // Initialize serial port communication
@@ -232,9 +223,8 @@ void setup() {
   // Modify the settings and background if we are simulating
   if (simulatePrizmatix) {
     for (int ii = 1; ii < nLEDs; ii++) {
-      for (int jj = 0; jj < nLevels; jj++) {
-        settings[ii][jj] = 0;
-      }
+      settingsHigh[ii] = 0;
+      settingsLow[ii] = 0;
       background[ii] = 0;
     }
   }
@@ -304,22 +294,12 @@ void showModeMenu() {
   switch (deviceState) {
     case CONFIG:
       Serial.println("CM");
-      // Serial.println("WF: waveform index, FQ: FM freq [Hz]");
-      // Serial.println("AM: AM index, V0...Vn: AM vals idx n");
-      // Serial.println("L0, L1, .., Ln: Settings for LED n");
-      // Serial.println("PR: print current settings matrix");
-      // Serial.println("RM: run mode, DM: direct mode");
       break;
     case DIRECT:
       Serial.println("DM");
-      // Serial.println("LL: settings [0 4095] for LEDs 0-7");
-      // Serial.println("RM: run mode, CM: config mode");
       break;
     case RUN:
       Serial.println("RM");
-      // Serial.println("GO: go, SP: stop, BL: blink");
-      // Serial.println("BG: background, DK: all off");
-      // Serial.println("CM: config mode, DM: direct mode");
       break;
   }
 }
@@ -386,6 +366,7 @@ void getConfig() {
     if (amplitudeIndex == 0) Serial.println("none");
     if (amplitudeIndex == 1) Serial.println("sin");
     if (amplitudeIndex == 2) Serial.println("half-cos");
+    if (amplitudeIndex == 3) Serial.println("compound phase shift");
   }
   if (strncmp(inputString, "AV", 2) == 0) {
     // Amplitude modulation values for the current index
@@ -441,20 +422,26 @@ void getConfig() {
     updateCompoundRange();
   }
   if (strncmp(inputString, "ST", 2) == 0) {
-    // Matrix of settings int, 0-1e4
+    // Matrix of settings int, 0-1e4, first
+    // settingsLow, then settingsHigh
     Serial.println("ST:");
     clearInputString();
     for (int ii = 0; ii < nLEDs; ii++) {
-      for (int jj = 0; jj < nLevels; jj++) {
-        waitForNewString();
-        int level = atoi(inputString);
-        settings[ii][jj] = level;
-        Serial.println(".");
-        clearInputString();
-      }
+      waitForNewString();
+      int level = atoi(inputString);
+      settingsLow[ii] = level;
+      Serial.println(".");
+      clearInputString();
     }
-    identifyActiveLEDs();
+    for (int ii = 0; ii < nLEDs; ii++) {
+      waitForNewString();
+      int level = atoi(inputString);
+      settingsHigh[ii] = level;
+      Serial.println(".");
+      clearInputString();
+    }
   }
+  identifyActiveLEDs();
   if (strncmp(inputString, "GP", 2) == 0) {
     // Matrix of gamma parameters (float)
     Serial.println("GP:");
@@ -482,10 +469,6 @@ void getConfig() {
     }
     identifyActiveLEDs();
     setToBackground();
-  }
-  if (strncmp(inputString, "PR", 2) == 0) {
-    // Print current settings
-    printCurrentSettings();
   }
   if (strncmp(inputString, "RM", 2) == 0) {
     // Switch to run mode
@@ -654,29 +637,12 @@ void updateCompoundRange() {
 }
 
 void identifyActiveLEDs() {
-  // Identify those LEDs that never differ from the background and
-  // remove them from the active list
-  int nActiveLEDs = 0;
+  // Identify those LEDs that are pinned and remove them from the active list
   for (int ii = 0; ii < nLEDs; ii++) {
-    int levelIdx = 0;
-    bool anyDiff = false;
-    bool stillChecking = true;
-    while (stillChecking) {
-      if (settings[ii][levelIdx] != background[ii]) {
-        anyDiff = true;
-        stillChecking = false;
-      } else {
-        levelIdx++;
-        if (levelIdx == nLevels) {
-          stillChecking = false;
-        }
-      }
-    }
-    if (anyDiff) {
-      ledIsActive[ii] = true;
-      nActiveLEDs++;
-    } else {
+    if (settingsHigh[ii] == settingsLow[ii]) {
       ledIsActive[ii] = false;
+    } else {
+      ledIsActive[ii] = true;
     }
   }
 }
@@ -726,12 +692,9 @@ void updateLED(double cyclePhase, int ledIndex) {
     floatLevel = contrast * (floatLevel - offset) + offset;
     // Apply any amplitude modulation
     floatLevel = applyAmplitudeModulation(floatLevel, offset);
-    // Cast the continuous floatLevel to one of the 45 discrete
-    // levels.
-    int discreteLevel = round((nLevels - 1) * floatLevel);
-    // Get the float intensity setting from the settings matrix
-    // for this level
-    float ledSettingFloat = float(settings[ledIndex][discreteLevel]) / float(settingScale);
+    // Get the float intensity setting as the linear proportional
+    // distance between the low and high value
+    float ledSettingFloat = (floatLevel * (settingsHigh[ledIndex] - settingsLow[ledIndex]) + settingsLow[ledIndex]) / float(settingScale);
     // gamma correct ledSettingFloat
     ledSettingFloat = gammaCorrect(ledSettingFloat, ledIndex);
     // Convert the ledSettingFloat to a 12 bit integer
@@ -744,7 +707,6 @@ void updateLED(double cyclePhase, int ledIndex) {
     }
   }
 }
-
 
 float getFrequencyModulation(float cyclePhase) {
   // Provides a continuous level, between 0-1, for a given waveform
@@ -776,7 +738,7 @@ float getFrequencyModulation(float cyclePhase) {
   if (waveformIndex == 5) {
     level = 0;
     for (int ii = 0; ii < 5; ii++) {
-      level = level + compoundAmps[ii] * sin(compoundHarmonics[ii] * 2 * pi * cyclePhase + compoundPhases[ii]);
+      level = level + compoundAmps[ii] * sin(compoundHarmonics[ii] * 2 * pi * cyclePhase - compoundPhases[ii]);
     }
     // Use the pre-computed "compoundRange" to place level in the 0-1 range
     level = (level - compoundRange[0]) / (compoundRange[1] - compoundRange[0]);
@@ -816,6 +778,15 @@ float applyAmplitudeModulation(float level, float offset) {
     }
     // center the level around the background
     level = (level - offset) * modLevel + offset;
+  }
+    // Vary the phase of a compound modulation harmonic
+  if (amplitudeIndex == 3) {
+    float totalDur = 1 / amplitudeVals[amplitudeIndex][0];
+    int harmonicIdx = amplitudeVals[amplitudeIndex][1];
+    // Determine how far along the modulation we are
+    float elapsedTimeSecs = (micros() - modulationStartTime) / 1e6;
+    float harmPhase = 2 * pi * (elapsedTimeSecs / totalDur);
+    compoundPhases[harmonicIdx] = harmPhase;
   }
   // ensure that level is within the 0-1 range
   level = max(level, 0);
@@ -872,21 +843,6 @@ void writeToOneCombiLED(int level, int ledIndex) {
   Wire.write((uint8_t)(highByte(level << 4)));
   Wire.write((uint8_t)(lowByte(level << 4)));
   Wire.endTransmission(1);
-}
-
-// Dump the settings matrix to the console
-void printCurrentSettings() {
-  int numRows = sizeof(settings) / sizeof(settings[0]);
-  int numCols = sizeof(settings[0]) / sizeof(settings[0][0]);
-  Serial.println("Settings matrix:");
-  for (int r = 0; r < numRows; r++) {
-    Serial.print("\n");
-    for (int c = 0; c < numCols; c++) {
-      Serial.print(settings[r][c]);
-      Serial.print(" ");
-    }
-  }
-  Serial.print("\n");
 }
 
 // Clean-up after receiving inputString
