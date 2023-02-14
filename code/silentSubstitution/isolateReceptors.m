@@ -124,14 +124,23 @@ for ii = 1:length(vub)
     end
 end
 
-myObj = @(x) IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrastVector,matchConstraint);
+warningState = warning;
+warning('off','MATLAB:rankDeficientMatrix');
+
+
 
 %% Optimize.
 % Progressive smoothing seems to work better than providing final value all
 % at once.
 options = optimset('fmincon');
-options = optimset(options,'Diagnostics','off','Display','off','LargeScale','on','Algorithm','interior-point', 'MaxFunEvals', 100000, 'TolFun', 1e-10, 'TolCon', 1e-10, 'TolX', 1e-10);
-x = fmincon(myObj,x,[],[],Aeq,beq,vlb,vub,[],options);
+options = optimset(options,'Diagnostics','off','Display','off','LargeScale','off','Algorithm','interior-point', 'MaxFunEvals', 100000, 'TolFun', 1e-10, 'TolCon', 1e-10, 'TolX', 1e-10);
+
+    myObj = @(x) IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrastVector,matchConstraint);
+    x = fmincon(myObj,x,[],[],Aeq,beq,vlb,vub,[],options);
+
+% Restore the warning state
+warning(warningState);
+
 
 % Extract the output arguments to be passed back.
 % This enforces a sanity check on the primaries.
@@ -150,7 +159,7 @@ end
 
 % Optimization subfunction.  This mixes maximizing response of isolated
 % receptors with smoothness.
-function fVal = IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrasts,matchConstraint)
+function [fVal,isolateContrasts] = IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrasts,matchConstraint)
 
 % Compute background including ambient
 backgroundSpd = B_primary*backgroundPrimary + ambientSpd;
@@ -159,12 +168,12 @@ backgroundSpd = B_primary*backgroundPrimary + ambientSpd;
 modulationSpd = B_primary*(x-backgroundPrimary);
 isolateContrasts = T_receptors(whichReceptorsToIsolate,:)*modulationSpd ./ (T_receptors(whichReceptorsToIsolate,:)*backgroundSpd);
 
-if length(isolateContrasts)==1
-    fVal = norm(abs(isolateContrasts)-1);
-else
-    beta = isolateContrasts\desiredContrasts';
-    scaledContrasts = beta*isolateContrasts;
-    fVal = norm(abs(isolateContrasts)-1) + (10^matchConstraint)*norm(scaledContrasts-desiredContrasts');
+fVal = -mean(isolateContrasts.*desiredContrasts');
+
+beta = isolateContrasts\desiredContrasts';
+if ~isinf(beta)
+scaledContrasts = beta*isolateContrasts;
+fVal = fVal + (10^matchConstraint)*sum((scaledContrasts-desiredContrasts').^4);
 end
 
 end

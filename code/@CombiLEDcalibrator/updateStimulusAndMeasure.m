@@ -6,14 +6,11 @@ if (obj.options.verbosity > 1)
     fprintf('        Target settings    : %2.3f %2.3f %2.3f %2.3f %2.3f %2.3f %2.3f %2.3f\n\n', targetSettings);
 end
 
-% Map the 0-1 range of settings to the 0-4095 range of the device
-deviceSettings = round(targetSettings*4095);
-
 % Get the displayObj
 displayObj = obj.displayObj;
 
 % Update the primaries
-displayObj.setPrimaries(deviceSettings);
+displayObj.setPrimaries(targetSettings);
 
 % Measure
 obj.radiometerObj.measure();

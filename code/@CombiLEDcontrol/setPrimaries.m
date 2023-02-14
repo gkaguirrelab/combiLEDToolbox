@@ -6,17 +6,8 @@ if length(settings) ~= obj.nPrimaries
     return
 end
 
-% Check that the settings is an integer vector
-if any(floor(settings)~=settings)
-    warning('The settings must be integers')
-    return
-end
-
-% Check that the settings is an integer vector
-if any(settings>4095) || any(settings<0)
-    warning('The settings must be 0-4095')
-    return
-end
+% Sanity check the settings range
+mustBeInRange(settings,0,1);
 
 % Check that we have an open connection
 if isempty(obj.serialObj)
@@ -42,7 +33,11 @@ readline(obj.serialObj);
 
 % Loop over the primaries and write the values
 for ii=1:length(settings)
-    writeline(obj.serialObj,num2str(settings(ii)));
+    % Each setting is sent as an integer, in the range of 0 to 1e4.
+    % This is a specification of the fractional settings with a
+    % precision to the fourth decimal place
+    valToSend = round(settings(ii) * 1e4);
+    writeline(obj.serialObj,num2str(valToSend));
     readline(obj.serialObj);
 end
 

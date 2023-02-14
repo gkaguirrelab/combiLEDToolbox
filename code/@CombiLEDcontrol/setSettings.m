@@ -6,22 +6,14 @@ if size(settings,1) ~= obj.nPrimaries
     return
 end
 
+% And that we have levels equal to the number of discrete levels
 if size(settings,2) ~= obj.nDiscreteLevels
     warning('Second dimension of settings must match number of discrete levels')
     return
 end
 
-% Check that the settings is an integer vector
-if any(floor(settings(:))~=settings(:))
-    warning('The settings must be integers')
-    return
-end
-
 % Sanity check the settings range
-if any(settings(:)>4095) || any(settings(:)<0)
-    warning('The settings must be 0-4095')
-    return
-end
+mustBeInRange(settings,0,1);
 
 % Check that we have an open connection
 if isempty(obj.serialObj)
@@ -45,7 +37,11 @@ readline(obj.serialObj);
 % Loop over the primaries and send the settings
 for ii = 1:obj.nPrimaries
     for jj= 1:obj.nDiscreteLevels
-        writeline(obj.serialObj,num2str(settings(ii,jj)));
+        % Each setting is sent as an integer, in the range of 0 to 1e4.
+        % This is a specification of the fractional settings with a
+        % precision to the fourth decimal place
+        valToSend = round(settings(ii,jj) * 1e4);
+        writeline(obj.serialObj,num2str(valToSend));
         readline(obj.serialObj);
     end
 end
