@@ -1,4 +1,4 @@
-function [modResult] = designModulation(whichDirection,varargin)
+function modResult = designModulation(whichDirection,varargin)
 % Nominal primaries and SPDs for isolating post-receptoral mechanisms
 %
 % Syntax:

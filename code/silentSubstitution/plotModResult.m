@@ -30,6 +30,7 @@ title('Modulation spectra');
 xlim([300 800]);
 xlabel('Wavelength');
 ylabel('Power');
+axis square
 
 % Primaries
 subplot(1,4,2)
@@ -43,6 +44,7 @@ title('Primaries');
 ylim([0 1]);
 xlabel('Primary');
 ylabel('Setting');
+axis square
 
 % Contrasts
 subplot(1,4,3)
@@ -66,10 +68,14 @@ a.XTickLabel = photoreceptorClassNames;
 xlim([0.5 nPhotoClasses+0.5]);
 title('Contrast');
 ylabel('Contrast');
-
+axis square
 
 %% Chromaticity
 subplot(1,4,4)
+
+% Start with the Matlab chromaticity diagram
+plotChromaticity;
+hold on
 
 % Load the XYZ fundamentals
 load('T_xyz1931.mat','T_xyz1931','S_xyz1931');
@@ -85,17 +91,13 @@ modNeg_chromaticity_xy = (T_xyz(1:2,:)*negativeModulationSPD/sum(T_xyz*negativeM
 
 % Plot the loci for each of the spectra
 plot(bg_chromaticity_xy(1), bg_chromaticity_xy(2), 'o', 'MarkerFaceColor', [0.5 0.5 0.5], 'MarkerSize', 10);
-hold on
 plot(modPos_chromaticity_xy(1), modPos_chromaticity_xy(2), 'o', 'MarkerFaceColor', 'k', 'MarkerSize', 10);
 plot(modNeg_chromaticity_xy(1), modNeg_chromaticity_xy(2), 'o', 'MarkerFaceColor', 'r', 'MarkerSize', 10);
 
-% Plot the boundary of the color space
-plot(xyYLocus(1,:)',xyYLocus(2,:)','k');
-
-% Add a legend and some labels
-hleg = legend({'background','positive','negative'});
+% Labels
 xlabel('x chromaticity');
 ylabel('y chromaticity');
 title(sprintf('Luminance %2.1f cd/m2',bg_photopicLuminanceCdM2_Y))
+axis square
 
 end
