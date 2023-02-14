@@ -114,12 +114,6 @@ bool simulatePrizmatix = false;
 /////////////////////////////////////////////////////////////////////
 
 
-/////////////////////// MEASURE TIMING //////////////////////////////
-// Controls if we collect and report timing data
-//
-bool measureTiming = true;
-/////////////////////////////////////////////////////////////////////
-
 
 ///////////////////// DIRECT MODE BEHAVIOR //////////////////////////
 // Direct mode is used to calibrate the device. This flag controls
@@ -145,6 +139,8 @@ const float pi = 3.1415927;
 
 // Fixed value that scales the settings and background values to floats between 0 and 1
 const int settingScale = 1e4;
+
+const int nGammaLevels = 20;
 
 // Define the device states
 enum { CONFIG,
@@ -174,6 +170,8 @@ float gammaParams[nLEDs][nGammaParams] = {
   { 1.5295, -2.8669, 1.9364, -0.3914, 0.7950, -0.0003 },
   { -1.1093, 3.3198, -3.5685, 1.6895, 0.6688, -0.0007 },
 };
+
+float gammaTable[nLEDs][nGammaLevels];
 
 // Light Flux, ~100 % contrast
 int settingsLow[nLEDs] = { 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -246,6 +244,8 @@ void setup() {
   }
   // Check which LEDs are "active"
   identifyActiveLEDs();
+  // Update the gammaTable
+  updateGammaTable();
   // Set the device to background
   setToBackground();
   // Update the compoundRange, in case we have
@@ -274,10 +274,8 @@ void loop() {
     unsigned long currentTime = micros();
     if ((currentTime - lastLEDUpdateTime) > minLEDAddressTime) {
       // Collect diagnostic timing information
-      if (measureTiming) {
-        cycleOverage = cycleOverage + (currentTime - lastLEDUpdateTime);
-        cycleCount++;
-      }
+      cycleOverage = cycleOverage + (currentTime - lastLEDUpdateTime);
+      cycleCount++;
       // Determine where we are in the cycle
       unsigned long cycleTime = ((currentTime - modulationStartTime) % cycleDur);
       double cyclePhase = double(cycleTime) / double(cycleDur);
@@ -555,20 +553,15 @@ void getRun() {
       modulationState = true;
       lastLEDUpdateTime = micros();
       modulationStartTime = micros();
-      if (measureTiming) {
-        cycleCount = 0;
-        cycleOverage = 0;
-      }
+      cycleCount = 0;
+      cycleOverage = 0;
     }
     if (strncmp(inputString, "SP", 2) == 0) {
       setToBackground();
-      Serial.println(".");
       modulationState = false;
-      if (measureTiming) {
-        float slopPerCycle =  float(cycleOverage)/float(cycleCount);
-        Serial.print("Slop per cycle: ");
-        Serial.println(slopPerCycle);
-      }
+      float slopPerCycle = float(cycleOverage) / float(cycleCount);
+      Serial.print("microsecs per update: ");
+      Serial.println(slopPerCycle);
     }
     if (strncmp(inputString, "BL", 2) == 0) {
       Serial.println(".");
@@ -705,7 +698,7 @@ void updateLED(double cyclePhase, int ledIndex) {
   if (ledIsActive[ledIndex]) {
     // Adjust the cyclePhase for the phaseOffset
     cyclePhase = cyclePhase + (phaseOffset / (2 * pi));
-    // Get the level for the current cyclePhase
+    // Get the level for the current cyclePhase (about 250 microseconds)
     float floatLevel = getFrequencyModulation(cyclePhase);
     // Get the background level for this LED
     float offset = float(background[ledIndex]) / float(settingScale);
@@ -716,11 +709,11 @@ void updateLED(double cyclePhase, int ledIndex) {
     // Get the float intensity setting as the linear proportional
     // distance between the low and high value
     float ledSettingFloat = (floatLevel * (settingsHigh[ledIndex] - settingsLow[ledIndex]) + settingsLow[ledIndex]) / float(settingScale);
-    // gamma correct ledSettingFloat
+    // gamma correct ledSettingFloat (about 80 microseconds)
     ledSettingFloat = gammaCorrect(ledSettingFloat, ledIndex);
     // Convert the ledSettingFloat to a 12 bit integer
     int ledSetting = round(ledSettingFloat * maxLevelVal);
-    // Update the LED
+    // Update the LED (about 230 microseconds)
     if (simulatePrizmatix) {
       pulseWidthModulate(ledSetting);
     } else {
@@ -815,13 +808,28 @@ float applyAmplitudeModulation(float level, float offset) {
   return level;
 }
 
-float gammaCorrect(float ledSettingFloat, int ledIndex) {
-  float corrected = 0;
-  for (int ii = 0; ii < nGammaParams; ii++) {
-    corrected = corrected + gammaParams[ledIndex][ii] * pow(ledSettingFloat, (nGammaParams - 1) - ii);
+void updateGammaTable() {
+  for (int ii = 0; ii < nLEDs; ii++) {
+    for (int jj = 0; jj < nGammaLevels; jj++) {
+      float input = float(jj) / (nGammaLevels - 1);
+      float corrected = 0;
+      for (int kk = 0; kk < nGammaParams; kk++) {
+        corrected = corrected + gammaParams[ii][kk] * pow(input, (nGammaParams - 1) - kk);
+      }
+      gammaTable[ii][jj] = corrected;
+    }
   }
+}
+
+float gammaCorrect(float ledSettingFloat, int ledIndex) {
+  // Linear interpolation between values in the gammaTable
+  int lowCell = floor(ledSettingFloat * (nGammaLevels-1));
+  int hiCell = ceil(ledSettingFloat * (nGammaLevels-1));
+  float mantissa = (ledSettingFloat * (nGammaLevels-1)) - lowCell;
+  float corrected = gammaTable[ledIndex][lowCell] + mantissa * (gammaTable[ledIndex][hiCell] - gammaTable[ledIndex][lowCell]);
   return corrected;
 }
+
 
 void pulseWidthModulate(int setting) {
   // Use pulse-width modulation to vary the
