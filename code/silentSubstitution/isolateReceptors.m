@@ -135,8 +135,8 @@ warning('off','MATLAB:rankDeficientMatrix');
 options = optimset('fmincon');
 options = optimset(options,'Diagnostics','off','Display','off','LargeScale','off','Algorithm','interior-point', 'MaxFunEvals', 100000, 'TolFun', 1e-10, 'TolCon', 1e-10, 'TolX', 1e-10);
 
-    myObj = @(x) IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrastVector,matchConstraint);
-    x = fmincon(myObj,x,[],[],Aeq,beq,vlb,vub,[],options);
+myObj = @(x) IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrastVector,matchConstraint);
+x = fmincon(myObj,x,[],[],Aeq,beq,vlb,vub,[],options);
 
 % Restore the warning state
 warning(warningState);
@@ -157,8 +157,9 @@ isolatingPrimary = x;
 
 end
 
-% Optimization subfunction.  This mixes maximizing response of isolated
-% receptors with smoothness.
+% Maximize the mean contrast on the targeted receptors, while imposing a
+% regularization that reflects the deviation of contrasts from the desired
+% contrasts.
 function [fVal,isolateContrasts] = IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrasts,matchConstraint)
 
 % Compute background including ambient
@@ -172,8 +173,8 @@ fVal = -mean(isolateContrasts.*desiredContrasts');
 
 beta = isolateContrasts\desiredContrasts';
 if ~isinf(beta)
-scaledContrasts = beta*isolateContrasts;
-fVal = fVal + (10^matchConstraint)*sum((scaledContrasts-desiredContrasts').^4);
+    scaledContrasts = beta*isolateContrasts;
+    fVal = fVal + (10^matchConstraint)*sum((scaledContrasts-desiredContrasts').^4);
 end
 
 end

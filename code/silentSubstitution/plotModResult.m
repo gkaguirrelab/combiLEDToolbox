@@ -90,9 +90,9 @@ modPos_chromaticity_xy = (T_xyz(1:2,:)*positiveModulationSPD/sum(T_xyz*positiveM
 modNeg_chromaticity_xy = (T_xyz(1:2,:)*negativeModulationSPD/sum(T_xyz*negativeModulationSPD));
 
 % Plot the loci for each of the spectra
-plot(bg_chromaticity_xy(1), bg_chromaticity_xy(2), 'o', 'MarkerFaceColor', [0.5 0.5 0.5], 'MarkerSize', 10);
-plot(modPos_chromaticity_xy(1), modPos_chromaticity_xy(2), 'o', 'MarkerFaceColor', 'k', 'MarkerSize', 10);
-plot(modNeg_chromaticity_xy(1), modNeg_chromaticity_xy(2), 'o', 'MarkerFaceColor', 'r', 'MarkerSize', 10);
+plot(bg_chromaticity_xy(1), bg_chromaticity_xy(2), 'o','MarkerEdgeColor','w','MarkerFaceColor', [0.5 0.5 0.5],'LineWidth', 2, 'MarkerSize', 10);
+plot(modPos_chromaticity_xy(1), modPos_chromaticity_xy(2), 'o','MarkerEdgeColor','w','MarkerFaceColor', 'k', 'LineWidth', 2,'MarkerSize', 10);
+plot(modNeg_chromaticity_xy(1), modNeg_chromaticity_xy(2), 'o','MarkerEdgeColor','w','MarkerFaceColor', 'r','LineWidth', 2, 'MarkerSize', 10);
 
 % Labels
 xlabel('x chromaticity');
