@@ -11,12 +11,11 @@ pupilDiameterMm = str2double(GetWithDefault('Pupil diameter in mm','3'));
 
 % Modulation demos
 modDemos = {...
-    'melanopsin pulses', ...
-    'Rider & Stockman distortion red', ...
-    'S-cone flicker distortion', ...
-    'penumbral cone flicker', ...
-    'light flux flicker', ...
-    'L–M slow modulation' ...
+    'melPulses', ...
+    'riderStockmanDistortion', ...
+    'SConeDistortion', ...
+    'lightFluxFlicker', ...
+    'slowLminusM' ...
     };
 
 % Present the options
@@ -28,30 +27,13 @@ for pp=1:length(modDemos)
 end
 
 choice = input('\nYour choice (return for done): ','s');
-idx = 0;
 if ~isempty(choice)
     choice = int32(choice);
     idx = find(charSet == choice);
-    notDone = true;
-else
-    notDone = false;
+    modResult = feval(modDemos{idx},obj,observerAgeInYears,pupilDiameterMm);
 end
 
-switch idx
-    case 1
-        modResult = melPulses(obj,observerAgeInYears,pupilDiameterMm);
-    case 2
-        modResult = riderStockmanDistortion(obj,observerAgeInYears,pupilDiameterMm);
-    case 3
-        modResult = SConeDistortion(obj,observerAgeInYears,pupilDiameterMm);
-    case 4
-        modResult = penumbralConeFlicker(obj,observerAgeInYears,pupilDiameterMm);
-    case 5
-        modResult = lightFluxFlicker(obj,observerAgeInYears,pupilDiameterMm);
-    case 6
-        modResult = slowLminusM(obj,observerAgeInYears,pupilDiameterMm);
-end
-
+plotModResult(modResult);
 obj.startModulation;
 
 %{
@@ -79,7 +61,7 @@ function modResult = lightFluxFlicker(obj,observerAgeInYears,pupilDiameterMm)
     obj.setBackground(modResult.settingsBackground);
     obj.setWaveformIndex(1);
     obj.setFrequency(48);
-    obj.setAMIndex(1);
+    obj.setAMIndex(0);
     obj.setAMValues([1,1]);
 end
 

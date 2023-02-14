@@ -41,7 +41,6 @@ function [modResult] = designModulation(whichDirection,varargin)
 %% Parse input
 p = inputParser;
 p.addRequired('whichDirection',@ischar)
-p.addParameter('nLevels',51,@isscalar)
 p.addParameter('calLocalData',fullfile(tbLocateProject('prizmatixDesign'),'cal','CombiLED_shortCable_2x5ND_classicEyePiece.mat'),@ischar);
 p.addParameter('primaryHeadRoom',0.00,@isscalar)
 p.addParameter('observerAgeInYears',25,@isscalar)
@@ -56,7 +55,6 @@ p.parse(whichDirection,varargin{:});
 % Pull some variables out of the Results for code clarity
 primaryHeadRoom = p.Results.primaryHeadRoom;
 verbose = p.Results.verbose;
-nLevels = p.Results.nLevels;
 
 % Load the calibration
 load(p.Results.calLocalData,'cals');
@@ -74,7 +72,6 @@ photoreceptorClasses = {...
     'LConeTabulatedAbsorbance10Deg', 'MConeTabulatedAbsorbance10Deg', 'SConeTabulatedAbsorbance10Deg',...
     'Melanopsin'};
 photoreceptorClassNames = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel'};
-nPhotoClasses = length(photoreceptorClassNames);
 
 % Get spectral sensitivities. Each row of the matrix T_receptors provides
 % the spectral sensitivity of the photoreceptor class in the corresponding
@@ -96,16 +93,9 @@ T_receptors = GetHumanPhotoreceptorSS(S, photoreceptorClasses, ...
 
 % Define the isolation operation as a function of the background. Always
 % use the background as the starting point of the modulation search
-modulationPrimaryBackFunc = @(backgroundPrimary) ...
+modulationPrimaryFunc = @(backgroundPrimary) ...
     isolateReceptors(T_receptors,whichReceptorsToTarget, ...
     whichReceptorsToIgnore, B_primary,backgroundPrimary,backgroundPrimary, ...
-    primaryHeadRoom,desiredContrast,ambientSpd,matchConstraint);
-
-% Define the isolation operation as a function of the search start point.
-% In this case, use the half-on background
-modulationPrimaryInitialFunc = @(initialPrimary) ...
-    isolateReceptors(T_receptors,whichReceptorsToTarget, ...
-    whichReceptorsToIgnore, B_primary,repmat(0.5,nPrimaries,1),initialPrimary, ...
     primaryHeadRoom,desiredContrast,ambientSpd,matchConstraint);
 
 % Define a function that returns the contrast on all photoreceptors
@@ -123,11 +113,8 @@ pub = ones(1,nPrimaries)-primaryHeadRoom;
 ub = ones(1,nPrimaries)-primaryHeadRoom;
 
 % Set BADS verbosity
-if verbose
-    optionsBADS.Display = 'iter';
-else
-    optionsBADS.Display = 'off';
-end
+optionsBADS.Display = 'off';
+
 % The optimization toolbox is currently not available for Matlab
 % running under Apple silicon. Detect this case and tell BADS so that
 % it doesn't issue a warning
@@ -138,21 +125,25 @@ end
 
 % Handle searching over backgrounds
 if searchBackground
+    % Alert the user if requested
+    if verbose
+        fprintf(['Searching over background for ' whichDirection ' modulation...\n'])
+    end
     % Set up an objective, which is just the negative of the mean contrast
     % on the targeted photoreceptors, accounting for the sign of the
     % desired contrast
-    myObj = @(x) -mean(contrastOnTargeted(contrastReceptorsFunc(modulationPrimaryBackFunc(x'),x')).*(desiredContrast'));
+    myObj = @(x) -mean(contrastOnTargeted(contrastReceptorsFunc(modulationPrimaryFunc(x'),x')).*(desiredContrast'));
     backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,[],optionsBADS)';
-    % backgroundPrimary = x0Background;
 else
+    if verbose
+        fprintf(['Searching for ' whichDirection ' modulation\n'])
+    end
     % If we are not searching across backgrounds, use the half-on
     backgroundPrimary = repmat(0.5,nPrimaries,1);
-    %    myObj = @(x) -mean(contrastOnTargeted(contrastReceptorsFunc(modulationPrimaryInitialFunc(x'),x0Background)).*(desiredContrast'));
-    %    backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,[],optionsBADS)';
 end
 
 % Perform the search with resulting background background
-modulationPrimary = modulationPrimaryBackFunc(backgroundPrimary);
+modulationPrimary = modulationPrimaryFunc(backgroundPrimary);
 
 % Get the contrast results
 contrastReceptorsBipolar = contrastReceptorsFunc(modulationPrimary,backgroundPrimary);
