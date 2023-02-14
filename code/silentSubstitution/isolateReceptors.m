@@ -129,15 +129,14 @@ warning('off','MATLAB:rankDeficientMatrix');
 
 
 
-
-myObj = @(x) IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrastVector,matchConstraint);
-
 %% Optimize.
 % Progressive smoothing seems to work better than providing final value all
 % at once.
 options = optimset('fmincon');
-options = optimset(options,'Diagnostics','off','Display','off','LargeScale','on','Algorithm','interior-point', 'MaxFunEvals', 100000, 'TolFun', 1e-10, 'TolCon', 1e-10, 'TolX', 1e-10);
-x = fmincon(myObj,x,[],[],Aeq,beq,vlb,vub,[],options);
+options = optimset(options,'Diagnostics','off','Display','off','LargeScale','off','Algorithm','interior-point', 'MaxFunEvals', 100000, 'TolFun', 1e-10, 'TolCon', 1e-10, 'TolX', 1e-10);
+
+    myObj = @(x) IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrastVector,matchConstraint);
+    x = fmincon(myObj,x,[],[],Aeq,beq,vlb,vub,[],options);
 
 % Restore the warning state
 warning(warningState);
@@ -160,7 +159,7 @@ end
 
 % Optimization subfunction.  This mixes maximizing response of isolated
 % receptors with smoothness.
-function fVal = IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrasts,matchConstraint)
+function [fVal,isolateContrasts] = IsolateFunction(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToIsolate,desiredContrasts,matchConstraint)
 
 % Compute background including ambient
 backgroundSpd = B_primary*backgroundPrimary + ambientSpd;
@@ -171,10 +170,10 @@ isolateContrasts = T_receptors(whichReceptorsToIsolate,:)*modulationSpd ./ (T_re
 
 fVal = -mean(isolateContrasts.*desiredContrasts');
 
-if length(isolateContrasts)>1
-    beta = isolateContrasts\desiredContrasts';
-    scaledContrasts = beta*isolateContrasts;
-    fVal = fVal + matchConstraint* (norm(scaledContrasts-desiredContrasts'));
+beta = isolateContrasts\desiredContrasts';
+if ~isinf(beta)
+scaledContrasts = beta*isolateContrasts;
+fVal = fVal + (10^matchConstraint)*sum((scaledContrasts-desiredContrasts').^4);
 end
 
 end

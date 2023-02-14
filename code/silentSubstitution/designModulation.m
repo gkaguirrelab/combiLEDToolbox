@@ -43,7 +43,6 @@ p = inputParser;
 p.addRequired('whichDirection',@ischar)
 p.addParameter('nLevels',51,@isscalar)
 p.addParameter('calLocalData',fullfile(tbLocateProject('prizmatixDesign'),'cal','CombiLED_shortCable_2x5ND_classicEyePiece.mat'),@ischar);
-p.addParameter('searchBackground',false,@islogical)
 p.addParameter('primaryHeadRoom',0.00,@isscalar)
 p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)
@@ -93,14 +92,21 @@ T_receptors = GetHumanPhotoreceptorSS(S, photoreceptorClasses, ...
 
 % Get the design parameters from the modulation dictionary
 [whichReceptorsToTarget,whichReceptorsToIgnore,...
-    desiredContrast,x0Background,matchConstraint] = ...
+    desiredContrast,x0Background,matchConstraint,searchBackground] = ...
     modDirectionDictionary(whichDirection);
 
 % Define the isolation operation as a function of the background. Always
 % use the background as the starting point of the modulation search
-modulationPrimaryFunc = @(backgroundPrimary) ...
+modulationPrimaryBackFunc = @(backgroundPrimary) ...
     isolateReceptors(T_receptors,whichReceptorsToTarget, ...
     whichReceptorsToIgnore, B_primary,backgroundPrimary,backgroundPrimary, ...
+    primaryHeadRoom,desiredContrast,ambientSpd,matchConstraint);
+
+% Define the isolation operation as a function of the search start point.
+% In this case, use the half-on background
+modulationPrimaryInitialFunc = @(initialPrimary) ...
+    isolateReceptors(T_receptors,whichReceptorsToTarget, ...
+    whichReceptorsToIgnore, B_primary,repmat(0.5,nPrimaries,1),initialPrimary, ...
     primaryHeadRoom,desiredContrast,ambientSpd,matchConstraint);
 
 % Define a function that returns the contrast on all photoreceptors
@@ -111,39 +117,43 @@ contrastReceptorsFunc = @(modulationPrimary,backgroundPrimary) ...
 % photoreceptors
 contrastOnTargeted = @(contrastReceptors) contrastReceptors(whichReceptorsToTarget);
 
+% Set the bounds within the primary headroom
+lb = zeros(1,nPrimaries)+primaryHeadRoom;
+plb = zeros(1,nPrimaries)+primaryHeadRoom;
+pub = ones(1,nPrimaries)-primaryHeadRoom;
+ub = ones(1,nPrimaries)-primaryHeadRoom;
+
+% Set BADS verbosity
+if verbose
+    optionsBADS.Display = 'iter';
+else
+    optionsBADS.Display = 'off';
+end
+% The optimization toolbox is currently not available for Matlab
+% running under Apple silicon. Detect this case and tell BADS so that
+% it doesn't issue a warning
+V = ver;
+if ~any(strcmp({V.Name}, 'Optimization Toolbox'))
+    optionsBADS.OptimToolbox = 0;
+end
+
 % Handle searching over backgrounds
-if p.Results.searchBackground
-    % Set the bounds within the primary headroom
-    lb = zeros(1,nPrimaries)+primaryHeadRoom;
-    plb = zeros(1,nPrimaries)+primaryHeadRoom;
-    pub = ones(1,nPrimaries)-primaryHeadRoom;
-    ub = ones(1,nPrimaries)-primaryHeadRoom;
-    % Set BADS verbosity
-    if verbose
-        optionsBADS.Display = 'iter';
-    else
-        optionsBADS.Display = 'off';
-    end
-    % The optimization toolbox is currently not available for Matlab
-    % running under Apple silicon. Detect this case and tell BADS so that
-    % it doesn't issue a warning
-    V = ver;
-    if ~any(strcmp({V.Name}, 'Optimization Toolbox'))
-        optionsBADS.OptimToolbox = 0;
-    end
+if searchBackground
     % Set up an objective, which is just the negative of the mean contrast
     % on the targeted photoreceptors, accounting for the sign of the
     % desired contrast
-    myObj = @(x) -mean(contrastOnTargeted(contrastReceptorsFunc(modulationPrimaryFunc(x'),x')).*(desiredContrast'));
+    myObj = @(x) -mean(contrastOnTargeted(contrastReceptorsFunc(modulationPrimaryBackFunc(x'),x')).*(desiredContrast'));
     backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,[],optionsBADS)';
-   % backgroundPrimary = x0Background;
+    % backgroundPrimary = x0Background;
 else
     % If we are not searching across backgrounds, use the half-on
     backgroundPrimary = repmat(0.5,nPrimaries,1);
+    %    myObj = @(x) -mean(contrastOnTargeted(contrastReceptorsFunc(modulationPrimaryInitialFunc(x'),x0Background)).*(desiredContrast'));
+    %    backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,[],optionsBADS)';
 end
 
 % Perform the search with resulting background background
-modulationPrimary = modulationPrimaryFunc(backgroundPrimary);
+modulationPrimary = modulationPrimaryBackFunc(backgroundPrimary);
 
 % Get the contrast results
 contrastReceptorsBipolar = contrastReceptorsFunc(modulationPrimary,backgroundPrimary);
@@ -224,6 +234,7 @@ end
 modResult.meta.whichDirection = whichDirection;
 modResult.meta.x0Background = x0Background;
 modResult.meta.matchConstraint = matchConstraint;
+modResult.meta.searchBackground = searchBackground;
 modResult.meta.p = p.Results;
 modResult.backgroundSPD = backgroundSPD;
 modResult.meta.photoreceptorClasses = photoreceptorClasses;
