@@ -114,6 +114,13 @@ bool simulatePrizmatix = false;
 /////////////////////////////////////////////////////////////////////
 
 
+/////////////////////// MEASURE TIMING //////////////////////////////
+// Controls if we collect and report timing data
+//
+bool measureTiming = true;
+/////////////////////////////////////////////////////////////////////
+
+
 ///////////////////// DIRECT MODE BEHAVIOR //////////////////////////
 // Direct mode is used to calibrate the device. This flag controls
 // if the settings that are sent in direct mode are subjected to the
@@ -212,8 +219,8 @@ uint8_t ledCycleIdx = 0;                                // Counter to index our 
 float phaseOffset = 0;                                  // 0-2pi, used to shift the waveform phase
 uint8_t ledUpdateOrder[] = { 0, 2, 4, 6, 1, 3, 5, 7 };  // The order in which LEDs are updated
 float modulationDurSecs = 0;                            // Duration of the modulation in secs (0 for continuous)
-int long cycleCount = 0;                                // Num cycles elapsed since modulation start
-
+unsigned long cycleCount = 0;                           // Num cycles elapsed since modulation start
+unsigned long cycleOverage = 0;
 
 
 // setup
@@ -266,6 +273,11 @@ void loop() {
   if (modulationState) {
     unsigned long currentTime = micros();
     if ((currentTime - lastLEDUpdateTime) > minLEDAddressTime) {
+      // Collect diagnostic timing information
+      if (measureTiming) {
+        cycleOverage = cycleOverage + (currentTime - lastLEDUpdateTime);
+        cycleCount++;
+      }
       // Determine where we are in the cycle
       unsigned long cycleTime = ((currentTime - modulationStartTime) % cycleDur);
       double cyclePhase = double(cycleTime) / double(cycleDur);
@@ -543,11 +555,20 @@ void getRun() {
       modulationState = true;
       lastLEDUpdateTime = micros();
       modulationStartTime = micros();
+      if (measureTiming) {
+        cycleCount = 0;
+        cycleOverage = 0;
+      }
     }
     if (strncmp(inputString, "SP", 2) == 0) {
       setToBackground();
       Serial.println(".");
       modulationState = false;
+      if (measureTiming) {
+        float slopPerCycle =  float(cycleOverage)/float(cycleCount);
+        Serial.print("Slop per cycle: ");
+        Serial.println(slopPerCycle);
+      }
     }
     if (strncmp(inputString, "BL", 2) == 0) {
       Serial.println(".");
@@ -779,7 +800,7 @@ float applyAmplitudeModulation(float level, float offset) {
     // center the level around the background
     level = (level - offset) * modLevel + offset;
   }
-    // Vary the phase of a compound modulation harmonic
+  // Vary the phase of a compound modulation harmonic
   if (amplitudeIndex == 3) {
     float totalDur = 1 / amplitudeVals[amplitudeIndex][0];
     int harmonicIdx = amplitudeVals[amplitudeIndex][1];
