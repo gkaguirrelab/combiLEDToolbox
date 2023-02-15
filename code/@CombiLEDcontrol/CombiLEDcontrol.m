@@ -47,8 +47,16 @@ classdef CombiLEDcontrol < handle
             p.addParameter('verbose',true,@islogical);
             p.parse(varargin{:})
 
-            % Do some stuff here
+            % Store the verbosity
             obj.verbose = p.Results.verbose;
+
+            % Open the serial port
+            obj.serialOpen;
+
+            % Send the default gammaTable
+            gammaTableFileName = fullfile(fileparts(mfilename('fullpath')),'defaultGammaTable.mat');
+            load(gammaTableFileName,'gammaTable');
+            obj.setGamma(gammaTable);
 
         end
 

@@ -19,10 +19,10 @@ end
 writeline(obj.serialObj,'WF');
 readline(obj.serialObj);
 writeline(obj.serialObj,num2str(waveformIndex));
-readline(obj.serialObj);
+msg=readline(obj.serialObj);
 
 if obj.verbose
-    fprintf('Waveform index set\n');
+    fprintf(['Waveform index set to ' char(msg) '\n']);
 end
 
 end

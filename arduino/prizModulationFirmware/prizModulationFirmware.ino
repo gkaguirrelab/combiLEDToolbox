@@ -140,7 +140,11 @@ const float pi = 3.1415927;
 // Fixed value that scales the settings and background values to floats between 0 and 1
 const int settingScale = 1e4;
 
-const int nGammaLevels = 20;
+// The resolution with which we will define the gamma look up table
+const int nGammaLevels = 30;
+
+// The number of parameters used to define the gamma polynomial function (5th degree + 1)
+const int nGammaParams = 6;
 
 // Define the device states
 enum { CONFIG,
@@ -157,23 +161,7 @@ bool modulationState = false;       // When we are running, are we modulating?
 // Define settings and modulations
 const uint8_t nLEDs = 8;  // the number of LEDs
 
-// Define a set of gamma functions. Each gamma function is a 5th order polynomial (plus a
-// constant) that maps an input setting to an output setting
-const int nGammaParams = 6;
-float gammaParams[nLEDs][nGammaParams] = {
-  { 0.4926, -1.0036, 0.8240, -0.0330, 0.7225, 0.0017 },
-  { -0.6430, 1.9306, -2.1050, 1.6427, 0.1740, -0.0001 },
-  { 3.4778, -8.7622, 8.5862, -3.3875, 1.0847, 0.0018 },
-  { -0.0841, 1.0015, -1.1905, 0.9454, 0.3296, 0.0003 },
-  { -0.5600, 1.7310, -1.8954, 1.2862, 0.4387, -0.0000 },
-  { -0.9650, 3.3443, -3.6143, 1.7453, 0.4884, -0.0011 },
-  { 1.5295, -2.8669, 1.9364, -0.3914, 0.7950, -0.0003 },
-  { -1.1093, 3.3198, -3.5685, 1.6895, 0.6688, -0.0007 },
-};
-
-float gammaTable[nLEDs][nGammaLevels];
-
-// Light Flux, ~100 % contrast
+// A default setting, which is 100% Light Flux. 0-1e4 precision
 int settingsLow[nLEDs] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 int settingsHigh[nLEDs] = { 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000 };
 int background[nLEDs] = { 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000 };
@@ -186,6 +174,9 @@ float contrast = 1;
 // from the background. Set to false initially, but we will check and update
 // this before entering the loop.
 bool ledIsActive[nLEDs] = { false, false, false, false, false, false, false, false };
+
+// A gamma table. 0-1e4 precision
+int gammaTable[nLEDs][nGammaLevels];
 
 // Variables that define an amplitude modulation
 uint8_t amplitudeIndex = 0;  // Default to no amplitude modulation
@@ -244,8 +235,8 @@ void setup() {
   }
   // Check which LEDs are "active"
   identifyActiveLEDs();
-  // Update the gammaTable
-  updateGammaTable();
+  // Initialize a linear gammaTable
+  initializeGammaTable();
   // Set the device to background
   setToBackground();
   // Update the compoundRange, in case we have
@@ -349,7 +340,7 @@ void getConfig() {
     clearInputString();
     waitForNewString();
     modulationDurSecs = atof(inputString);
-    Serial.println(atof(inputString));
+    Serial.println(modulationDurSecs);
   }
   if (strncmp(inputString, "CN", 2) == 0) {
     // Contrast (0-1 float)
@@ -357,7 +348,7 @@ void getConfig() {
     clearInputString();
     waitForNewString();
     contrast = atof(inputString);
-    Serial.println(atof(inputString));
+    Serial.println(contrast);
   }
   if (strncmp(inputString, "PH", 2) == 0) {
     // Phase offset (0-2pi float)
@@ -365,7 +356,7 @@ void getConfig() {
     clearInputString();
     waitForNewString();
     phaseOffset = atof(inputString);
-    Serial.println(atof(inputString));
+    Serial.println(phaseOffset);
   }
   if (strncmp(inputString, "AM", 2) == 0) {
     // Amplitude modulation index
@@ -380,17 +371,17 @@ void getConfig() {
   }
   if (strncmp(inputString, "AV", 2) == 0) {
     // Amplitude modulation values for the current index
-    Serial.println("AV0:");
+    Serial.println("AV:");
     clearInputString();
     waitForNewString();
     float newVal = atof(inputString);
     amplitudeVals[amplitudeIndex][0] = newVal;
-    Serial.println("AV1:");
+    Serial.println(newVal);
     clearInputString();
     waitForNewString();
     newVal = atof(inputString);
     amplitudeVals[amplitudeIndex][1] = newVal;
-    Serial.println(".");
+    Serial.println(newVal);
   }
   if (strncmp(inputString, "CH", 2) == 0) {
     // Compound modulation, 5 harmonic indices
@@ -400,7 +391,7 @@ void getConfig() {
       waitForNewString();
       float newVal = atof(inputString);
       compoundHarmonics[ii] = newVal;
-      Serial.println(".");
+      Serial.println(newVal);
       clearInputString();
     }
     updateCompoundRange();
@@ -413,7 +404,7 @@ void getConfig() {
       waitForNewString();
       float newVal = atof(inputString);
       compoundAmps[ii] = newVal;
-      Serial.println(".");
+      Serial.println(newVal);
       clearInputString();
     }
     updateCompoundRange();
@@ -426,7 +417,7 @@ void getConfig() {
       waitForNewString();
       float newVal = atof(inputString);
       compoundPhases[ii] = newVal;
-      Serial.println(".");
+      Serial.println(newVal);
       clearInputString();
     }
     updateCompoundRange();
@@ -440,31 +431,23 @@ void getConfig() {
       waitForNewString();
       int level = atoi(inputString);
       settingsLow[ii] = level;
-      Serial.println(".");
+      Serial.println(level);
       clearInputString();
     }
     for (int ii = 0; ii < nLEDs; ii++) {
       waitForNewString();
       int level = atoi(inputString);
       settingsHigh[ii] = level;
-      Serial.println(".");
+      Serial.println(level);
       clearInputString();
     }
+    identifyActiveLEDs();
   }
-  identifyActiveLEDs();
   if (strncmp(inputString, "GP", 2) == 0) {
-    // Matrix of gamma parameters (float)
     Serial.println("GP:");
     clearInputString();
-    for (int ii = 0; ii < nLEDs; ii++) {
-      for (int jj = 0; jj < nGammaParams; jj++) {
-        waitForNewString();
-        gammaParams[ii][jj] = atof(inputString);
-        Serial.println(".");
-        clearInputString();
-      }
-    }
-    identifyActiveLEDs();
+    updateGammaTable();
+    setToBackground();
   }
   if (strncmp(inputString, "BG", 2) == 0) {
     // Matrix of background settings int, 0-1e4
@@ -474,7 +457,7 @@ void getConfig() {
       waitForNewString();
       int level = atoi(inputString);
       background[ii] = level;
-      Serial.println(".");
+      Serial.println(level);
       clearInputString();
     }
     identifyActiveLEDs();
@@ -592,40 +575,6 @@ void getRun() {
       showModeMenu();
     }
     clearInputString();
-  }
-}
-
-void pollSerialPort() {
-  // Detect the case that we have received a complete string but
-  // have not yet finished doing something with it. In this case,
-  // do not accept anything further from the buffer
-  if ((stringComplete) && (inputCharIndex == 0)) return;
-  // See if there is something in the buffer
-  while (Serial.available()) {
-    // get the new byte:
-    char inChar = (char)Serial.read();
-    // add it to the inputString:
-    inputString[inputCharIndex] = inChar;
-    inputCharIndex++;
-    if (inputCharIndex >= inputStringLen) {
-      Serial.println("ERROR: Input overflow inputString buffer");
-      clearInputString();
-      return;
-    }
-    // if the incoming character is a newline,
-    // set a flag so the main loop can
-    // do something about it.
-    if (inChar == '\n') {
-      stringComplete = true;
-      inputCharIndex = 0;
-    }
-  }
-}
-
-void waitForNewString() {
-  bool stillWaiting = true;
-  while (!stringComplete) {
-    pollSerialPort();
   }
 }
 
@@ -808,28 +757,48 @@ float applyAmplitudeModulation(float level, float offset) {
   return level;
 }
 
-void updateGammaTable() {
+void initializeGammaTable() {
+  // Loop over the LEDs
   for (int ii = 0; ii < nLEDs; ii++) {
+    for (int jj = 0; jj < nGammaLevels; jj++) {
+      float corrected = float(jj) / (nGammaLevels - 1);
+      gammaTable[ii][jj] = round(corrected * 1e4);
+    }
+  }
+}
+
+void updateGammaTable() {
+  // Loop over the LEDs
+  for (int ii = 0; ii < nLEDs; ii++) {
+    // Receive a set of gammaParams that specify the
+    // polynomial form of the gamma correction
+    float gammaParams[nGammaParams];
+    for (int kk = 0; kk < nGammaParams; kk++) {
+      waitForNewString();
+      gammaParams[kk] = atof(inputString);
+      Serial.println(gammaParams[kk]);
+      clearInputString();
+    }
+    // Use this set of gammaParams to populate the gammaTable
     for (int jj = 0; jj < nGammaLevels; jj++) {
       float input = float(jj) / (nGammaLevels - 1);
       float corrected = 0;
       for (int kk = 0; kk < nGammaParams; kk++) {
-        corrected = corrected + gammaParams[ii][kk] * pow(input, (nGammaParams - 1) - kk);
+        corrected = corrected + gammaParams[kk] * pow(input, (nGammaParams - 1) - kk);
       }
-      gammaTable[ii][jj] = corrected;
+      gammaTable[ii][jj] = round(corrected * 1e4);
     }
   }
 }
 
 float gammaCorrect(float ledSettingFloat, int ledIndex) {
   // Linear interpolation between values in the gammaTable
-  int lowCell = floor(ledSettingFloat * (nGammaLevels-1));
-  int hiCell = ceil(ledSettingFloat * (nGammaLevels-1));
-  float mantissa = (ledSettingFloat * (nGammaLevels-1)) - lowCell;
-  float corrected = gammaTable[ledIndex][lowCell] + mantissa * (gammaTable[ledIndex][hiCell] - gammaTable[ledIndex][lowCell]);
+  int lowCell = floor(ledSettingFloat * (nGammaLevels - 1));
+  int hiCell = ceil(ledSettingFloat * (nGammaLevels - 1));
+  float mantissa = (ledSettingFloat * (nGammaLevels - 1)) - lowCell;
+  float corrected = float(gammaTable[ledIndex][lowCell]) / 1e4 + mantissa * (float(gammaTable[ledIndex][hiCell]) / 1e4 - float(gammaTable[ledIndex][lowCell]) / 1e4);
   return corrected;
 }
-
 
 void pulseWidthModulate(int setting) {
   // Use pulse-width modulation to vary the
@@ -872,6 +841,40 @@ void writeToOneCombiLED(int level, int ledIndex) {
   Wire.write((uint8_t)(highByte(level << 4)));
   Wire.write((uint8_t)(lowByte(level << 4)));
   Wire.endTransmission(1);
+}
+
+void pollSerialPort() {
+  // Detect the case that we have received a complete string but
+  // have not yet finished doing something with it. In this case,
+  // do not accept anything further from the buffer
+  if ((stringComplete) && (inputCharIndex == 0)) return;
+  // See if there is something in the buffer
+  while (Serial.available()) {
+    // get the new byte:
+    char inChar = (char)Serial.read();
+    // add it to the inputString:
+    inputString[inputCharIndex] = inChar;
+    inputCharIndex++;
+    if (inputCharIndex >= inputStringLen) {
+      Serial.println("ERROR: Input overflow inputString buffer");
+      clearInputString();
+      return;
+    }
+    // if the incoming character is a newline,
+    // set a flag so the main loop can
+    // do something about it.
+    if (inChar == '\n') {
+      stringComplete = true;
+      inputCharIndex = 0;
+    }
+  }
+}
+
+void waitForNewString() {
+  bool stillWaiting = true;
+  while (!stringComplete) {
+    pollSerialPort();
+  }
 }
 
 // Clean-up after receiving inputString

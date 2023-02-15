@@ -18,16 +18,17 @@ switch obj.deviceState
         obj.deviceState = 'CONFIG';
 end
 
-% Enter the frequency send state
+% Enter the contrast send state
 writeline(obj.serialObj,'CN');
 readline(obj.serialObj);
 
-% Send the frequency
-writeline(obj.serialObj,num2str(contrast));
-readline(obj.serialObj);
+% Send the contrast
+writeline(obj.serialObj,num2str(contrast,'%.4f'));
+msg = readline(obj.serialObj);
 
 if obj.verbose
-    fprintf('Contrast sent\n');
+    fprintf(['contrast set to ' char(msg) '\n']);
 end
+
 
 end

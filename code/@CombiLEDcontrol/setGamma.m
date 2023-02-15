@@ -6,19 +6,20 @@ if size(gammaTable,2) ~= obj.nPrimaries
     return
 end
 
+% Truncate any values above 1
+gammaTable(gammaTable>1)=1;
+
+% Check the input range
+mustBeInRange(gammaTable,0,1);
+
 % Check that we have an open connection
 if isempty(obj.serialObj)
     warning('Serial connection not yet established');
     return
 end
 
-% Place the CombiLED in Config Mode
-switch obj.deviceState
-    case 'CONFIG'
-    case {'RUN','DIRECT'}
-        writeline(obj.serialObj,'CM');
-        readline(obj.serialObj);
-        obj.deviceState = 'CONFIG';
+if obj.verbose
+    fprintf('Creating and sending gamma parameters\n');
 end
 
 % Loop through the gamma table and calculate a 5th-degree polynomial fit.
@@ -37,20 +38,34 @@ for ii=1:obj.nPrimaries
     end
 end
 
+% Place the CombiLED in Config Mode
+switch obj.deviceState
+    case 'CONFIG'
+    case {'RUN','DIRECT'}
+        writeline(obj.serialObj,'CM');
+        readline(obj.serialObj);
+        obj.deviceState = 'CONFIG';
+end
+
 % Enter the settings send state
 writeline(obj.serialObj,'GP');
 readline(obj.serialObj);
 
 % Loop over the primaries and send the settings
 for ii = 1:obj.nPrimaries
+    report = sprintf('gammaParams led%d: [ ',ii-1);
     for jj= 1:obj.nGammaParams
-        writeline(obj.serialObj,num2str(gammaParams(ii,jj)));
-        readline(obj.serialObj);
+        % Send value as 0-1e4 int
+        val = gammaParams(ii,jj);
+        writeline(obj.serialObj,num2str(val,'%.4f'));
+        msg = readline(obj.serialObj);        
+        report = [report, char(msg), ' '];
+    end
+    report = [report,']\n'];
+    if obj.verbose
+        fprintf(report);
     end
 end
 
-if obj.verbose
-    fprintf('Gamma params sent\n');
-end
 
 end

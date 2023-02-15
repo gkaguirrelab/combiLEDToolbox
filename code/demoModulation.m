@@ -2,9 +2,6 @@
 % Open a CombiLEDcontrol object
 obj = CombiLEDcontrol();
 
-% Establish a serial connection
-obj.serialOpen;
-
 % Get observer properties
 observerAgeInYears = str2double(GetWithDefault('Age in years','30'));
 pupilDiameterMm = str2double(GetWithDefault('Pupil diameter in mm','3'));
@@ -36,9 +33,13 @@ end
 plotModResult(modResult);
 obj.startModulation;
 
+foo=1;
+
 %{
 obj.stopModulation;
 obj.serialClose;
+close all
+clear
 %}
 
 
@@ -72,7 +73,7 @@ function modResult = SConeDistortion(obj,observerAgeInYears,pupilDiameterMm)
     obj.setWaveformIndex(1);
     obj.setFrequency(30);
     obj.setAMIndex(1);
-    obj.setAMValues([1,1]);
+    obj.setAMValues([0.2,1]);
 end
 
 function modResult = riderStockmanDistortion(obj,observerAgeInYears,pupilDiameterMm)

@@ -21,10 +21,10 @@ readline(obj.serialObj);
 
 % Send the amplitude modulation index
 writeline(obj.serialObj,num2str(amplitudeIndex));
-readline(obj.serialObj);
+msg = readline(obj.serialObj);
 
 if obj.verbose
-    fprintf('Amplitude modulation index sent\n');
+    fprintf(['Amplitude modulation index set to ' char(msg) '\n']);
 end
 
 end

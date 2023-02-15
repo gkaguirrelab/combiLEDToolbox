@@ -16,11 +16,11 @@ end
 
 % Stop
 writeline(obj.serialObj,'SP');
-readline(obj.serialObj);
+msg = readline(obj.serialObj);
 
 % Say
 if obj.verbose
-    fprintf('Stopped modulation\n');
+    fprintf([char(msg) '\n']);
 end
 
 end

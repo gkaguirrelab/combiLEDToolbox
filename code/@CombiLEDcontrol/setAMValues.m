@@ -20,13 +20,15 @@ writeline(obj.serialObj,'AV');
 readline(obj.serialObj);
 
 % Loop over the amplitude values and send these
+report = 'amplitudeValues: [ ';
 for ii = 1:length(amplitudeValues)
-    writeline(obj.serialObj,num2str(amplitudeValues(ii)));
-    readline(obj.serialObj);
+    writeline(obj.serialObj,num2str(amplitudeValues(ii),'%.4f'));
+    msg = readline(obj.serialObj);
+    report = [report, char(msg), ' '];
 end
-
+report = [report,']\n'];
 if obj.verbose
-    fprintf('Amplitude modulation values sent\n');
+    fprintf(report);
 end
 
 end

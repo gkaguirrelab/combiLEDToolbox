@@ -20,11 +20,12 @@ writeline(obj.serialObj,'MD');
 readline(obj.serialObj);
 
 % Send the duration
-writeline(obj.serialObj,num2str(modulationDurSecs));
-readline(obj.serialObj);
+writeline(obj.serialObj,num2str(modulationDurSecs,'%.4f'));
+msg = readline(obj.serialObj);
 
 if obj.verbose
-    fprintf('Modulation duration sent\n');
+    fprintf(['Modulation duration set to ' char(msg) '\n']);
 end
+
 
 end

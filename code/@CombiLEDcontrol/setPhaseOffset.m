@@ -23,11 +23,12 @@ writeline(obj.serialObj,'PH');
 readline(obj.serialObj);
 
 % Send the phaseOffset
-writeline(obj.serialObj,num2str(phaseOffset));
-readline(obj.serialObj);
+writeline(obj.serialObj,num2str(phaseOffset,'%.4f'));
+msg = readline(obj.serialObj);
 
 if obj.verbose
-    fprintf('phaseOffset sent\n');
+    fprintf(['phaseOffset set to ' char(msg) '\n']);
 end
+
 
 end

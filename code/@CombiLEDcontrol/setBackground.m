@@ -29,17 +29,20 @@ writeline(obj.serialObj,'BG');
 readline(obj.serialObj);
 
 % Loop over the primaries and send the settings
+report = 'settingsBackground: [ ';
 for ii = 1:obj.nPrimaries
     % Each setting is sent as an integer, in the range of 0 to 1e4.
     % This is a specification of the fractional settings with a
     % precision to the fourth decimal place
     valToSend = round(settingsBackground(ii) * 1e4);
     writeline(obj.serialObj,num2str(valToSend));
-    readline(obj.serialObj);
+    msg = readline(obj.serialObj);
+    report = [report, char(msg), ' '];
+end
+report = [report,']\n'];
+if obj.verbose
+    fprintf(report);
 end
 
-if obj.verbose
-    fprintf('Background vector sent\n');
-end
 
 end

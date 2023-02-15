@@ -20,11 +20,12 @@ writeline(obj.serialObj,'FQ');
 readline(obj.serialObj);
 
 % Send the frequency
-writeline(obj.serialObj,num2str(frequency));
-readline(obj.serialObj);
+writeline(obj.serialObj,num2str(frequency,'%.4f'));
+msg = readline(obj.serialObj);
 
 if obj.verbose
-    fprintf('Frequency sent\n');
+    fprintf(['Frequency set to ' char(msg) '\n']);
 end
+
 
 end

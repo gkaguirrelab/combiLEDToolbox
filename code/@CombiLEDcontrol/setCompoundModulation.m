@@ -24,26 +24,46 @@ readline(obj.serialObj);
 % Send the compound harmonics
 writeline(obj.serialObj,'CH');
 readline(obj.serialObj);
+report = 'compoundHarmonics: [ ';
 for ii = 1:5
-    writeline(obj.serialObj,num2str(compoundHarmonics(ii)));
-    readline(obj.serialObj);
+    writeline(obj.serialObj,num2str(compoundHarmonics(ii),'%.4f'));
+    msg = readline(obj.serialObj);
+    report = [report, char(msg), ' '];
+end
+report = [report,']\n'];
+if obj.verbose
+    fprintf(report);
 end
 
 % Send the compound amplitudes
 writeline(obj.serialObj,'CA');
 readline(obj.serialObj);
+report = 'compoundAmplitudes: [ ';
 for ii = 1:5
-    writeline(obj.serialObj,num2str(compoundAmplitudes(ii)));
-    readline(obj.serialObj);
+    writeline(obj.serialObj,num2str(compoundAmplitudes(ii),'%.4f'));
+    msg = readline(obj.serialObj);
+    report = [report, char(msg), ' '];
 end
+report = [report,']\n'];
+if obj.verbose
+    fprintf(report);
+end
+
 
 % Send the compound phases
 writeline(obj.serialObj,'CP');
 readline(obj.serialObj);
+report = 'compoundPhases: [ ';
 for ii = 1:5
-    writeline(obj.serialObj,num2str(compoundPhases(ii)));
-    readline(obj.serialObj);
+    writeline(obj.serialObj,num2str(compoundPhases(ii),'%.4f'));
+    msg = readline(obj.serialObj);
+    report = [report, char(msg), ' '];
 end
+report = [report,']\n'];
+if obj.verbose
+    fprintf(report);
+end
+
 
 if obj.verbose
     fprintf('Compound modulation values sent\n');
