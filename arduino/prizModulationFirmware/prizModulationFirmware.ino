@@ -140,8 +140,9 @@ const float pi = 3.1415927;
 // Fixed value that scales the settings and background values to floats between 0 and 1
 const int settingScale = 1e4;
 
-// The resolution with which we will define the gamma look up table
+// The resolution with which we will define various look-up tables
 const int nGammaLevels = 30;
+const int nAmpModLevels = 30;
 
 // The number of parameters used to define the gamma polynomial function (5th degree + 1)
 const int nGammaParams = 6;
@@ -186,6 +187,10 @@ float amplitudeVals[4][2] = {
   { 0.1, 1.5 },  // Half-cosine window: block frequency Hz, window duration seconds
   { 0.1, 2 },    // Modulate the phase of the index 2 harmonic of the compound modulation
 };
+
+// An amplitude modulation look-up table. 0-1e4 precision
+int gammaTable[nAmpModLevels];
+
 
 // Variables the define compound modulations. Support is provided for a compound modulation
 // composed of up to 5 sinusoids. For each sinusoid, we specify the harmonic index relative
