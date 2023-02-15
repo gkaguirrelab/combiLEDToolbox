@@ -647,13 +647,13 @@ void updateLED(double cyclePhase, int ledIndex) {
   if (ledIsActive[ledIndex]) {
     // Adjust the cyclePhase for the phaseOffset
     cyclePhase = cyclePhase + (phaseOffset / (2 * pi));
-    // Get the level for the current cyclePhase (about 250 microseconds)
+    // Get the level for the current cyclePhase (about 225 microseconds)
     float floatLevel = getFrequencyModulation(cyclePhase);
     // Get the background level for this LED
     float offset = float(background[ledIndex]) / float(settingScale);
     // Scale according to the contrast value
     floatLevel = contrast * (floatLevel - offset) + offset;
-    // Apply any amplitude modulation
+    // Apply any amplitude modulation (about 300 msecs for a sin modulation)
     floatLevel = applyAmplitudeModulation(floatLevel, offset);
     // Get the float intensity setting as the linear proportional
     // distance between the low and high value
