@@ -62,9 +62,8 @@ function modResult = lightFluxFlicker(obj,observerAgeInYears,pupilDiameterMm)
     obj.setBackground(modResult.settingsBackground);
     obj.setWaveformIndex(1);
     obj.setFrequency(16);
-    obj.setContrast(0.1);
-    obj.setAMIndex(2);
-    obj.setAMValues([0.5,0.25]);
+    obj.setContrast(1);
+    obj.setAMIndex(0);
 end
 
 function modResult = SConeDistortion(obj,observerAgeInYears,pupilDiameterMm)

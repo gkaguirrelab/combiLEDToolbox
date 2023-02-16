@@ -41,7 +41,7 @@ function modResult = designModulation(whichDirection,varargin)
 %% Parse input
 p = inputParser;
 p.addRequired('whichDirection',@ischar)
-p.addParameter('calLocalData',fullfile(tbLocateProject('prizmatixDesign'),'cal','CombiLED_shortCable_2x5ND_classicEyePiece.mat'),@ischar);
+p.addParameter('calLocalData',fullfile(tbLocateProject('prizmatixDesign'),'cal','CombiLED_shortLLG_classicEyePiece_ND2x5.mat'),@ischar);
 p.addParameter('primaryHeadRoom',0.00,@isscalar)
 p.addParameter('observerAgeInYears',25,@isscalar)
 p.addParameter('fieldSizeDegrees',30,@isscalar)

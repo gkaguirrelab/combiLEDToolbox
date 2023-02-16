@@ -179,11 +179,11 @@ int fmModTable[nFmModLevels];
 // Adjust the overall contrast of the modulation between 0 and 1
 float fmContrast = 1;
 
-// The ledIsActive vector is regenerated whenever the settings or background
+// The ledUpdateOrder vector is regenerated whenever the settings or background
 // changes. The idea is to skip updating LEDs if their settings never change
-// from the background. Set to false initially, but we will check and update
-// this before entering the loop.
-bool ledIsActive[nLEDs] = { false, false, false, false, false, false, false, false };
+// from the background.
+int nActiveLEDs = nLEDs;
+uint8_t ledUpdateOrder[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 
 // A gamma table. 0-1e4 precision
 int gammaTable[nLEDs][nGammaLevels];
@@ -211,18 +211,16 @@ float compoundPhases[5] = { 0, 0.7854, 4.3633, 0, 0 };  // Phase delay in radian
 float compoundRange[2] = { 0, 1 };
 
 // Timing variables
-uint8_t waveformIndex = 1;                              // Default to sinusoid
-unsigned long fmCycleDur = round(1e6 / 3);              // Initialize at 3 Hz
-unsigned long amCycleDur = round(1e6 / 0.1);            // Initialize at 0.1 Hz
-unsigned long modulationStartTime = micros();           // Initialize these with the clock
-unsigned long lastLEDUpdateTime = micros();             // Initialize these with the clock
-int blinkDurationMSecs = 100;                           // Default duration of the blink event in msecs
-uint8_t ledCycleIdx = 0;                                // Counter to index our cycle through updating LEDs
-float phaseOffset = 0;                                  // 0-1, used to shift the waveform phase
-uint8_t ledUpdateOrder[] = { 0, 2, 4, 6, 1, 3, 5, 7 };  // The order in which LEDs are updated
-float modulationDurSecs = 0;                            // Duration of the modulation in secs (0 for continuous)
-unsigned long cycleCount = 0;                           // Num cycles elapsed since modulation start
-unsigned long cycleOverage = 0;
+uint8_t waveformIndex = 1;                     // Default to sinusoid
+unsigned long fmCycleDur = round(1e6 / 3);     // Initialize at 3 Hz
+unsigned long amCycleDur = round(1e6 / 0.1);   // Initialize at 0.1 Hz
+unsigned long modulationStartTime = micros();  // Initialize these with the clock
+unsigned long lastLEDUpdateTime = micros();    // Initialize these with the clock
+int blinkDurationMSecs = 100;                  // Default duration of the blink event in msecs
+uint8_t ledCycleIdx = 0;                       // Counter to index our cycle through updating LEDs
+float phaseOffset = 0;                         // 0-1, used to shift the waveform phase
+float modulationDurSecs = 0;                   // Duration of the modulation in secs (0 for continuous)
+unsigned long cycleCount = 0;                  // Num cycles elapsed since modulation start
 
 
 // setup
@@ -282,21 +280,20 @@ void loop() {
     unsigned long currentTime = micros();
     if ((currentTime - lastLEDUpdateTime) > minLEDAddressTime) {
       // Collect diagnostic timing information
-      cycleOverage = cycleOverage + (currentTime - lastLEDUpdateTime);
       cycleCount++;
       // Determine where we are in the fm cycle
       unsigned long fmCycleTime = ((currentTime - modulationStartTime) % fmCycleDur);
-      double fmCyclePhase = double(fmCycleTime) / double(fmCycleDur);
+      float fmCyclePhase = float(fmCycleTime) / float(fmCycleDur);
       // Determine where we are in the am cycle
       unsigned long amCycleTime = ((currentTime - modulationStartTime) % amCycleDur);
-      double amCyclePhase = double(amCycleTime) / double(amCycleDur);
+      float amCyclePhase = float(amCycleTime) / float(amCycleDur);
       // Update the lastTime
       lastLEDUpdateTime = currentTime;
       // Update the next LED
       updateLED(fmCyclePhase, amCyclePhase, ledUpdateOrder[ledCycleIdx]);
       // Advance the ledCycleIdx
       ledCycleIdx++;
-      ledCycleIdx = ledCycleIdx % nLEDs;
+      ledCycleIdx = ledCycleIdx % nActiveLEDs;
     }
     // Check if we have exceeded the modulation duration
     if (modulationDurSecs > 0) {
@@ -572,14 +569,14 @@ void getRun() {
       lastLEDUpdateTime = micros();
       modulationStartTime = micros();
       cycleCount = 0;
-      cycleOverage = 0;
     }
     if (strncmp(inputString, "SP", 2) == 0) {
       setToBackground();
       modulationState = false;
-      float slopPerCycle = float(cycleOverage) / float(cycleCount);
-      Serial.print("microsecs per update: ");
-      Serial.println(slopPerCycle);
+      unsigned long currentTime = micros();
+      float timePerCycle = float(currentTime - modulationStartTime) / float(cycleCount);
+      Serial.print("microsecs/cycle: ");
+      Serial.println(timePerCycle);
     }
     if (strncmp(inputString, "BL", 2) == 0) {
       Serial.println(".");
@@ -635,12 +632,12 @@ void updateCompoundRange() {
 }
 
 void identifyActiveLEDs() {
+  nActiveLEDs = 0;
   // Identify those LEDs that are pinned and remove them from the active list
   for (int ii = 0; ii < nLEDs; ii++) {
-    if (settingsHigh[ii] == settingsLow[ii]) {
-      ledIsActive[ii] = false;
-    } else {
-      ledIsActive[ii] = true;
+    if (settingsHigh[ii] != settingsLow[ii]) {
+      ledUpdateOrder[nActiveLEDs] = ii;
+      nActiveLEDs++;
     }
   }
 }
@@ -677,35 +674,32 @@ void setToOff() {
   }
 }
 
-void updateLED(double fmCyclePhase, double amCyclePhase, int ledIndex) {
-  // Check if the current LED is marked as active
-  if (ledIsActive[ledIndex]) {
-    // Adjust the cyclePhase for the phaseOffset
-    fmCyclePhase = fmCyclePhase + phaseOffset;
-    // Get the level for the current cyclePhase
-    float floatLevel = returnFrequencyModulation(fmCyclePhase);
-    // Get the background level for this LED
-    float offset = float(background[ledIndex]) / float(settingScale);
-    // Scale according to the fmContrast value
-    floatLevel = fmContrast * (floatLevel - offset) + offset;
-    // Apply any amplitude modulation
-    floatLevel = applyAmplitudeModulation(amCyclePhase, floatLevel, offset);
-    // ensure that level is within the 0-1 range
-    floatLevel = max(floatLevel, 0);
-    floatLevel = min(floatLevel, 1);
-    // Get the floatSettingLED as the proportional
-    // distance between the low and high setting value for this LED
-    float floatSettingLED = (floatLevel * (settingsHigh[ledIndex] - settingsLow[ledIndex]) + settingsLow[ledIndex]) / float(settingScale);
-    // gamma correct floatSettingLED (about 80 microseconds)
-    floatSettingLED = applyGammaCorrect(floatSettingLED, ledIndex);
-    // Convert the floatSettingLED to a 12 bit integer
-    int settingLED = round(floatSettingLED * maxLevelVal);
-    // Update the LED (about 230 microseconds)
-    if (simulatePrizmatix) {
-      pulseWidthModulate(settingLED);
-    } else {
-      writeToOneCombiLED(settingLED, ledIndex);
-    }
+void updateLED(float fmCyclePhase, float amCyclePhase, int ledIndex) {
+  // Adjust the cyclePhase for the phaseOffset
+  fmCyclePhase = fmCyclePhase + phaseOffset;
+  // Get the level for the current cyclePhase
+  float floatLevel = returnFrequencyModulation(fmCyclePhase);
+  // Get the background level for this LED
+  float offset = float(background[ledIndex]) / float(settingScale);
+  // Scale according to the fmContrast value
+  floatLevel = fmContrast * (floatLevel - offset) + offset;
+  // Apply any amplitude modulation
+  floatLevel = applyAmplitudeModulation(amCyclePhase, floatLevel, offset);
+  // ensure that level is within the 0-1 range
+  floatLevel = max(floatLevel, 0);
+  floatLevel = min(floatLevel, 1);
+  // Get the floatSettingLED as the proportional
+  // distance between the low and high setting value for this LED
+  float floatSettingLED = (floatLevel * (settingsHigh[ledIndex] - settingsLow[ledIndex]) + settingsLow[ledIndex]) / float(settingScale);
+  // gamma correct floatSettingLED (about 80 microseconds)
+  floatSettingLED = applyGammaCorrect(floatSettingLED, ledIndex);
+  // Convert the floatSettingLED to a 12 bit integer
+  int settingLED = round(floatSettingLED * maxLevelVal);
+  // Update the LED (about 230 microseconds)
+  if (simulatePrizmatix) {
+    pulseWidthModulate(settingLED);
+  } else {
+    writeToOneCombiLED(settingLED, ledIndex);
   }
 }
 
@@ -806,7 +800,7 @@ float calcAmplitudeModulation(float amCyclePhase) {
   }
   if (amplitudeIndex == 2) {
     // Half-cosine window at block onset and offset
-    float totalDurSecs = double(amCycleDur) / 1e6;
+    float totalDurSecs = float(amCycleDur) / 1e6;
     float rampDurSecs = amplitudeVals[amplitudeIndex][0];
     // Determine how far along the half-cosine ramp we are, relative
     // to the modulation frequency given by amplitudeVals[0]
@@ -902,7 +896,7 @@ void pulseWidthModulate(int setting) {
   }
 }
 
-// Send a setting to an wired LED
+// Send a setting to a wired LED
 void writeToOneCombiLED(int level, int ledIndex) {
   // sanitize the input
   level = max(level, 0);
