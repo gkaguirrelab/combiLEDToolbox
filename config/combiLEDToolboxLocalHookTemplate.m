@@ -1,6 +1,6 @@
-function prizmatixDesignLocalHook
+function combiLEDToolboxLocalHook
 
-%  prizmatixDesignLocalHook
+%  combiLEDToolboxLocalHook
 %
 % Configure things for working on the prizmatixDesign project.
 %
@@ -26,7 +26,7 @@ function prizmatixDesignLocalHook
 
 
 %% Say hello.
-projectName = 'prizmatixDesign';
+projectName = 'combiLEDToolbox';
 
 
 %% Delete any old prefs
