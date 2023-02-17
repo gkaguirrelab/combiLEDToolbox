@@ -2,16 +2,16 @@
 obj = CombiLEDcontrol();
 
 modResult = designModulation('LightFlux');
-modResult.settingsBackground([1 2 3 4 6 7 8])=0.5;
-modResult.settingsHigh([1 2 3 4 6 7 8])=0.5;
-modResult.settingsLow([1 2 3 4 6 7 8])=0.5;
+modResult.settingsBackground([1 2 3 4 6 7])=0.5;
+modResult.settingsHigh([1 2 3 4 6 7])=0.5;
+modResult.settingsLow([1 2 3 4 6 7])=0.5;
 obj.setSettings(modResult);
 obj.setBackground(modResult.settingsBackground);
-obj.setWaveformIndex(1);
+obj.setWaveformIndex(2);
 obj.setContrast(1);
 obj.setAMIndex(0);
 
-freqsToTest = [3,6,12,24,48];
+freqsToTest = [1];
 
 disp('Connect Klein.');
 pause;
@@ -26,11 +26,11 @@ for ff=1:length(freqsToTest)
     b=X'\luminance256HzData';
     fitLum = X'*b;    
     [frq, amp] = simpleFFT( luminance256HzData, 256);
-    subplot(2,5,ff);
+    subplot(2,length(freqsToTest),ff);
     plot(luminance256HzData,'.');
     hold on
     plot(fitLum,'-r');
-    subplot(2,5,ff+5);
+    subplot(2,length(freqsToTest),ff+length(freqsToTest));
     loglog(frq,amp,'.k');
     hold on
     loglog(frq,amp,'-r');
