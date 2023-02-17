@@ -72,6 +72,7 @@ classdef CombiLEDcontrol < handle
         setSettings(obj,modResult)
         setBackground(obj,settingsBackground)
         setAMIndex(obj,amplitudeIndex)
+        setAMFrequency(obj,amplitudeFrequency)
         setAMValues(obj,amplitudeVals)
         setCompoundModulation(obj,compoundHarmonics,compoundAmplitudes,compoundPhases)
         setWaveformIndex(obj,waveformIndex)
