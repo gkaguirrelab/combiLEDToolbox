@@ -134,7 +134,6 @@ bool gammaCorrectInDirectMode = false;
 /////////////////////////////////////////////////////////////////////
 
 
-
 // Fixed hardware values
 const int maxLevelVal = 4095;       // maximum setting value for the prizmatix LEDs
 const int minLEDAddressTime = 300;  // the time, in microseconds, required to send an LED setting
@@ -148,7 +147,7 @@ const int settingScale = 1e4;
 // The resolution with which we will define various look-up tables
 const int nGammaLevels = 25;
 const int nAmModLevels = 25;
-const int nFmModLevels = 25;
+const int nFmModLevels = 50;
 
 // The number of parameters used to define the gamma polynomial function (5th degree + 1)
 const int nGammaParams = 6;
@@ -175,6 +174,12 @@ int background[nLEDs] = { 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000 };
 
 // A frequency modulation look-up table. 0-1e4 precision
 int fmModTable[nFmModLevels];
+
+bool interpolateWaveform = true;  // Controls if we perform linear interpolation
+                                  // between levels of the fmModTable. Generally,
+                                  // we want to do so for continuous (e.g., sin)
+                                  // modulations, but not for discontinuous
+                                  // (e.g., square wave) modulations.
 
 // Adjust the overall contrast of the modulation between 0 and 1
 float fmContrast = 1;
@@ -348,7 +353,6 @@ void getConfig() {
     clearInputString();
     waitForNewString();
     fmCycleDur = 1e6 / atof(inputString);
-    updateFmModTable();
     Serial.println(atof(inputString));
   }
   if (strncmp(inputString, "MD", 2) == 0) {
@@ -705,14 +709,19 @@ void updateLED(float fmCyclePhase, float amCyclePhase, int ledIndex) {
 
 float returnFrequencyModulation(float fmCyclePhase) {
   float level = 1;
-  // Linear interpolation between values in the fmModTable
   float floatCell = fmCyclePhase * (nFmModLevels - 1);
-  int lowCell = floor(floatCell);
-  if (lowCell == (nFmModLevels - 1)) {
-    level = float(fmModTable[lowCell]) / settingScale;
+  if (interpolateWaveform) {
+    // Linear interpolation between values in the fmModTable
+    int lowCell = floor(floatCell);
+    if (lowCell == (nFmModLevels - 1)) {
+      level = float(fmModTable[lowCell]) / settingScale;
+    } else {
+      float mantissa = (floatCell)-lowCell;
+      level = (float(fmModTable[lowCell]) + mantissa * float(fmModTable[lowCell + 1] - fmModTable[lowCell])) / settingScale;
+    }
   } else {
-    float mantissa = (floatCell)-lowCell;
-    level = (float(fmModTable[lowCell]) + mantissa * float(fmModTable[lowCell + 1] - fmModTable[lowCell])) / settingScale;
+    // Nearest-neighbor in the fmModTable
+    level = float(fmModTable[round(floatCell)]) / settingScale;
   }
   return level;
 }
@@ -722,6 +731,12 @@ void updateFmModTable() {
     float fmCyclePhase = float(ii) / (nFmModLevels - 1);
     float modLevel = calFrequencyModulation(fmCyclePhase);
     fmModTable[ii] = round(modLevel * settingScale);
+  }
+  // Set the interpolateWaveform state
+  if ((waveformIndex == 2) || (waveformIndex == 3) || (waveformIndex == 4)) {
+    interpolateWaveform = false;
+  } else {
+    interpolateWaveform = true;
   }
 }
 
