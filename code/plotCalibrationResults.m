@@ -1,3 +1,7 @@
+% Interacts with the OOC CalibratorAnalyzer routines in the BrainardLab
+% Toolbox. Asks the user to select one of the CombiLED calibration files
+% and then displays the analysis results for themost recent calibration.
+
 
 % Figure out where the cal files are located
 calDir = fullfile(fileparts(fileparts(mfilename('fullpath'))),'cal');
