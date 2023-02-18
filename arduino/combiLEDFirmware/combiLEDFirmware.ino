@@ -235,6 +235,7 @@ void setup() {
   Serial.begin(57600);
   // Modify the settings and background if we are simulating
   if (simulatePrizmatix) {
+    background[0] = 0;
     for (int ii = 1; ii < nLEDs; ii++) {
       settingsHigh[ii] = 0;
       settingsLow[ii] = 0;
@@ -381,7 +382,7 @@ void getConfig() {
     clearInputString();
     waitForNewString();
     phaseOffset = atof(inputString) / (2 * pi);
-    Serial.println(inputString);
+    Serial.println(atof(inputString));
   }
   if (strncmp(inputString, "AM", 2) == 0) {
     // Amplitude modulation index
@@ -528,7 +529,7 @@ void getDirect() {
     for (int ii = 0; ii < nLEDs; ii++) {
       waitForNewString();
       int level = atoi(inputString);
-      Serial.println(".");
+      Serial.println(level);
       clearInputString();
       // Convert 1e4 level to a 0-1 float level
       float floatSettingLED = float(level) / float(settingScale);
@@ -545,7 +546,7 @@ void getDirect() {
   }
   if (strncmp(inputString, "DK", 2) == 0) {
     setToOff();
-    Serial.println(".");
+    Serial.println("Lights off");
     modulationState = false;
   }
   if (strncmp(inputString, "RM", 2) == 0) {
@@ -569,7 +570,7 @@ void getRun() {
   if (stringComplete) {
     stringComplete = false;
     if (strncmp(inputString, "GO", 2) == 0) {
-      Serial.println(".");
+      Serial.println("Start modulation");
       modulationState = true;
       lastLEDUpdateTime = micros();
       modulationStartTime = micros();
