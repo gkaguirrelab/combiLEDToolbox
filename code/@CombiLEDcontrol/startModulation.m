@@ -16,11 +16,11 @@ end
 
 % Go
 writeline(obj.serialObj,'GO');
-readline(obj.serialObj);
+msg = readline(obj.serialObj);
 
 % Say
 if obj.verbose
-    fprintf('Running modulation\n');
+    fprintf([char(msg) '\n']);
 end
 
 end

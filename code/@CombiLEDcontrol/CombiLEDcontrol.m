@@ -7,9 +7,7 @@ classdef CombiLEDcontrol < handle
     properties (Constant)
 
         nPrimaries = 8;
-        nDiscreteLevels = 51;
         baudrate = 57600;
-        refreshRate = 10; % Hz
         nGammaParams = 6;
     end
 
