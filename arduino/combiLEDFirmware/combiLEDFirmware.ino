@@ -16,36 +16,33 @@
 //  LED6 --   627          19            480
 //  LED7 --   561          15            470
 //
-// The "settings" vectors specifies the highest and lowest intensity level
+// The "settings" vectors specify the highest and lowest intensity levels
 // of each LED between 0 and 1 with 1e-4 precision. Over time, a waveform
 // defines a linear transition between the high and the low state,
-// producing (for example) a linear change in luminance or L–M contrast,
-// for example. Gamma correction is performed on device, and the resulting
-// floating level is then cast into a 12 bit LED setting
+// producing (for example) a change in luminance or L–M contrast. Gamma
+// correction is performed on device, and the resulting floating value
+// is cast into a 12 bit LED setting.
 //
 // The modulation is under the control of a waveform (e.g., sin, square) and
 // a frequency [Hz]. After setup, the code enters a run loop during which each
 // LED is updated sequentially. The waveform is used to define a floating
-// point level (0-1), which is mapped between the low an high settings values.
+// point level (0-1), which is mapped between the low and high setting values.
 //
-// There is a minimum amount of time required to address an LED (about 300
-// microseconds). The routine will attempt to update LEDs at this interval
-// but in practice just under 850 microseconds (0.85 msecs) are needed to
-// update an LED. The program clock advances and, at this interval, determines
-// where we are in the waveform cycle and updates the next LED to the setting
-// for that LED. As a consequence, different LEDs oscillate at different phase
-// delays of the waveform. As the waveform frequency is unlikely to be
-// synchronized to the minimum LED refresh rate, this phase delay will precess
-// across waveform cycles. This can cause aliasing of the modulation to lower
-// frequencies. To ameliorate this, the LEDs are updated in an interleaved order.
+// There is a minimum amount of time required to address an LED (about 250
+// microseconds). The routine will attempt to update LEDs at this interval,
+// but computational overhead results in about 850 microseconds (0.85 msecs)
+// per LED update. The program clock advances and, for each cycle, determines
+// where we are in the waveform and updates the settings on the next LED. As
+// a consequence, different LEDs oscillate at different phase delays of the
+// waveform.
 //
 // Given 8 LEDs to update, and a maximum update rate of 0.85 msecs / LED, the
 // Nyquist frequency of the device is ~147 Hz, limiting us to roughly 70 Hz as a
 // max modulation frequency. We can do better than this by limiting ourselves to
-// fewer than 8 active LEDs. If an LED has settings that never vary from the
-// background, then that LED is marked as "inactive", and skipped in the
-// sequential updating. This allows the remaining, active LEDs to be updated
-// more frequently.
+// fewer than 8 active LEDs. If an LED has the same high and low setting value,
+// then that LED is marked as "inactive", and skipped in the sequential 
+// updating. This allows the remaining, active LEDs to be updated more 
+// frequently.
 //
 // In addition to the frequency modulation of the waveform, a superimposed
 // amplitude modulation may be specified.
@@ -60,25 +57,31 @@
 //  simulatePrizmatix   Boolean. If set to true, the code treats the Arduino
 //                      built-in LED as LED0. The intensity of the LED is
 //                      pulse-width modulated. The other 7 channels are ignored.
+//  gammaCorrectInDirectMode  Boolean. Normally set to false. Set to true for
+//                      the particular instance of wishing to confirm via a 
+//                      calibration measurement the effect of gamma correction.
 //  maxLevelVal         4095. This is the max of the 12-bit range.
+//  settingScale        1e4. To save memory, many variables are unsigned ints,
+//                      with an expected value of 0 - 1e4. The variable is
+//                      divided by the setting scale to yield a float.
 //  minLEDAddressTime   Scalar, microseconds. We find that it takes 234 microsecs
-//                      to write a setting to one LED. We set this minimum address
-//                      time to somewhat longer than this to allow time for
-//                      computation overhead.
+//                      to write a setting to one LED. We ensure that we don't
+//                      try to update settings faster than this, as it causes
+//                      collisions in the communication channel.
 //  settingsHigh, settingsLow 8x1 int matrix, all between 0 and 1e4. Each value
 //                      defines the high or low setting for each of the 8 LEDs.
-//                      The specified value is divided
-//                      by 1e4 to yield a value between 0 and 1. This value is
-//                      subject to gamma correction prior to being passed to the
-//                      LED.
+//                      The specified value is divided by 1e4 to yield a floaat
+//                      between 0 and 1. This value is subject to gamma correction
+//                      prior to being passed to the LED.
 //  background          8x1 int array of value 0-1e4. Specifies the
 //                      background level for each LED.
-//  fmContrast            Float, between 0 and 1. Defines the contrast of the
+//  fmContrast          Float, between 0 and 1. Defines the contrast of the
 //                      modulation relative to its maximum.
 //  gammaParams         8x6 float matrix. Defines the parameters of a 5th order
 //                      polynomial (plus an offset) that define the conversion
 //                      of the desired intensity level to the corresponding
-//                      device level for each LED.
+//                      device level for each LED. These parameters are used to
+//                      create a gamma correction look-up table.
 //  waveformIndex       Scalar. Defines the waveform profile to be used:
 //                        0 - no modulation (stay at background)
 //                        1 - sinusoid
@@ -86,17 +89,15 @@
 //                        3 - saw-tooth on
 //                        4 - saw-tooth off
 //                        5 - compound modulation
-//  fmCycleDur            Scalar. The duration in microseconds of the waveform.
-//  phaseOffset         Float, 0-2pi. Used to shift the phase of the waveform.
+//  fmCycleDur          Scalar. The duration in microseconds of the fm waveform.
+//  phaseOffset         Float, 0-1. Used to shift the phase of the fm waveform.
 //  amplitudeIndex      Scalar. Defines the amplitude modulation profile:
 //                        0 - none
 //                        1 - sinusoid modulation
 //                        2 - half-cosine window
+//  amCycleDur          Scalar. The duration in microseconds of the am waveform.
 //  amplitudeVals       2x1 float array. Values control the amplitude modulation,
-//                      varying by the amplitudeIndex:
-//                        0 - [unused, unused]
-//                        1 - [frequency Hz, modulation depth 0-1]
-//                        2 - [block frequency (on then off), half-cosine duration]
+//                      varying by the amplitudeIndex.
 //  blinkDurationMSecs  Scalar. Duration of attention event in milliseconds.
 //                      During run-mode, passing a "blink" command sets all LEDs
 //                      to zero for the blink duration. Default is 100 msecs.
@@ -136,7 +137,7 @@ bool gammaCorrectInDirectMode = false;
 
 // Fixed hardware values
 const int maxLevelVal = 4095;       // maximum setting value for the prizmatix LEDs
-const int minLEDAddressTime = 300;  // the time, in microseconds, required to send an LED setting
+const int minLEDAddressTime = 250;  // the time, in microseconds, required to send an LED setting
 
 // Fixed reality values
 const float pi = 3.1415927;
