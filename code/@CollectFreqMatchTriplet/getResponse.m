@@ -22,13 +22,14 @@ while waitingForKey
         KbResponse = find(keycode);
         if any([keyPress1, keyPress2]==KbResponse)
             waitingForKey = false;
-            responseTimeSecs = (tic()-intervalStart)/1e9;
+            responseTimeSecs = double(tic()-intervalStart)/1e9;
         end
     end
 
     % Check if we have run out of time
     if (tic()-intervalStart) > responseDurMicroSecs
         waitingForKey = false;
+        responseTimeSecs = nan;
     end
 
 end

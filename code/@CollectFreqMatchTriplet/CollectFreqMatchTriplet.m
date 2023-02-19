@@ -40,10 +40,10 @@ classdef CollectFreqMatchTriplet < handle
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
-            p.addParameter('randomizePhase',false,@islogical);            
+            p.addParameter('randomizePhase',true,@islogical);            
             p.addParameter('ReferenceFrequencySet',logspace(log10(2),log10(24),15),@isnumeric);
             p.addParameter('simulatePsiParams',[],@isnumeric);
-            p.addParameter('psiParamsDomainList',{0:0.01:0.5, 0:0.01:0.5, -0.15:0.025:0.15},@isnumeric);
+            p.addParameter('psiParamsDomainList',{0:0.01:0.75, 0:0.01:0.75, -0.15:0.025:0.15},@isnumeric);
             p.addParameter('verbose',true,@islogical);
             p.parse(varargin{:})
 
@@ -52,7 +52,6 @@ classdef CollectFreqMatchTriplet < handle
             obj.TestContrast = TestContrast;
             obj.TestFrequency = TestFrequency;
             obj.ReferenceContrast = ReferenceContrast;
-            obj.nTrials = p.Results.nTrials;
             obj.randomizePhase = p.Results.randomizePhase;
             obj.ReferenceFrequencySet = p.Results.ReferenceFrequencySet;
             obj.simulatePsiParams = p.Results.simulatePsiParams;
@@ -65,9 +64,9 @@ classdef CollectFreqMatchTriplet < handle
             % Ensure that the CombiLED is configured to present our stimuli
             % properly
             obj.CombiLEDObj.setWaveformIndex(1); % sinusoidal flicker
-            obj.CombiLEDObj.setAMIndex(2); % half-cosine ramp
-            obj.CombiLEDObj.setAMFrequency(0.5); % half-cosine ramp
-            obj.CombiLEDObj.setAMValues([0.1,0]); % half-cosine duration
+%            obj.CombiLEDObj.setAMIndex(2); % half-cosine ramp
+%            obj.CombiLEDObj.setAMFrequency(0.5); % half-cosine ramp
+%            obj.CombiLEDObj.setAMValues([0.1,0]); % half-cosine duration
             obj.CombiLEDObj.setDuration(obj.stimulusDurationSecs);
             
         end

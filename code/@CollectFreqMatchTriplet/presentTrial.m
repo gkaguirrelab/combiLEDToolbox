@@ -166,7 +166,11 @@ else
     obj.waitUntil(tic()+3e9);
 
     % Store a note that we had an invalid response
-    questData.trialData.invalidResponseTrials(end+1) = currTrialIdx;
+    if ~isfield(questData,'invalidResponseTrials')
+        questData.invalidResponseTrials = currTrialIdx;
+    else
+        questData.invalidResponseTrials(end+1) = currTrialIdx;
+    end
 end
 
 % Put questData back into the obj
