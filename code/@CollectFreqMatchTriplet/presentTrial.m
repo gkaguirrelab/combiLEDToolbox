@@ -3,11 +3,8 @@ function obj = presentTrial(obj)
 % Get the questData
 questData = obj.questData;
 
-% Check if we are done presenting trials
-currTrial = size(questData.trialData,1)+1;
-if currTrial > obj.nTrials
-    return
-end
+% Get the current trial index
+currTrialIdx = size(questData.trialData,1)+1;
 
 % Determine if we are simulating
 simulateTrial = ~isempty(obj.simulatePsiParams);
@@ -160,16 +157,16 @@ if validResponse
     questData = qpUpdate(questData,qpStimParams,outcome);
 
     % Add in the phase and interval information
-    questData.trialData(currTrial).phases = [refPhase,testPhase];
-    questData.trialData(currTrial).ref1Interval = ref1Interval;
-    questData.trialData(currTrial).responseTimeSecs = responseTimeSecs;
+    questData.trialData(currTrialIdx).phases = [refPhase,testPhase];
+    questData.trialData(currTrialIdx).ref1Interval = ref1Interval;
+    questData.trialData(currTrialIdx).responseTimeSecs = responseTimeSecs;
 else
     % Buzz the bad trial
     sound(badSound, Fs);
     obj.waitUntil(tic()+3e9);
 
     % Store a note that we had an invalid response
-    questData.trialData.invalidResponseTrials(end+1) = currTrial;
+    questData.trialData.invalidResponseTrials(end+1) = currTrialIdx;
 end
 
 % Put questData back into the obj

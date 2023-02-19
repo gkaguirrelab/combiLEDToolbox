@@ -18,14 +18,13 @@ classdef CollectFreqMatchTriplet < handle
         simulatePsiParams
         psiParamsDomainList
         randomizePhase = true;
-        nTrials;
         TestContrast
         TestFrequency
         ReferenceContrast
         ReferenceFrequencySet
         stimulusDurationSecs = 1;
         responseDurSecs = 3;
-        interStimulusIntervalSecs = 1;
+        interStimulusIntervalSecs = 0.75;
     end
 
     % These may be modified after object creation
@@ -41,7 +40,6 @@ classdef CollectFreqMatchTriplet < handle
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
-            p.addParameter('nTrials',200,@isnumeric);
             p.addParameter('randomizePhase',false,@islogical);            
             p.addParameter('ReferenceFrequencySet',logspace(log10(2),log10(24),15),@isnumeric);
             p.addParameter('simulatePsiParams',[],@isnumeric);
@@ -67,7 +65,9 @@ classdef CollectFreqMatchTriplet < handle
             % Ensure that the CombiLED is configured to present our stimuli
             % properly
             obj.CombiLEDObj.setWaveformIndex(1); % sinusoidal flicker
-            obj.CombiLEDObj.setAMIndex(0); % no amplitude modulation
+            obj.CombiLEDObj.setAMIndex(2); % half-cosine ramp
+            obj.CombiLEDObj.setAMFrequency(0.5); % half-cosine ramp
+            obj.CombiLEDObj.setAMValues([0.1,0]); % half-cosine duration
             obj.CombiLEDObj.setDuration(obj.stimulusDurationSecs);
             
         end
