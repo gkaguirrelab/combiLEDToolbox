@@ -77,7 +77,7 @@ end
 if ~simulateStimuli
 
     % Alert the subject the trial is about to start
-    stopTime = tic() + 2*obj.interStimulusIntervalSecs*1e9;
+    stopTime = tic() + 1e9;
     sound(readySound, Fs);
     obj.waitUntil(stopTime);
 

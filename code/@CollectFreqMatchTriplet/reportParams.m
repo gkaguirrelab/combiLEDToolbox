@@ -19,7 +19,7 @@ psiParamsFit = qpFit(questData.trialData,questData.qpPF,psiParamsQuest,questData
 
 % Report these values
 if verbose
-    if ~isempty(obj.simulatePsiParams)
+    if obj.simulateResponse
         fprintf('Simulated parameters: %2.3f, %2.3f, %2.3f\n',obj.simulatePsiParams);
     end
     fprintf('Max posterior QUEST+ parameters: %2.3f, %2.3f, %2.3f\n',psiParamsQuest);
