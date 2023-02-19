@@ -21,11 +21,14 @@ for cc = 1:length(stimCounts)
     nTrials(cc) = sum(stimCounts(cc).outcomeCounts);
     pChooseR2(cc) = stimCounts(cc).outcomeCounts(2)/nTrials(cc);
 end
+markerSizeIdx = discretize(nTrials,3);
+markerSizeSet = [25,50, 100];
 for cc = 1:length(stimCounts)
-    scatter(stim(cc,2),stim(cc,1),nTrials(cc)*4,'o', ...
+    scatter(stim(cc,2),stim(cc,1),markerSizeSet(markerSizeIdx(cc)),'o', ...
         'MarkerFaceColor',[pChooseR2(cc) 0 1-pChooseR2(cc)], ...
-        'MarkerEdgeColor','none', ...
+        'MarkerEdgeColor','k', ...
         'MarkerFaceAlpha',nTrials(cc)/max(nTrials));
+    hold on
 end
 axis square
 xlim([min(ReferenceFrequencySet)*1.1, max(ReferenceFrequencySet)]*1.1);

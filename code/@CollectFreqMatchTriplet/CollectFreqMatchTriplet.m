@@ -23,9 +23,9 @@ classdef CollectFreqMatchTriplet < handle
         TestFrequency
         ReferenceContrast
         ReferenceFrequencySet
-        stimulusDurationSecs = 1.5;
+        stimulusDurationSecs = 1;
         responseDurSecs = 3;
-        interStimulusIntervalSecs = 0.5;
+        interStimulusIntervalSecs = 1;
     end
 
     % These may be modified after object creation

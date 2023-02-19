@@ -29,10 +29,10 @@ ref2Frequency = obj.inverseTransVals(qpStimParams(2),TestFrequency);
 Fs = 8192; % Sampling Frequency
 dur = 0.1; % Duration in seconds
 t  = linspace(0, dur, round(Fs*dur));
-intervalOneSound = sin(2*pi*500*t);
-intervalTestSound = [sin(2*pi*750*t) sin(2*pi*750*t)];
-intervalTwoSound = sin(2*pi*1000*t);
-readySound = [intervalOneSound intervalTwoSound];
+lowTone = sin(2*pi*500*t);
+midTone = sin(2*pi*750*t);
+highTone = sin(2*pi*1000*t);
+readySound = [lowTone midTone highTone];
 badSound = [sin(2*pi*250*t) sin(2*pi*250*t)];
 
 % Determine if we have random phase or not
@@ -64,59 +64,69 @@ switch ref1Interval
         error('Not a valid ref1Interval')
 end
 
-%% First reference interval
+%% Alert the subject the trial is about to start
+stopTime = tic() + 2*obj.interStimulusIntervalSecs*1e9;
+sound(readySound, Fs);
+obj.waitUntil(stopTime);
+
+%% Present the stimuli
 if ~simulateTrial
 
-    % Prepare the first reference interval stimulus
-    obj.CombiLEDObj.setContrast(intOneParams(1));
-    obj.CombiLEDObj.setFrequency(intOneParams(2));
-    obj.CombiLEDObj.setPhaseOffset(intOneParams(3));
+    % Present two alternations of interval one reference and the test
+    for ii=1:2
 
-    % Prepare the subject
-    stopTime = tic() + 2*obj.interStimulusIntervalSecs*1e9;
-    sound(readySound, Fs);
-    obj.waitUntil(stopTime);
+        % Prepare the first reference interval stimulus
+        obj.CombiLEDObj.setContrast(intOneParams(1));
+        obj.CombiLEDObj.setFrequency(intOneParams(2));
+        obj.CombiLEDObj.setPhaseOffset(intOneParams(3));
 
-    % Present a reference stimulus
-    stopTime = stopTime + obj.stimulusDurationSecs*1e9;
-    obj.CombiLEDObj.startModulation;
-    sound(intervalOneSound, Fs);
-    obj.waitUntil(stopTime);
+        % Present a reference stimulus
+        stopTime = tic() + obj.stimulusDurationSecs*1e9;
+        obj.CombiLEDObj.startModulation;
+        sound(lowTone, Fs);
+        obj.waitUntil(stopTime);
 
-    %% Test interval
+        % Prepare the test stimulus
+        obj.CombiLEDObj.setContrast(testParams(1));
+        obj.CombiLEDObj.setFrequency(testParams(2));
+        obj.CombiLEDObj.setPhaseOffset(testParams(3));
 
-    % Prepare the test stimulus
-    obj.CombiLEDObj.setContrast(testParams(1));
-    obj.CombiLEDObj.setFrequency(testParams(2));
-    obj.CombiLEDObj.setPhaseOffset(testParams(3));
-
-    % ISI
-    stopTime = stopTime + obj.interStimulusIntervalSecs*1e9;
-    obj.waitUntil(stopTime);
-
-    % Present the test stimulus.
-    stopTime = stopTime + obj.stimulusDurationSecs*1e9;
-    obj.CombiLEDObj.startModulation;
-    sound(intervalTestSound, Fs);
-    obj.waitUntil(stopTime);
-
-    %% Second reference interval
-
-    % Prepare the second reference interval stimulus
-    obj.CombiLEDObj.setContrast(intTwoParams(1));
-    obj.CombiLEDObj.setFrequency(intTwoParams(2));
-    obj.CombiLEDObj.setPhaseOffset(intTwoParams(3));
+        % Present the test stimulus.
+        stopTime = tic() + obj.stimulusDurationSecs*1e9;
+        obj.CombiLEDObj.startModulation;
+        sound(midTone, Fs);
+        obj.waitUntil(stopTime);
+    end
 
     % ISI
     stopTime = stopTime + obj.interStimulusIntervalSecs*1e9;
     obj.waitUntil(stopTime);
 
-    % Present the second reference interval stimulus. Allow the response
-    % interval to start shortly after the stimulus starts
-    stopTime = stopTime + obj.interStimulusIntervalSecs*1e9;
-    obj.CombiLEDObj.startModulation;
-    sound(intervalTwoSound, Fs);
-    obj.waitUntil(stopTime);
+    % Present two alternations of interval two reference and the test
+    for ii=1:2
+
+        % Prepare the first reference interval stimulus
+        obj.CombiLEDObj.setContrast(intTwoParams(1));
+        obj.CombiLEDObj.setFrequency(intTwoParams(2));
+        obj.CombiLEDObj.setPhaseOffset(intTwoParams(3));
+
+        % Present a reference stimulus
+        stopTime = tic() + obj.stimulusDurationSecs*1e9;
+        obj.CombiLEDObj.startModulation;
+        sound(highTone, Fs);
+        obj.waitUntil(stopTime);
+
+        % Prepare the test stimulus
+        obj.CombiLEDObj.setContrast(testParams(1));
+        obj.CombiLEDObj.setFrequency(testParams(2));
+        obj.CombiLEDObj.setPhaseOffset(testParams(3));
+
+        % Present the test stimulus.
+        stopTime = tic() + obj.stimulusDurationSecs*1e9;
+        obj.CombiLEDObj.startModulation;
+        sound(midTone, Fs);
+        obj.waitUntil(stopTime);
+    end
 
     % Start the response interval
     [intervalChoice, responseTimeSecs] = obj.getResponse;
