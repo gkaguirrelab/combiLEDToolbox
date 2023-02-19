@@ -12,7 +12,7 @@ ReferenceFrequencySet = obj.forwardTransformVals(ReferenceFrequencySet,TestFrequ
 % transparancy visualizes number of trials (more opaque -> more trials),
 % while point color visualizes percent correct (more blue -> more R1).
 figure; 
-figuresize(800,400,'units','pt');
+figuresize(750,250,'units','pt');
 
 subplot(1,3,1);
 hold on
@@ -70,6 +70,6 @@ plot(1:length(questData.entropyAfterTrial),questData.entropyAfterTrial,'.k');
 axis square
 xlabel('trial number');
 ylabel('entropy');
-title('Entropy as a function of trial number')
+title('Entropy by trial number')
 
 end
