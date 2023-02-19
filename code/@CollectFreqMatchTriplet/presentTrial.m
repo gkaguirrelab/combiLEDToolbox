@@ -10,6 +10,9 @@ currTrialIdx = size(questData.trialData,1)+1;
 simulateStimuli = obj.simulateStimuli;
 simulateResponse = obj.simulateResponse;
 
+% Determine if we are giving feedback on each trial
+giveFeedback = obj.giveFeedback;
+
 % The contrast levels of the stimuli are set by the calling routine
 TestContrast = obj.TestContrast;
 ReferenceContrast = obj.ReferenceContrast;
@@ -31,6 +34,8 @@ lowTone = sin(2*pi*500*t);
 midTone = sin(2*pi*750*t);
 highTone = sin(2*pi*1000*t);
 readySound = [lowTone midTone highTone];
+correctSound = sin(2*pi*750*t);
+incorrectSound = sin(2*pi*250*t);
 badSound = [sin(2*pi*250*t) sin(2*pi*250*t)];
 
 % Determine if we have random phase or not
@@ -60,6 +65,12 @@ switch ref1Interval
         intTwoParams = ref1Params;
     otherwise
         error('Not a valid ref1Interval')
+end
+
+% Handle verbosity
+if obj.verbose
+    fprintf('Trial %d; test [%2.2f]; int1 [%2.2f]; int2 [%2.2f]...', ...
+        currTrialIdx,testParams(2),intOneParams(2),intTwoParams(2));
 end
 
 %% Present the stimuli
@@ -157,7 +168,24 @@ if ~isempty(intervalChoice)
         outcome = 2;
     end
 else
+    outcome = nan;
     validResponse = false;
+end
+
+if obj.verbose
+    fprintf('choice = %d \n', intervalChoice);
+end
+
+% If we are giving feedback, determine if the subject correctly selected
+% the interval with the frequency that is closer to the test
+if giveFeedback && validResponse
+    [~,correctReference] = min(abs(qpStimParams));
+    if outcome == correctReference
+        sound(correctSound, Fs);
+    else
+        sound(incorrectSound, Fs);
+    end
+    obj.waitUntil(tic()+5e8);
 end
 
 % Update questData if a valid response

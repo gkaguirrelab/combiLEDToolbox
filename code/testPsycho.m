@@ -12,6 +12,6 @@ fprintf('Press a key to start data collection\n')
 pause
 
 % Present 40 trials
-for ii=1:400
+for ii=1:40
     psychObj.presentTrial;
 end

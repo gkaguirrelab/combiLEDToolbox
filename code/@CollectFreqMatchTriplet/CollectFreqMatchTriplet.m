@@ -18,6 +18,7 @@ classdef CollectFreqMatchTriplet < handle
         simulatePsiParams
         simulateResponse
         simulateStimuli
+        giveFeedback
         psiParamsDomainList
         randomizePhase = true;
         TestContrast
@@ -43,8 +44,9 @@ classdef CollectFreqMatchTriplet < handle
             % input parser
             p = inputParser; p.KeepUnmatched = false;
             p.addParameter('randomizePhase',true,@islogical);            
-            p.addParameter('simulateResponse',true,@islogical);            
-            p.addParameter('simulateStimuli',true,@islogical);            
+            p.addParameter('simulateResponse',false,@islogical);            
+            p.addParameter('simulateStimuli',false,@islogical);    
+            p.addParameter('giveFeedback',true,@islogical);                
             p.addParameter('ReferenceFrequencySet',logspace(log10(2),log10(24),15),@isnumeric);
             p.addParameter('simulatePsiParams',[0.15, 0.05, -0.05],@isnumeric);
             p.addParameter('psiParamsDomainList',{0:0.01:0.75, 0:0.01:0.75, -0.15:0.025:0.15},@isnumeric);
@@ -59,10 +61,17 @@ classdef CollectFreqMatchTriplet < handle
             obj.randomizePhase = p.Results.randomizePhase;
             obj.simulateResponse = p.Results.simulateResponse;
             obj.simulateStimuli = p.Results.simulateStimuli;
+            obj.giveFeedback = p.Results.giveFeedback;
             obj.ReferenceFrequencySet = p.Results.ReferenceFrequencySet;
             obj.simulatePsiParams = p.Results.simulatePsiParams;
             obj.psiParamsDomainList = p.Results.psiParamsDomainList;
             obj.verbose = p.Results.verbose;
+
+            % Detect incompatible simulate settings
+            if obj.simulateStimuli && ~obj.simulateResponse
+                fprintf('Forcing simulateResponse to true, as one cannot respond to a simulated stimulus\n')
+                obj.simulateResponse = true;
+            end
 
             % Initialize Quest+
             obj.qpInitialize;
