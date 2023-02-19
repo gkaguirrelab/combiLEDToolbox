@@ -1,0 +1,23 @@
+
+varargin = { ...
+    'stimParamsDomainList',{refValRange, refValRange, tVal}, ...
+    'psiParamsDomainList',{1:0.5:10, 1:0.5:10, -5:0.5:5}, ...
+    'qpPF',@qpPFJoganStocker, ...
+    'filterStimParamsDomainFun',@qpFilterJoganStockerStimDomain, ...
+    'qpOutcomeF',@(x) qpSimulatedObserver(x,@qpPFJoganStocker,simulatedPsiParams), ...
+    'nOutcomes', 2, ...
+    'verbose',true};
+
+questData = qpInitialize(varargin{:});
+
+% Within a loop
+stimulus = qpQuery(questData);
+
+% present the stimulus to the subject and get the outcome
+% outcome = questData.qpOutcomeF(stim);
+% The outcome value is "1" if reference 1 was selected, and "2" if
+% reference 2 was selected.
+
+% Update the questData
+questData = qpUpdate(questData,stim,outcome);
+
