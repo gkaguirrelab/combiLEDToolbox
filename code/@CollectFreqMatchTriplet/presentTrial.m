@@ -133,8 +133,12 @@ if ~simulateStimuli
         % Present the test stimulus.
         stopTime = tic() + obj.stimulusDurationSecs*1e9;
         obj.CombiLEDObj.startModulation;
-        sound(midTone, Fs);
-        obj.waitUntil(stopTime);
+        sound(midTone, Fs);        
+        if ii==1
+            % Only wait it is the first cycle. On the second cycle we jump
+            % right to the response interval for the inpatient subject.
+            obj.waitUntil(stopTime);
+        end
     end
 
     % Start the response interval
@@ -176,9 +180,10 @@ if obj.verbose
     fprintf('choice = %d \n', intervalChoice);
 end
 
-% If we are giving feedback, determine if the subject correctly selected
-% the interval with the frequency that is closer to the test
+% Handle feedback at the end of the trial
 if giveFeedback && validResponse
+    % If we are giving feedback, determine if the subject correctly
+    % selected the interval with the frequency that is closer to the test
     [~,correctReference] = min(abs(qpStimParams));
     if outcome == correctReference
         sound(correctSound, Fs);
@@ -186,6 +191,12 @@ if giveFeedback && validResponse
         sound(incorrectSound, Fs);
     end
     obj.waitUntil(tic()+5e8);
+end
+
+if ~giveFeedback && validResponse
+    % If we aren't giving feedback, but the subject did make a valid
+    % response, we give the same, pleasing tone after every trial.
+    sound(correctSound, Fs);
 end
 
 % Update questData if a valid response

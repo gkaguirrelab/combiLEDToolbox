@@ -5,13 +5,19 @@ modResult = designModulation('LightFlux');
 combiLEDObj.setSettings(modResult);
 combiLEDObj.setBackground(modResult.settingsBackground);
 
-% When we simulate, we need to have a non-zero value for the bias
-psychObj = CollectFreqMatchTriplet(combiLEDObj,0.75,7.8082,0.75);
+% Define a triplet
+TestContrast = 0.5;
+TestFrequency = 7;
+ReferenceContrast = 0.75;
 
+% Instantiate the psychometric object
+psychObj = CollectFreqMatchTriplet(combiLEDObj,TestContrast,TestFrequency,ReferenceContrast);
+
+% Get ready to rumble
 fprintf('Press a key to start data collection\n')
 pause
 
-% Present 40 trials
-for ii=1:40
+% Present 25 trials (about 5 minutes)
+for ii=1:25
     psychObj.presentTrial;
 end
