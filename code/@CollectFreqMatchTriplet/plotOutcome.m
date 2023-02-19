@@ -12,6 +12,8 @@ ReferenceFrequencySet = obj.forwardTransformVals(ReferenceFrequencySet,TestFrequ
 % transparancy visualizes number of trials (more opaque -> more trials),
 % while point color visualizes percent correct (more blue -> more R1).
 figure; 
+figuresize(800,400,'units','pt');
+
 subplot(1,3,1);
 hold on
 stimCounts = qpCounts(qpData(questData.trialData),questData.nOutcomes);

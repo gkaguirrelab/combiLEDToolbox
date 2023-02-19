@@ -4,7 +4,7 @@ function qpInitialize(obj)
 TestFrequency = obj.TestFrequency;
 ReferenceFrequencySet = obj.ReferenceFrequencySet;
 psiParamsDomainList = obj.psiParamsDomainList;
-simulatePsiParams = obj.simulatePsiParams;
+simulateResponse = obj.simulateResponse;
 verbose = obj.verbose;
 
 % Transform the reference frequency set for compatability with the
@@ -12,10 +12,11 @@ verbose = obj.verbose;
 ReferenceFrequencySet = obj.forwardTransformVals(ReferenceFrequencySet,TestFrequency);
 
 % Handle simulation and the outcome function
-if isempty(simulatePsiParams)
-    qpOutcomeF = [];
-else
+if simulateResponse
+    simulatePsiParams = obj.simulatePsiParams;
     qpOutcomeF = @(x) qpSimulatedObserver(x,@qpPFJoganStocker,simulatePsiParams);
+else
+    qpOutcomeF = [];
 end
 
 % Create the Quest+ varargin

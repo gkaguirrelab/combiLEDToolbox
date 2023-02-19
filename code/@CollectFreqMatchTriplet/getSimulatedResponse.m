@@ -1,4 +1,4 @@
-function [intervalChoice, responseTimeSecs] = simulateResponse(obj,FrequencyParams,ref1Interval)
+function [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,FrequencyParams,ref1Interval)
 
 % Get the simulated choice of ref1 or ref2
 outcome = obj.questData.qpOutcomeF(FrequencyParams);

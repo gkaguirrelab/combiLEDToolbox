@@ -6,8 +6,9 @@ questData = obj.questData;
 % Get the current trial index
 currTrialIdx = size(questData.trialData,1)+1;
 
-% Determine if we are simulating
-simulateTrial = ~isempty(obj.simulatePsiParams);
+% Determine if we are simulating the stimuli
+simulateStimuli = obj.simulateStimuli;
+simulateResponse = obj.simulateResponse;
 
 % The contrast levels of the stimuli are set by the calling routine
 TestContrast = obj.TestContrast;
@@ -61,13 +62,13 @@ switch ref1Interval
         error('Not a valid ref1Interval')
 end
 
-%% Alert the subject the trial is about to start
-stopTime = tic() + 2*obj.interStimulusIntervalSecs*1e9;
-sound(readySound, Fs);
-obj.waitUntil(stopTime);
-
 %% Present the stimuli
-if ~simulateTrial
+if ~simulateStimuli
+
+    % Alert the subject the trial is about to start
+    stopTime = tic() + 2*obj.interStimulusIntervalSecs*1e9;
+    sound(readySound, Fs);
+    obj.waitUntil(stopTime);
 
     % Present two alternations of interval one reference and the test
     for ii=1:2
@@ -126,15 +127,23 @@ if ~simulateTrial
     end
 
     % Start the response interval
-    [intervalChoice, responseTimeSecs] = obj.getResponse;
+    if ~simulateResponse
+        [intervalChoice, responseTimeSecs] = obj.getResponse;
+    else
+        [intervalChoice, responseTimeSecs] = obj.getSimulatedResponse(qpStimParams,ref1Interval);
+    end
 
     % Make sure the stimulus has stopped
     obj.CombiLEDObj.stopModulation;
 
 else
 
-    % We are simulating. Just get a response
-    [intervalChoice, responseTimeSecs] = obj.simulateResponse(qpStimParams,ref1Interval);
+    % Start the response interval
+    if ~simulateResponse
+        [intervalChoice, responseTimeSecs] = obj.getResponse;
+    else
+        [intervalChoice, responseTimeSecs] = obj.getSimulatedResponse(qpStimParams,ref1Interval);
+    end
 
 end
 
