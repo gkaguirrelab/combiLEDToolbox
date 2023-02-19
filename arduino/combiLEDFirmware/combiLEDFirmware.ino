@@ -382,7 +382,7 @@ void getConfig() {
     clearInputString();
     waitForNewString();
     phaseOffset = atof(inputString) / (2 * pi);
-    Serial.println(atof(inputString));
+    Serial.println(phaseOffset);
   }
   if (strncmp(inputString, "AM", 2) == 0) {
     // Amplitude modulation index

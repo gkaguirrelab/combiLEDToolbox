@@ -1,19 +1,18 @@
-combiLEDObj = CombiLEDcontrol('verbose',false);
+combiLEDObj = CombiLEDcontrol('verbose',true);
 
-% Get observer properties
+% Send a particular modulation direction to the CombiLED
 modResult = designModulation('LightFlux');
 combiLEDObj.setSettings(modResult);
 combiLEDObj.setBackground(modResult.settingsBackground);
-combiLEDObj.setWaveformIndex(1);
-combiLEDObj.setAMIndex(0);
-combiLEDObj.setDuration(3);
 
-% Open a stairCase objects to start from a high and a low point
-psychObj{1} = Collect2AFCStaircase(combiLEDObj,0.5,7.8082,0.8,'startHigh',true);
-psychObj{2} = Collect2AFCStaircase(combiLEDObj,0.5,7.8082,0.8,'startHigh',false);
+% When we simulate, we need to have a non-zero value for the bias
+simulatePsiParams = [0.25, 0.1, -0.15];
+psychObj = CollectFreqMatchTriplet(combiLEDObj,0.5,7.8082,0.75,'simulatePsiParams',simulatePsiParams);
+
+fprintf('Press a key to start data collection\n')
+pause
 
 % Present 40 trials
-for ii=1:40
-    psychObj{1}.presentTrial;
-    psychObj{2}.presentTrial;
+for ii=1:200
+    psychObj.presentTrial;
 end

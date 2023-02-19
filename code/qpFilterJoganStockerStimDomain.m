@@ -45,11 +45,6 @@ function stimOK = qpFilterJoganStockerStimDomain(stimParams)
 %% Grab params
 r1Val = stimParams(1);
 r2Val = stimParams(2);
-tVal = stimParams(3);
-
-% Only sample stimuli from the upper right corner of the stimulus matrix
-r1Val = r1Val-tVal;
-r2Val = r2Val-tVal;
 
 if r2Val>=r1Val
     stimOK = true;

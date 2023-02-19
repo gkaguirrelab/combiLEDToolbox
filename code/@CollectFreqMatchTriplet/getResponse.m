@@ -1,4 +1,4 @@
-function response = getResponse(obj)
+function [intervalChoice, responseTimeSecs] = getResponse(obj)
 
 % Set the response interval
 responseDurMicroSecs = obj.responseDurSecs * 1e9;
@@ -22,6 +22,7 @@ while waitingForKey
         KbResponse = find(keycode);
         if any([keyPress1, keyPress2]==KbResponse)
             waitingForKey = false;
+            responseTimeSecs = (tic()-intervalStart)/1e9;
         end
     end
 
@@ -33,13 +34,17 @@ while waitingForKey
 end
 
 % Interpret the response
-switch KbResponse
-    case num2cell(keyPress1)
-        response = 1;
-    case num2cell(keyPress2)
-        response = 2;
-    otherwise
-        response = [];
+if isempty(KbResponse)
+    intervalChoice = [];
+else
+    switch KbResponse
+        case num2cell(keyPress1)
+            intervalChoice = 1;
+        case num2cell(keyPress2)
+            intervalChoice = 2;
+        otherwise
+            error('Not an allowed response')
+    end
 end
 
 % Restore echoing key presses to Matlab console

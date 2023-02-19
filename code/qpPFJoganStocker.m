@@ -15,10 +15,8 @@ function probPickR2 = qpPFJoganStocker(stimParams,psiParams)
 %       discriminability. JoV, March 13, 2014, vol. 14 no.3
 %
 %  The parameters are:
-%   r1Val, r2Val            - Scalar. The value of a stimulus parameter 
-%                             that varies between the reference stimuli
-%   tVal                    - Scalar. The value of a stimulus parameter for
-%                             the test
+%   r1Val, r2Val            - Scalar. The difference in a stimulus value
+%                             between each reference and the test
 %   rSigma, tSigma          - Noise parameters for the reference and the
 %                             test
 %   bias                    - Scalar. Difference between perceived value 
@@ -27,7 +25,7 @@ function probPickR2 = qpPFJoganStocker(stimParams,psiParams)
 %
 % Inputs:
 %     stimParams          - nx3 matrix. Each row contains the stimulus
-%                           parameters: ref1Val, ref2Val, testVal
+%                           parameters: ref1Val, ref2Val
 %     psiParams           - nx3 matrix. Each row has the psychometric
 %                           parameters: rSigma, tSigma, tVal
 %
@@ -49,15 +47,15 @@ end
 if (size(psiParams,1) ~= 1)
     error('Should be a vector');
 end
-if (size(stimParams,2) ~= 3)
-    error('Three stim parameters');
+if (size(stimParams,2) ~= 2)
+    error('Two stim parameters required');
 end
 
 
 %% Grab params
 r1Val = stimParams(:,1);
 r2Val = stimParams(:,2);
-tVal = stimParams(:,3);
+tVal = 0; % We could the rVals relative to the tVal;
 rSigma = psiParams(:,1);
 tSigma = psiParams(:,2);
 bias = psiParams(:,3);
