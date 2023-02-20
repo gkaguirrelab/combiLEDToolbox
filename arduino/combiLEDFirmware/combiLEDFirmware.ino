@@ -40,8 +40,8 @@
 // Nyquist frequency of the device is ~147 Hz, limiting us to roughly 70 Hz as a
 // max modulation frequency. We can do better than this by limiting ourselves to
 // fewer than 8 active LEDs. If an LED has the same high and low setting value,
-// then that LED is marked as "inactive", and skipped in the sequential 
-// updating. This allows the remaining, active LEDs to be updated more 
+// then that LED is marked as "inactive", and skipped in the sequential
+// updating. This allows the remaining, active LEDs to be updated more
 // frequently.
 //
 // In addition to the frequency modulation of the waveform, a superimposed
@@ -58,7 +58,7 @@
 //                      built-in LED as LED0. The intensity of the LED is
 //                      pulse-width modulated. The other 7 channels are ignored.
 //  gammaCorrectInDirectMode  Boolean. Normally set to false. Set to true for
-//                      the particular instance of wishing to confirm via a 
+//                      the particular instance of wishing to confirm via a
 //                      calibration measurement the effect of gamma correction.
 //  maxLevelVal         4095. This is the max of the 12-bit range.
 //  settingScale        1e4. To save memory, many variables are unsigned ints,
@@ -159,7 +159,7 @@ enum { CONFIG,
        DIRECT } deviceState = RUN;
 
 // Global and control variables
-const uint8_t inputStringLen = 12;  // size of the command string buffer 
+const uint8_t inputStringLen = 12;  // size of the command string buffer
 char inputString[inputStringLen];   // a character vector to hold incoming data
 uint8_t inputCharIndex = 0;         // index to count our accumulated characters
 bool stringComplete = false;        // whether the input string is complete
@@ -189,10 +189,19 @@ float fmContrast = 1;
 // changes. The idea is to skip updating LEDs if their settings never change
 // from the background.
 int nActiveLEDs = nLEDs;
-uint8_t ledUpdateOrder[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+uint8_t ledUpdateOrder[nLEDs] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 
 // A gamma table. 0-1e4 precision
-int gammaTable[nLEDs][nGammaLevels];
+int gammaTable[nLEDs][nGammaLevels] = {
+  { 0, 329, 640, 946, 1253, 1565, 1886, 2218, 2561, 2917, 3286, 3667, 4060, 4465, 4882, 5309, 5749, 6201, 6668, 7152, 7657, 8188, 8752, 9357, 10013 },
+  { 0, 98, 246, 435, 659, 915, 1198, 1506, 1836, 2186, 2557, 2947, 3357, 3786, 4237, 4708, 5201, 5718, 6258, 6822, 7410, 8023, 8660, 9319, 10000 },
+  { 0, 409, 719, 982, 1215, 1436, 1655, 1883, 2125, 2388, 2672, 2981, 3314, 3671, 4053, 4461, 4894, 5356, 5851, 6383, 6962, 7599, 8307, 9105, 10015 },
+  { 0, 150, 332, 540, 769, 1016, 1278, 1552, 1840, 2141, 2457, 2790, 3141, 3515, 3914, 4342, 4802, 5298, 5833, 6411, 7034, 7704, 8423, 9192, 10010 },
+  { 0, 210, 453, 723, 1017, 1331, 1664, 2012, 2375, 2750, 3138, 3536, 3946, 4366, 4798, 5242, 5698, 6169, 6655, 7157, 7678, 8220, 8784, 9373, 9989 },
+  { 0, 221, 495, 800, 1128, 1473, 1829, 2190, 2555, 2921, 3287, 3654, 4022, 4395, 4773, 5162, 5566, 5989, 6437, 6917, 7434, 7996, 8609, 9281, 10020 },
+  { 0, 316, 634, 957, 1284, 1617, 1956, 2300, 2650, 3005, 3366, 3733, 4105, 4485, 4872, 5270, 5679, 6103, 6546, 7013, 7508, 8039, 8614, 9240, 9930 },
+  { 0, 312, 675, 1065, 1473, 1892, 2315, 2738, 3161, 3580, 3996, 4410, 4822, 5235, 5650, 6069, 6493, 6923, 7360, 7803, 8251, 8701, 9147, 9585, 10005 },
+};
 
 // Variables that define an amplitude modulation
 uint8_t amplitudeIndex = 0;  // Default to no amplitude modulation
@@ -206,10 +215,10 @@ float amplitudeVals[3][2] = {
 int amModTable[nAmModLevels];
 
 // Variables the define compound modulations. Support is provided for a compound
-// modulation composed of up to 5 sinusoids. For each sinusoid, we specify the 
+// modulation composed of up to 5 sinusoids. For each sinusoid, we specify the
 // harmonic index relative to the fundamental FM modulation frequency (0 for no
-// modulation), the relative amplitude of that harmonic component, and the 
-// relative phase (in radians). Finally, we need to know the min and max values 
+// modulation), the relative amplitude of that harmonic component, and the
+// relative phase (in radians). Finally, we need to know the min and max values
 // across a full cycle of a given compound waveform. The compoundRange
 // variable holds the result. See the function "updateCompoundRange" for details.
 float compoundHarmonics[5] = { 1, 2, 4, 0, 0 };         // Harmonics to include
@@ -254,8 +263,6 @@ void setup() {
   }
   // Check which LEDs are "active"
   identifyActiveLEDs();
-  // Initialize a linear gammaTable
-  initializeGammaTable();
   // Populate the amplitude modulation table
   updateAmModTable();
   // Set the device to background
@@ -460,6 +467,18 @@ void getConfig() {
     }
     updateCompoundRange();
     updateFmModTable();
+  }
+  if (strncmp(inputString, "LU", 2) == 0) {
+    // LED Update Order
+    Serial.println("LP:");
+    clearInputString();
+    for (int ii = 0; ii < nLEDs; ii++) {
+      waitForNewString();
+      float newVal = atoi(inputString);
+      ledUpdateOrder[ii] = newVal;
+      Serial.println(newVal);
+      clearInputString();
+    }
   }
   if (strncmp(inputString, "ST", 2) == 0) {
     // Matrix of settings int, 0-1e4, first
@@ -839,16 +858,6 @@ float calcAmplitudeModulation(float amCyclePhase) {
   return modLevel;
 }
 
-void initializeGammaTable() {
-  // Loop over the LEDs
-  for (int ii = 0; ii < nLEDs; ii++) {
-    for (int jj = 0; jj < nGammaLevels; jj++) {
-      float corrected = float(jj) / (nGammaLevels - 1);
-      gammaTable[ii][jj] = round(corrected * settingScale);
-    }
-  }
-}
-
 void updateGammaTable() {
   // Loop over the LEDs
   for (int ii = 0; ii < nLEDs; ii++) {
@@ -862,7 +871,9 @@ void updateGammaTable() {
       clearInputString();
     }
     // Use this set of gammaParams to populate the gammaTable
-    for (int jj = 0; jj < nGammaLevels; jj++) {
+    // Note we skip the first entry as this has an obligatory
+    // value of zero.
+    for (int jj = 1; jj < nGammaLevels; jj++) {
       float input = float(jj) / (nGammaLevels - 1);
       float corrected = 0;
       for (int kk = 0; kk < nGammaParams; kk++) {
