@@ -77,8 +77,8 @@ end
 if ~simulateStimuli
 
     % Alert the subject the trial is about to start
-    stopTime = tic() + 1e9;
     sound(readySound, Fs);
+    stopTime = tic() + 1e9;
     obj.waitUntil(stopTime);
 
     % Present two alternations of interval one reference and the test
@@ -90,9 +90,9 @@ if ~simulateStimuli
         obj.CombiLEDObj.setPhaseOffset(intOneParams(3));
 
         % Present a reference stimulus
+        sound(lowTone, Fs);
         stopTime = tic() + obj.stimulusDurationSecs*1e9;
         obj.CombiLEDObj.startModulation;
-        sound(lowTone, Fs);
         obj.waitUntil(stopTime);
 
         % Prepare the test stimulus
@@ -101,9 +101,9 @@ if ~simulateStimuli
         obj.CombiLEDObj.setPhaseOffset(testParams(3));
 
         % Present the test stimulus.
+        sound(midTone, Fs);
         stopTime = tic() + obj.stimulusDurationSecs*1e9;
         obj.CombiLEDObj.startModulation;
-        sound(midTone, Fs);
         obj.waitUntil(stopTime);
     end
 
@@ -120,9 +120,9 @@ if ~simulateStimuli
         obj.CombiLEDObj.setPhaseOffset(intTwoParams(3));
 
         % Present a reference stimulus
+        sound(highTone, Fs);
         stopTime = tic() + obj.stimulusDurationSecs*1e9;
         obj.CombiLEDObj.startModulation;
-        sound(highTone, Fs);
         obj.waitUntil(stopTime);
 
         % Prepare the test stimulus
@@ -131,9 +131,9 @@ if ~simulateStimuli
         obj.CombiLEDObj.setPhaseOffset(testParams(3));
 
         % Present the test stimulus.
+        sound(midTone, Fs);
         stopTime = tic() + obj.stimulusDurationSecs*1e9;
         obj.CombiLEDObj.startModulation;
-        sound(midTone, Fs);        
         if ii==1
             % Only wait it is the first cycle. On the second cycle we jump
             % right to the response interval for the inpatient subject.
@@ -177,7 +177,7 @@ else
 end
 
 if obj.verbose
-    fprintf('choice = %d \n', intervalChoice);
+    fprintf('choice = %d', intervalChoice);
 end
 
 % Handle feedback at the end of the trial
@@ -187,10 +187,20 @@ if giveFeedback && validResponse
     [~,correctReference] = min(abs(qpStimParams));
     if outcome == correctReference
         sound(correctSound, Fs);
+        if obj.verbose
+            fprintf('; correct');
+        end
     else
         sound(incorrectSound, Fs);
+        if obj.verbose
+            fprintf('; incorrect');
+        end
     end
     obj.waitUntil(tic()+5e8);
+end
+
+if obj.verbose
+    fprintf('\n');
 end
 
 if ~giveFeedback && validResponse

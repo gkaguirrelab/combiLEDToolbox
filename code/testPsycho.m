@@ -11,7 +11,10 @@ TestFrequency = 7;
 ReferenceContrast = 0.75;
 
 % Instantiate the psychometric object
-psychObj = CollectFreqMatchTriplet(combiLEDObj,TestContrast,TestFrequency,ReferenceContrast);
+combiLEDObj = [];
+psychObj = CollectFreqMatchTriplet(combiLEDObj,...
+    TestContrast,TestFrequency,ReferenceContrast,...
+    'simulateStimuli',true,'simulateResponse',true);
 
 % Get ready to rumble
 fprintf('Press a key to start data collection\n')

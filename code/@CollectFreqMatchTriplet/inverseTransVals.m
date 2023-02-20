@@ -5,7 +5,7 @@ function values = inverseTransVals(obj,refValues,testValue)
 if isempty(testValue)
     values = 10.^refValues;
 else
-    values = 10.^refValues + testValue;
+    values = 10.^(refValues + log10(testValue));
 end
 
 end
