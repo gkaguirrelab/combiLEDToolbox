@@ -48,7 +48,7 @@ classdef CollectFreqMatchTriplet < handle
             p.addParameter('simulateStimuli',false,@islogical);    
             p.addParameter('giveFeedback',true,@islogical);                
             p.addParameter('ReferenceFrequencySet',logspace(log10(2),log10(24),15),@isnumeric);
-            p.addParameter('simulatePsiParams',[0.15, 0.05, -0.05],@isnumeric);
+            p.addParameter('simulatePsiParams',[0.35, 0.15, -0.075],@isnumeric);
             p.addParameter('psiParamsDomainList',{0:0.01:0.75, 0:0.01:0.75, -0.15:0.025:0.15},@isnumeric);
             p.addParameter('verbose',true,@islogical);
             p.parse(varargin{:})

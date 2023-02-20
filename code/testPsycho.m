@@ -14,13 +14,14 @@ ReferenceContrast = 0.75;
 combiLEDObj = [];
 psychObj = CollectFreqMatchTriplet(combiLEDObj,...
     TestContrast,TestFrequency,ReferenceContrast,...
-    'simulateStimuli',true,'simulateResponse',true);
+    'simulateStimuli',true,'simulateResponse',true,...
+    'verbose',false);
 
 % Get ready to rumble
 fprintf('Press a key to start data collection\n')
 pause
 
 % Present 25 trials (about 5 minutes)
-for ii=1:25
+for ii=1:100
     psychObj.presentTrial;
 end

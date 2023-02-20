@@ -186,17 +186,23 @@ if giveFeedback && validResponse
     % selected the interval with the frequency that is closer to the test
     [~,correctReference] = min(abs(qpStimParams));
     if outcome == correctReference
-        sound(correctSound, Fs);
+        if ~simulateStimuli
+            sound(correctSound, Fs);
+        end
         if obj.verbose
             fprintf('; correct');
         end
     else
-        sound(incorrectSound, Fs);
+        if ~simulateStimuli
+            sound(incorrectSound, Fs);
+        end
         if obj.verbose
             fprintf('; incorrect');
         end
     end
-    obj.waitUntil(tic()+5e8);
+    if ~simulateStimuli
+        obj.waitUntil(tic()+5e8);
+    end
 end
 
 if obj.verbose
@@ -220,7 +226,9 @@ if validResponse
     questData.trialData(currTrialIdx).responseTimeSecs = responseTimeSecs;
 else
     % Buzz the bad trial
-    sound(badSound, Fs);
+    if ~simulateStimuli
+        sound(badSound, Fs);
+    end
     obj.waitUntil(tic()+3e9);
 
     % Store a note that we had an invalid response
