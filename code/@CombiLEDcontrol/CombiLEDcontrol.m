@@ -75,6 +75,7 @@ classdef CombiLEDcontrol < handle
         setCompoundModulation(obj,compoundHarmonics,compoundAmplitudes,compoundPhases)
         setWaveformIndex(obj,waveformIndex)
         setGamma(obj,gammaTable)
+        setLEDUpdateOrder(obj,ledUpdateOrder)
 
     end
 end

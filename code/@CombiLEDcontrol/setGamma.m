@@ -47,6 +47,28 @@ switch obj.deviceState
         obj.deviceState = 'CONFIG';
 end
 
+% Code to dump out the gamma table used on device. I have this so I can
+% generate the table and stick it in the arduino firmware as the default
+% table
+%{
+for ii = 1:obj.nPrimaries
+    str = '{ ';
+    for jj=0:24
+        output = 0;
+        if jj>0
+            input = jj/24;
+            for kk=1:obj.nGammaParams
+                output = output + gammaParams(ii,kk) * input^(obj.nGammaParams-kk);
+            end
+        end
+        output = round(output*1e4);
+        str = [str sprintf('%d, ',output)];
+    end
+    str = [str(1:end-2) ' },\n'];
+    fprintf(str);
+end
+%}
+
 % Enter the settings send state
 writeline(obj.serialObj,'GP');
 readline(obj.serialObj);
