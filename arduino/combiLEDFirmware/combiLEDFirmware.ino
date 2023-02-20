@@ -112,16 +112,15 @@
 #include <Wire.h>
 
 
-///////////////////// SIMULATE PRIZMATIX /////////////////////////////
+////////////////////////// SIMULATE PRIZMATIX //////////////////////////////////
 // Set this variable to use the built-in LED to simulate
 // the output of the Prizmatix device
 //
 bool simulatePrizmatix = false;
-/////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 
-
-///////////////////// DIRECT MODE BEHAVIOR //////////////////////////
+////////////////////////// DIRECT MODE BEHAVIOR ////////////////////////////////
 // Direct mode is used to calibrate the device. This flag controls
 // if the settings that are sent in direct mode are subjected to the
 // on-board gamma correction. If the device is being calibrated, we
@@ -132,17 +131,17 @@ bool simulatePrizmatix = false;
 // calibration measure that uses this correction.
 //
 bool gammaCorrectInDirectMode = false;
-/////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 
 // Fixed hardware values
-const int maxLevelVal = 4095;       // maximum setting value for the prizmatix LEDs
-const int minLEDAddressTime = 250;  // the time, in microseconds, required to send an LED setting
+const int maxLevelVal = 4095;       // maximum setting value for the LEDs
+const int minLEDAddressTime = 250;  // time required to set an LED (microsecs)
 
 // Fixed reality values
 const float pi = 3.1415927;
 
-// Fixed value that scales the settings and background values to floats between 0 and 1
+// Fixed value that scales various interger variables between 0 and 1
 const int settingScale = 1e4;
 
 // The resolution with which we will define various look-up tables
@@ -150,7 +149,8 @@ const int nGammaLevels = 25;
 const int nAmModLevels = 25;
 const int nFmModLevels = 50;
 
-// The number of parameters used to define the gamma polynomial function (5th degree + 1)
+// The number of parameters used to define the gamma polynomial function
+// (5th degree + 1)
 const int nGammaParams = 6;
 
 // Define the device states
@@ -159,7 +159,7 @@ enum { CONFIG,
        DIRECT } deviceState = RUN;
 
 // Global and control variables
-const uint8_t inputStringLen = 12;  // size of the string buffer used to send commands
+const uint8_t inputStringLen = 12;  // size of the command string buffer 
 char inputString[inputStringLen];   // a character vector to hold incoming data
 uint8_t inputCharIndex = 0;         // index to count our accumulated characters
 bool stringComplete = false;        // whether the input string is complete
@@ -205,13 +205,14 @@ float amplitudeVals[3][2] = {
 // An amplitude modulation look-up table. 0-1e4 precision
 int amModTable[nAmModLevels];
 
-// Variables the define compound modulations. Support is provided for a compound modulation
-// composed of up to 5 sinusoids. For each sinusoid, we specify the harmonic index relative
-// to the fundamental FM modulation frequency (0 for no modulation), the relative amplitude
-// of that harmonic component, and the relative phase (in radians). Finally, we need to know
-// the min and max values across a full cycle of a given compound waveform. The compoundRange
+// Variables the define compound modulations. Support is provided for a compound
+// modulation composed of up to 5 sinusoids. For each sinusoid, we specify the 
+// harmonic index relative to the fundamental FM modulation frequency (0 for no
+// modulation), the relative amplitude of that harmonic component, and the 
+// relative phase (in radians). Finally, we need to know the min and max values 
+// across a full cycle of a given compound waveform. The compoundRange
 // variable holds the result. See the function "updateCompoundRange" for details.
-float compoundHarmonics[5] = { 1, 2, 4, 0, 0 };         // Multiples of the fundamental
+float compoundHarmonics[5] = { 1, 2, 4, 0, 0 };         // Harmonics to include
 float compoundAmps[5] = { 0.5, 1, 1, 0, 0 };            // Relative amplitudes
 float compoundPhases[5] = { 0, 0.7854, 4.3633, 0, 0 };  // Phase delay in radians
 float compoundRange[2] = { 0, 1 };
@@ -222,11 +223,11 @@ unsigned long fmCycleDur = round(1e6 / 3);     // Initialize at 3 Hz
 unsigned long amCycleDur = round(1e6 / 0.1);   // Initialize at 0.1 Hz
 unsigned long modulationStartTime = micros();  // Initialize these with the clock
 unsigned long lastLEDUpdateTime = micros();    // Initialize these with the clock
-int blinkDurationMSecs = 100;                  // Default duration of the blink event in msecs
-uint8_t ledCycleIdx = 0;                       // Counter to index our cycle through updating LEDs
-float phaseOffset = 0;                         // 0-1, used to shift the waveform phase
-float modulationDurSecs = 0;                   // Duration of the modulation in secs (0 for continuous)
-unsigned long cycleCount = 0;                  // Num cycles elapsed since modulation start
+int blinkDurationMSecs = 100;                  // Blink even duration
+uint8_t ledCycleIdx = 0;                       // Counter across LED updates
+float phaseOffset = 0;                         // 0-1; shifts the waveform phase
+float modulationDurSecs = 0;                   // Set to 0 for continuous
+unsigned long cycleCount = 0;                  // Cycles elapsed since mod start
 
 
 // setup
