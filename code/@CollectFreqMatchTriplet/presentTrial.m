@@ -37,6 +37,13 @@ readySound = [lowTone midTone highTone];
 correctSound = sin(2*pi*750*t);
 incorrectSound = sin(2*pi*250*t);
 badSound = [sin(2*pi*250*t) sin(2*pi*250*t)];
+audioObjs.low = audioplayer(lowTone,Fs);
+audioObjs.mid = audioplayer(midTone,Fs);
+audioObjs.high = audioplayer(highTone,Fs);
+audioObjs.ready = audioplayer(readySound,Fs);
+audioObjs.correct = audioplayer(correctSound,Fs);
+audioObjs.incorrect = audioplayer(incorrectSound,Fs);
+audioObjs.bad = audioplayer(badSound,Fs);
 
 % Determine if we have random phase or not
 if obj.randomizePhase
@@ -58,11 +65,11 @@ ref1Interval = 1+logical(round(rand()));
 % Assign the stimuli to the intervals
 switch ref1Interval
     case 1
-        intOneParams = ref1Params;
-        intTwoParams = ref2Params;
+        intervalParams(1,:) = ref1Params;
+        intervalParams(2,:) = ref2Params;
     case 2
-        intOneParams = ref2Params;
-        intTwoParams = ref1Params;
+        intervalParams(1,:) = ref2Params;
+        intervalParams(2,:) = ref1Params;
     otherwise
         error('Not a valid ref1Interval')
 end
@@ -70,73 +77,55 @@ end
 % Handle verbosity
 if obj.verbose
     fprintf('Trial %d; test [%2.2f]; int1 [%2.2f]; int2 [%2.2f]...', ...
-        currTrialIdx,testParams(2),intOneParams(2),intTwoParams(2));
+        currTrialIdx,testParams(2),intervalParams(1,2),intervalParams(2,2));
 end
 
 %% Present the stimuli
 if ~simulateStimuli
 
     % Alert the subject the trial is about to start
-    sound(readySound, Fs);
+    audioObjs.ready.play;
     stopTime = tic() + 1e9;
     obj.waitUntil(stopTime);
 
-    % Present two alternations of interval one reference and the test
+    % Present the two intervals
     for ii=1:2
 
-        % Prepare the first reference interval stimulus
-        obj.CombiLEDObj.setContrast(intOneParams(1));
-        obj.CombiLEDObj.setFrequency(intOneParams(2));
-        obj.CombiLEDObj.setPhaseOffset(intOneParams(3));
+        % Within each interval, alternate between the reference and the
+        % test twice
+        for ss=1:2
 
-        % Present a reference stimulus
-        sound(lowTone, Fs);
-        stopTime = tic() + obj.stimulusDurationSecs*1e9;
-        obj.CombiLEDObj.startModulation;
-        obj.waitUntil(stopTime);
+            % Prepare the reference stimulus
+            stopTime = tic() + obj.interFlickerIntervalSecs*1e9;
+            obj.CombiLEDObj.setContrast(intervalParams(ii,1));
+            obj.CombiLEDObj.setFrequency(intervalParams(ii,2));
+            obj.CombiLEDObj.setPhaseOffset(intervalParams(ii,3));
+            obj.waitUntil(stopTime);
 
-        % Prepare the test stimulus
-        obj.CombiLEDObj.setContrast(testParams(1));
-        obj.CombiLEDObj.setFrequency(testParams(2));
-        obj.CombiLEDObj.setPhaseOffset(testParams(3));
+            % Present a reference stimulus
+            stopTime = tic() + obj.stimulusDurationSecs*1e9;
+            obj.CombiLEDObj.startModulation;
+            audioObjs.low.play;
+            obj.waitUntil(stopTime);
 
-        % Present the test stimulus.
-        sound(midTone, Fs);
-        stopTime = tic() + obj.stimulusDurationSecs*1e9;
-        obj.CombiLEDObj.startModulation;
-        obj.waitUntil(stopTime);
-    end
+            % Prepare the test stimulus
+            stopTime = tic() + obj.interFlickerIntervalSecs*1e9;
+            obj.CombiLEDObj.setContrast(testParams(1));
+            obj.CombiLEDObj.setFrequency(testParams(2));
+            obj.CombiLEDObj.setPhaseOffset(testParams(3));
+            obj.waitUntil(stopTime);
 
-    % ISI
-    stopTime = stopTime + obj.interStimulusIntervalSecs*1e9;
-    obj.waitUntil(stopTime);
+            % Present the test stimulus.
+            stopTime = tic() + obj.stimulusDurationSecs*1e9;
+            obj.CombiLEDObj.startModulation;
+            audioObjs.mid.play;
+            obj.waitUntil(stopTime);
 
-    % Present two alternations of interval two reference and the test
-    for ii=1:2
+        end
 
-        % Prepare the first reference interval stimulus
-        obj.CombiLEDObj.setContrast(intTwoParams(1));
-        obj.CombiLEDObj.setFrequency(intTwoParams(2));
-        obj.CombiLEDObj.setPhaseOffset(intTwoParams(3));
-
-        % Present a reference stimulus
-        sound(highTone, Fs);
-        stopTime = tic() + obj.stimulusDurationSecs*1e9;
-        obj.CombiLEDObj.startModulation;
-        obj.waitUntil(stopTime);
-
-        % Prepare the test stimulus
-        obj.CombiLEDObj.setContrast(testParams(1));
-        obj.CombiLEDObj.setFrequency(testParams(2));
-        obj.CombiLEDObj.setPhaseOffset(testParams(3));
-
-        % Present the test stimulus.
-        sound(midTone, Fs);
-        stopTime = tic() + obj.stimulusDurationSecs*1e9;
-        obj.CombiLEDObj.startModulation;
+        % ISI
         if ii==1
-            % Only wait it is the first cycle. On the second cycle we jump
-            % right to the response interval for the inpatient subject.
+            stopTime = stopTime + obj.interStimulusIntervalSecs*1e9;
             obj.waitUntil(stopTime);
         end
     end
@@ -187,14 +176,14 @@ if giveFeedback && validResponse
     [~,correctReference] = min(abs(qpStimParams));
     if outcome == correctReference
         if ~simulateStimuli
-            sound(correctSound, Fs);
+            audioObjs.correct.play;
         end
         if obj.verbose
             fprintf('; correct');
         end
     else
         if ~simulateStimuli
-            sound(incorrectSound, Fs);
+            audioObjs.incorrect.play;
         end
         if obj.verbose
             fprintf('; incorrect');
@@ -212,7 +201,7 @@ end
 if ~giveFeedback && validResponse
     % If we aren't giving feedback, but the subject did make a valid
     % response, we give the same, pleasing tone after every trial.
-    sound(correctSound, Fs);
+    audioObjs.correct.play;
 end
 
 % Update questData if a valid response
@@ -227,7 +216,7 @@ if validResponse
 else
     % Buzz the bad trial
     if ~simulateStimuli
-        sound(badSound, Fs);
+        audioObjs.bad.play;
     end
     obj.waitUntil(tic()+3e9);
 

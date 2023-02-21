@@ -27,6 +27,7 @@ classdef CollectFreqMatchTriplet < handle
         ReferenceFrequencySet
         stimulusDurationSecs = 1;
         responseDurSecs = 3;
+        interFlickerIntervalSecs = 0.2;
         interStimulusIntervalSecs = 0.75;
     end
 
@@ -47,9 +48,11 @@ classdef CollectFreqMatchTriplet < handle
             p.addParameter('simulateResponse',false,@islogical);            
             p.addParameter('simulateStimuli',false,@islogical);    
             p.addParameter('giveFeedback',true,@islogical);                
-            p.addParameter('ReferenceFrequencySet',logspace(log10(2),log10(24),15),@isnumeric);
+            p.addParameter('ReferenceFrequencySet',[4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48, 54, 64],@isnumeric);
             p.addParameter('simulatePsiParams',[0.35, 0.15, -0.075],@isnumeric);
-            p.addParameter('psiParamsDomainList',{0:0.01:0.75, 0:0.01:0.75, -0.15:0.025:0.15},@isnumeric);
+            p.addParameter('psiParamsDomainList',{linspace(0,2,51), ...
+                linspace(0,2,51),...
+                linspace(-3,3,51)},@isnumeric);
             p.addParameter('verbose',true,@islogical);
             p.parse(varargin{:})
 
@@ -81,9 +84,9 @@ classdef CollectFreqMatchTriplet < handle
             if ~obj.simulateStimuli
                 obj.CombiLEDObj.setDuration(obj.stimulusDurationSecs);
                 obj.CombiLEDObj.setWaveformIndex(1); % sinusoidal flicker
-                %            obj.CombiLEDObj.setAMIndex(2); % half-cosine ramp
-                %            obj.CombiLEDObj.setAMFrequency(0.5); % half-cosine ramp
-                %            obj.CombiLEDObj.setAMValues([0.1,0]); % half-cosine duration
+                obj.CombiLEDObj.setAMIndex(2); % half-cosine ramp
+                obj.CombiLEDObj.setAMFrequency(0.5/obj.stimulusDurationSecs); % half-cosine ramp
+                obj.CombiLEDObj.setAMValues([obj.stimulusDurationSecs/20,0]); % half-cosine duration
             end
 
         end

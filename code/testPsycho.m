@@ -7,21 +7,26 @@ combiLEDObj.setBackground(modResult.settingsBackground);
 
 % Define a triplet
 TestContrast = 0.5;
-TestFrequency = 7;
+TestFrequency = 16;
 ReferenceContrast = 0.75;
 
 % Instantiate the psychometric object
-combiLEDObj = [];
+clear psychObj
 psychObj = CollectFreqMatchTriplet(combiLEDObj,...
     TestContrast,TestFrequency,ReferenceContrast,...
-    'simulateStimuli',true,'simulateResponse',true,...
-    'verbose',false);
+    'simulateStimuli',false,'simulateResponse',false,...
+    'simulatePsiParams',[0.15, 0.35, -0.2],...
+    'verbose',true);
 
 % Get ready to rumble
 fprintf('Press a key to start data collection\n')
 pause
 
 % Present 25 trials (about 5 minutes)
-for ii=1:100
+for ii=1:25
     psychObj.presentTrial;
 end
+
+[~, recoveredParams]=psychObj.reportParams
+psychObj.plotOutcome
+
