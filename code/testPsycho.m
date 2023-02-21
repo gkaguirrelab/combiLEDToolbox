@@ -5,10 +5,12 @@ modResult = designModulation('LightFlux');
 combiLEDObj.setSettings(modResult);
 combiLEDObj.setBackground(modResult.settingsBackground);
 
+%% For modulations up to 64 Hz, the max allowable contrast is 0.7
+
 % Define a triplet
-TestContrast = 0.5;
-TestFrequency = 16;
-ReferenceContrast = 0.75;
+TestContrast = 0.15;
+TestFrequency = 20;
+ReferenceContrast = 0.3;
 
 % Instantiate the psychometric object
 clear psychObj

@@ -108,6 +108,11 @@ a.XTickLabel = arrayfun(@(x) num2str(x),freqsToTest,'UniformOutput',false);
 xlabel('Frequency [log Hz]')
 ylabel('Relative amplitude reduction [proportion]')
 
+% Save the roll-off function
+contrastRollOff = correctedCombi;
+frequencySupport = freqsToTest;
+dataFileName = fullfile(fileparts(mfilename("fullpath")),'freqRollOffMeasure.mat');
+save(dataFileName,'contrastRollOff','frequencySupport');
 
 
 %% local function

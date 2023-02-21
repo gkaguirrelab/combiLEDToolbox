@@ -22,8 +22,10 @@ classdef CollectFreqMatchTriplet < handle
         psiParamsDomainList
         randomizePhase = true;
         TestContrast
+        TestContrastAdjusted
         TestFrequency
         ReferenceContrast
+        ReferenceContrastAdjustedByFreq
         ReferenceFrequencySet
         stimulusDurationSecs = 1;
         responseDurSecs = 3;
@@ -48,7 +50,7 @@ classdef CollectFreqMatchTriplet < handle
             p.addParameter('simulateResponse',false,@islogical);            
             p.addParameter('simulateStimuli',false,@islogical);    
             p.addParameter('giveFeedback',true,@islogical);                
-            p.addParameter('ReferenceFrequencySet',[4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48, 54, 64],@isnumeric);
+            p.addParameter('ReferenceFrequencySet',[3, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40],@isnumeric);
             p.addParameter('simulatePsiParams',[0.35, 0.15, -0.075],@isnumeric);
             p.addParameter('psiParamsDomainList',{linspace(0,2,51), ...
                 linspace(0,2,51),...
@@ -88,6 +90,23 @@ classdef CollectFreqMatchTriplet < handle
                 obj.CombiLEDObj.setAMFrequency(0.5/obj.stimulusDurationSecs); % half-cosine ramp
                 obj.CombiLEDObj.setAMValues([obj.stimulusDurationSecs/20,0]); % half-cosine duration
             end
+
+            % There is a roll-off (attenuation) of the amplitude of
+            % modulations with frequency. We can adjust for this property,
+            % and detect those cases which are outside of our ability to
+            % correct
+            obj.ReferenceContrastAdjustedByFreq = obj.ReferenceContrast ./ ...
+                contrastAttentionByFreq(obj.ReferenceFrequencySet);
+
+            % Check that the adjusted contrast does not exceed unity
+            mustBeInRange(obj.ReferenceContrastAdjustedByFreq,0,1);
+
+            % Now adjust the test contrast
+            obj.TestContrastAdjusted = obj.TestContrast / ...
+                contrastAttentionByFreq(obj.TestFrequency);
+
+            % Check that the adjusted contrast does not exceed unity
+            mustBeInRange(obj.TestContrastAdjusted,0,1);
 
         end
 

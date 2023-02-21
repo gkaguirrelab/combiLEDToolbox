@@ -14,8 +14,7 @@ simulateResponse = obj.simulateResponse;
 giveFeedback = obj.giveFeedback;
 
 % The contrast levels of the stimuli are set by the calling routine
-TestContrast = obj.TestContrast;
-ReferenceContrast = obj.ReferenceContrast;
+TestContrast = obj.TestContrastAdjusted;
 
 % The test frequency is set by the calling function
 TestFrequency = obj.TestFrequency;
@@ -25,6 +24,12 @@ TestFrequency = obj.TestFrequency;
 qpStimParams = qpQuery(questData);
 ref1Frequency = obj.inverseTransVals(qpStimParams(1),TestFrequency);
 ref2Frequency = obj.inverseTransVals(qpStimParams(2),TestFrequency);
+[~,ref1FreqIdx] = min(abs(obj.ReferenceFrequencySet-ref1Frequency));
+[~,ref2FreqIdx] = min(abs(obj.ReferenceFrequencySet-ref2Frequency));
+ref1Contrast = obj.ReferenceContrastAdjustedByFreq(ref1FreqIdx);
+ref2Contrast = obj.ReferenceContrastAdjustedByFreq(ref2FreqIdx);
+
+% Get the adjusted reference contrasts for these frequencies
 
 % Prepare the sounds
 Fs = 8192; % Sampling Frequency
@@ -47,16 +52,16 @@ audioObjs.bad = audioplayer(badSound,Fs);
 
 % Determine if we have random phase or not
 if obj.randomizePhase
-    refPhase = rand()*2*pi;
-    testPhase = rand()*2*pi;
+    refPhase = rand()*pi/2;
+    testPhase = rand()*pi/2;
 else
     refPhase = 0;
     testPhase = 0;
 end
 
 % Assemble the param sets
-ref1Params = [ReferenceContrast,ref1Frequency,refPhase];
-ref2Params = [ReferenceContrast,ref2Frequency,refPhase];
+ref1Params = [ref1Contrast,ref1Frequency,refPhase];
+ref2Params = [ref2Contrast,ref2Frequency,refPhase];
 testParams = [TestContrast,TestFrequency,testPhase];
 
 % Randomly pick which interval contains ref1
@@ -105,7 +110,11 @@ if ~simulateStimuli
             % Present a reference stimulus
             stopTime = tic() + obj.stimulusDurationSecs*1e9;
             obj.CombiLEDObj.startModulation;
-            audioObjs.low.play;
+            if ii==1
+                audioObjs.low.play;
+            else
+                audioObjs.high.play;
+            end
             obj.waitUntil(stopTime);
 
             % Prepare the test stimulus
