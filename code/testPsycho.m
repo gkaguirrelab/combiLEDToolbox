@@ -39,7 +39,6 @@ else
 end
 
 % Set up the CombiLED
-clear combiLEDObj
 combiLEDObj = CombiLEDcontrol('verbose',false);
 
 % Send the modulation direction to the CombiLED
@@ -60,7 +59,6 @@ TestFrequency = TestFreqSet(IdxZ);
 
 % Instantiate the psychometric object
 clear psychObj
-combiLEDObj = [];
 psychObj = CollectFreqMatchTriplet(combiLEDObj,...
     TestContrast,TestFrequency,ReferenceContrast,...
     'simulateStimuli',false,'simulateResponse',false,...
@@ -69,13 +67,12 @@ psychObj = CollectFreqMatchTriplet(combiLEDObj,...
 % Loop through ~5 minute measurement periods
 stillMeasuring = true;
 while stillMeasuring
-
     msg = GetWithDefault('Press enter to start, q to quit','');
-
     if strcmp(msg,'q')
         stillMeasuring = false;
     else
-
+        % Store the block start time
+        psychObj.blockStartTimes(end+1) = datetime();
         % Present 25 trials (about 5 minutes)
         for ii=1:25
             psychObj.presentTrial;
@@ -87,16 +84,21 @@ end
 fileStem = [subjectID '_' modDirection '_' sprintf('%02d',measureCount) ...
     '_' strrep(num2str(ReferenceContrast),'.','x') ...
     '_' strrep(num2str(TestContrast),'.','x') ...
-    '_' strrep(num2str(TestFrequency),'.','x') '.mat'];
-filename = fullfile(saveDataDir,fileStem);
+    '_' strrep(num2str(TestFrequency),'.','x')];
+filename = fullfile(saveDataDir,[fileStem '.mat']);
 save(filename,'psychObj');
+
+% Report the results for this measurement
+[~, recoveredParams]=psychObj.reportParams;
+figHandle = psychObj.plotOutcome();
+
+% Save the figure
+filename = fullfile(saveDataDir,[fileStem '.pdf']);
+saveas(figHandle,filename,'pdf')
 
 % Update and save the measurementRecord
 measurementRecord(measureRecordIdx) = measureCount;
 filename = fullfile(saveDataDir,'measurementRecord.mat');
 save(filename,'measurementRecord');
 
-% Report the results for this measurement
-[~, recoveredParams]=psychObj.reportParams;
-psychObj.plotOutcome
 

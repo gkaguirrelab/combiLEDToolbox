@@ -1,4 +1,4 @@
-function plotOutcome(obj)
+function figHandle = plotOutcome(obj)
 
 % Grab some variables
 questData = obj.questData;
@@ -11,7 +11,7 @@ ReferenceFrequencySet = obj.forwardTransformVals(ReferenceFrequencySet,TestFrequ
 % Plot trial locations together with maximum likelihood fit. Point
 % transparancy visualizes number of trials (more opaque -> more trials),
 % while point color visualizes percent correct (more blue -> more R1).
-figure; 
+figHandle = figure; 
 figuresize(750,250,'units','pt');
 
 subplot(1,3,1);
@@ -71,5 +71,10 @@ axis square
 xlabel('trial number');
 ylabel('entropy');
 title('Entropy by trial number')
+
+% Add a supertitle
+str = sprintf('Cref = %2.2f; Ctest = %2.2f; Ftest = %d Hz; params = [%2.3f, %2.3f, %2.3f]',...
+    obj.ReferenceContrast,obj.TestContrast,obj.TestFrequency,psiParamsFit);
+sgtitle(str);
 
 end

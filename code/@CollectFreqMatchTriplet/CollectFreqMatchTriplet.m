@@ -15,7 +15,6 @@ classdef CollectFreqMatchTriplet < handle
     properties (SetAccess=private)
         CombiLEDObj
         questData
-        startTime
         simulatePsiParams
         simulateResponse
         simulateStimuli
@@ -38,6 +37,7 @@ classdef CollectFreqMatchTriplet < handle
     properties (SetAccess=public)
         % Verbosity
         verbose = true;
+        blockStartTimes = datetime();
     end
 
     methods
@@ -47,10 +47,10 @@ classdef CollectFreqMatchTriplet < handle
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
-            p.addParameter('randomizePhase',true,@islogical);
+            p.addParameter('randomizePhase',false,@islogical);
             p.addParameter('simulateResponse',false,@islogical);
             p.addParameter('simulateStimuli',false,@islogical);
-            p.addParameter('giveFeedback',true,@islogical);
+            p.addParameter('giveFeedback',false,@islogical);
             p.addParameter('ReferenceFrequencySet',[3, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40],@isnumeric);
             p.addParameter('simulatePsiParams',[0.15, 0.05, -0.15],@isnumeric);
             p.addParameter('psiParamsDomainList',{linspace(0,0.5,51), ...
@@ -79,20 +79,18 @@ classdef CollectFreqMatchTriplet < handle
                 obj.simulateResponse = true;
             end
 
+            % Initialize the blockStartTimes field
+            obj.blockStartTimes(1) = datetime();
+            obj.blockStartTimes(1) = [];
+
             % Initialize Quest+
             obj.qpInitialize;
-
-            % Store the start time
-            obj.startTime = datetime();
 
             % Ensure that the CombiLED is configured to present our stimuli
             % properly (if we are not simulating the stimuli)
             if ~obj.simulateStimuli
                 obj.CombiLEDObj.setDuration(obj.stimulusDurationSecs);
                 obj.CombiLEDObj.setWaveformIndex(1); % sinusoidal flicker
-                obj.CombiLEDObj.setAMIndex(2); % half-cosine ramp
-                obj.CombiLEDObj.setAMFrequency(0.5/obj.stimulusDurationSecs); % half-cosine ramp
-                obj.CombiLEDObj.setAMValues([obj.stimulusDurationSecs/20,0]); % half-cosine duration
             end
 
             % There is a roll-off (attenuation) of the amplitude of
@@ -121,7 +119,7 @@ classdef CollectFreqMatchTriplet < handle
         [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,FrequencyParams,ref1Interval);
         waitUntil(obj,stopTimeMicroSeconds)
         [psiParamsQuest, psiParamsFit] = reportParams(obj)
-        plotOutcome(obj)
+        figHandle = plotOutcome(obj);
         values = forwardTransformVals(obj,refValues,testValue)
         values = inverseTransVals(obj,refValues,testValue)
     end
