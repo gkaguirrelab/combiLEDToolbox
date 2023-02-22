@@ -6,6 +6,10 @@
 %
 % Each modulation was measured using the Tektronix and a CSV file saved.
 % 
+% These measurements were made for OneLight and CombiLED modulations. The
+% measurements were repeated for the CombiLED, but using an OSI
+% optoelectronics photodiode (10D, 11-01-004) with reportedly higher
+% temporal sampling.
 %
 
 % Open a CombiLEDcontrol object

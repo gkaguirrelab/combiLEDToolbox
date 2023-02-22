@@ -15,6 +15,7 @@ classdef CollectFreqMatchTriplet < handle
     properties (SetAccess=private)
         CombiLEDObj
         questData
+        startTime
         simulatePsiParams
         simulateResponse
         simulateStimuli
@@ -51,7 +52,7 @@ classdef CollectFreqMatchTriplet < handle
             p.addParameter('simulateStimuli',false,@islogical);
             p.addParameter('giveFeedback',true,@islogical);
             p.addParameter('ReferenceFrequencySet',[3, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40],@isnumeric);
-            p.addParameter('simulatePsiParams',[0.2, 0.1, 0.0],@isnumeric);
+            p.addParameter('simulatePsiParams',[0.15, 0.05, -0.15],@isnumeric);
             p.addParameter('psiParamsDomainList',{linspace(0,0.5,51), ...
                 linspace(0,0.5,51),...
                 linspace(-0.25,0.25,51)},@isnumeric);
@@ -80,6 +81,9 @@ classdef CollectFreqMatchTriplet < handle
 
             % Initialize Quest+
             obj.qpInitialize;
+
+            % Store the start time
+            obj.startTime = datetime();
 
             % Ensure that the CombiLED is configured to present our stimuli
             % properly (if we are not simulating the stimuli)
