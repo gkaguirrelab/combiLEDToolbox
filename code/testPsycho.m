@@ -2,6 +2,9 @@
 clear
 close all
 
+% Set a random seed
+rng('shuffle');
+
 % Define a location to save data
 subjectID = 'hero_gka';
 modDirection = 'LightFlux';
