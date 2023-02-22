@@ -48,7 +48,7 @@ for dd = 1:2
     figure('Name',devices{dd});
 
     % The path to the CSV files saved from the Tektronix oscilloscope
-    dataFileDir = fullfile(fileparts(mfilename("fullpath")),[devices{dd} '_tektronixDataFiles']);
+    dataFileDir = fullfile(fileparts(mfilename("fullpath")),[devices{dd} '_radiometric' '_tektronixDataFiles']);
     dataFileList = dir(fullfile(dataFileDir,'*.CSV'));
 
     % Loop over the frequencies
