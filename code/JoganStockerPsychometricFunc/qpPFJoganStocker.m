@@ -7,7 +7,7 @@ function probPickR2 = qpPFJoganStocker(stimParams,psiParams)
 % Description:
 %   The probability, derived from signal detection theory, that an observer
 %   will select reference stimulus 2 over reference stimulus 1 as more
-%   similar to the test sstimulus given the input properties. This is based
+%   similar to the test stimulus given the input properties. This is based
 %   upon code written by M Jogan and described in:
 %
 %       M Jogan & A. Stocker. A new two-alternative forced choice method

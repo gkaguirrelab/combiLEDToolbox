@@ -46,19 +46,19 @@ classdef CollectFreqMatchTriplet < handle
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
-            p.addParameter('randomizePhase',true,@islogical);            
-            p.addParameter('simulateResponse',false,@islogical);            
-            p.addParameter('simulateStimuli',false,@islogical);    
-            p.addParameter('giveFeedback',true,@islogical);                
+            p.addParameter('randomizePhase',true,@islogical);
+            p.addParameter('simulateResponse',false,@islogical);
+            p.addParameter('simulateStimuli',false,@islogical);
+            p.addParameter('giveFeedback',true,@islogical);
             p.addParameter('ReferenceFrequencySet',[3, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40],@isnumeric);
-            p.addParameter('simulatePsiParams',[0.35, 0.15, -0.075],@isnumeric);
-            p.addParameter('psiParamsDomainList',{linspace(0,2,51), ...
-                linspace(0,2,51),...
-                linspace(-3,3,51)},@isnumeric);
+            p.addParameter('simulatePsiParams',[0.2, 0.1, 0.0],@isnumeric);
+            p.addParameter('psiParamsDomainList',{linspace(0,0.5,51), ...
+                linspace(0,0.5,51),...
+                linspace(-0.25,0.25,51)},@isnumeric);
             p.addParameter('verbose',true,@islogical);
             p.parse(varargin{:})
 
-            % Place various inputs and options into object properties            
+            % Place various inputs and options into object properties
             obj.CombiLEDObj = CombiLEDObj;
             obj.TestContrast = TestContrast;
             obj.TestFrequency = TestFrequency;

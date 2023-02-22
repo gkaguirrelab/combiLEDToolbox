@@ -19,17 +19,20 @@ TestContrast = obj.TestContrastAdjusted;
 % The test frequency is set by the calling function
 TestFrequency = obj.TestFrequency;
 
-% The frequency parameters are provided by Quest+, but must be transformed
-% from relative, scaled, log units, to absolute, linear frequency units.
+% Get the frequency parameters are provided by Quest+
 qpStimParams = qpQuery(questData);
+
+% These are in relative log units. Conver them here to absolute, linear
+% frequency for presentation to the subject
 ref1Frequency = obj.inverseTransVals(qpStimParams(1),TestFrequency);
 ref2Frequency = obj.inverseTransVals(qpStimParams(2),TestFrequency);
+
+% Adjust the contrast of the stimulus to account for device attenuation of
+% the modulation at high temporal frequencies
 [~,ref1FreqIdx] = min(abs(obj.ReferenceFrequencySet-ref1Frequency));
 [~,ref2FreqIdx] = min(abs(obj.ReferenceFrequencySet-ref2Frequency));
 ref1Contrast = obj.ReferenceContrastAdjustedByFreq(ref1FreqIdx);
 ref2Contrast = obj.ReferenceContrastAdjustedByFreq(ref2FreqIdx);
-
-% Get the adjusted reference contrasts for these frequencies
 
 % Prepare the sounds
 Fs = 8192; % Sampling Frequency
@@ -85,7 +88,7 @@ if obj.verbose
         currTrialIdx,testParams(2),intervalParams(1,2),intervalParams(2,2));
 end
 
-%% Present the stimuli
+% Present the stimuli
 if ~simulateStimuli
 
     % Alert the subject the trial is about to start
@@ -138,26 +141,15 @@ if ~simulateStimuli
             obj.waitUntil(stopTime);
         end
     end
+end
 
-    % Start the response interval
-    if ~simulateResponse
-        [intervalChoice, responseTimeSecs] = obj.getResponse;
-    else
-        [intervalChoice, responseTimeSecs] = obj.getSimulatedResponse(qpStimParams,ref1Interval);
-    end
-
+% Start the response interval
+if ~simulateResponse
+    [intervalChoice, responseTimeSecs] = obj.getResponse;
     % Make sure the stimulus has stopped
     obj.CombiLEDObj.stopModulation;
-
 else
-
-    % Start the response interval
-    if ~simulateResponse
-        [intervalChoice, responseTimeSecs] = obj.getResponse;
-    else
-        [intervalChoice, responseTimeSecs] = obj.getSimulatedResponse(qpStimParams,ref1Interval);
-    end
-
+    [intervalChoice, responseTimeSecs] = obj.getSimulatedResponse(qpStimParams,ref1Interval);
 end
 
 % Determine if the subject has selected reference One or Two

@@ -1,15 +1,12 @@
 function qpInitialize(obj)
 
 % Pull out some information from the obj
-TestFrequency = obj.TestFrequency;
-ReferenceFrequencySet = obj.ReferenceFrequencySet;
 psiParamsDomainList = obj.psiParamsDomainList;
 simulateResponse = obj.simulateResponse;
 verbose = obj.verbose;
 
-% Transform the reference frequency set for compatability with the
-% psychometric function
-ReferenceFrequencySet = obj.forwardTransformVals(ReferenceFrequencySet,TestFrequency);
+% Transform the stimulus set to relative log space
+ReferenceFrequencySet = obj.forwardTransformVals(obj.ReferenceFrequencySet,obj.TestFrequency);
 
 % Handle simulation and the outcome function
 if simulateResponse

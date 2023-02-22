@@ -14,10 +14,11 @@ ReferenceContrast = 0.3;
 
 % Instantiate the psychometric object
 clear psychObj
+combiLEDObj = [];
 psychObj = CollectFreqMatchTriplet(combiLEDObj,...
     TestContrast,TestFrequency,ReferenceContrast,...
-    'simulateStimuli',false,'simulateResponse',false,...
-    'simulatePsiParams',[0.15, 0.35, -0.2],...
+    'simulateStimuli',true,'simulateResponse',true,...
+    'simulatePsiParams',[0.15, 0.05, -0.15],...
     'verbose',true);
 
 % Get ready to rumble
@@ -25,7 +26,7 @@ fprintf('Press a key to start data collection\n')
 pause
 
 % Present 25 trials (about 5 minutes)
-for ii=1:25
+for ii=1:100
     psychObj.presentTrial;
 end
 
