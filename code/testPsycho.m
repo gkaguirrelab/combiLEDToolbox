@@ -29,7 +29,7 @@ simulateStimuli = false;
 simulateResponse = false;
 verboseCombiLED = false;
 verbosePsychObj = false;
-updateFigures = true;
+updateFigures = false;
 
 % Define a location to save data
 subjectID = 'hero_gka';
@@ -165,6 +165,8 @@ for ii=1:nTripletsPerPass
         sessionObj{ii} = tmpObj.psychObj;
         clear tmpObj
         sessionObj{ii}.CombiLEDObj = CombiLEDObj;
+        % Initiate the CombiLED settings
+        sessionObj{ii}.initializeDisplay;
     else
         sessionObj{ii} = CollectFreqMatchTriplet(CombiLEDObj,...
             sessionData.TestContrast(ii),sessionData.TestFrequency(ii),sessionData.ReferenceContrast(ii),...
@@ -225,6 +227,8 @@ for ii=1:nTripletsPerPass
     filename = fullfile(saveDataDir,[fileStem '.mat']);
     clear psychObj
     psychObj = sessionObj{ii};
+    % empty the CombiLEDObj handle
+    psychObj.CombiLEDObj = [];
     save(filename,'psychObj');
     % figure
     if updateFigures
