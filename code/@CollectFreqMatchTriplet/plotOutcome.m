@@ -1,4 +1,8 @@
-function figHandle = plotOutcome(obj)
+function figHandle = plotOutcome(obj,visible)
+
+if nargin==1
+    visible='on';
+end
 
 % Grab some variables
 questData = obj.questData;
@@ -11,7 +15,7 @@ ReferenceFrequencySet = obj.forwardTransformVals(ReferenceFrequencySet,TestFrequ
 % Plot trial locations together with maximum likelihood fit. Point
 % transparancy visualizes number of trials (more opaque -> more trials),
 % while point color visualizes percent correct (more blue -> more R1).
-figHandle = figure; 
+figHandle = figure('visible',visible);
 figuresize(750,250,'units','pt');
 
 subplot(1,3,1);

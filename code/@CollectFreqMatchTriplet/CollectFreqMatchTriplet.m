@@ -13,7 +13,6 @@ classdef CollectFreqMatchTriplet < handle
 
     % Calling function can see, but not modify
     properties (SetAccess=private)
-        CombiLEDObj
         questData
         simulatePsiParams
         simulateResponse
@@ -35,9 +34,16 @@ classdef CollectFreqMatchTriplet < handle
 
     % These may be modified after object creation
     properties (SetAccess=public)
+
+        % The display object. This is modifiable so that we can re-load
+        % a CollectFreqMatchTriplet, update this handle, and then continue
+        % to collect data
+        CombiLEDObj
+
         % Verbosity
         verbose = true;
         blockStartTimes = datetime();
+        
     end
 
     methods
@@ -84,14 +90,10 @@ classdef CollectFreqMatchTriplet < handle
             obj.blockStartTimes(1) = [];
 
             % Initialize Quest+
-            obj.qpInitialize;
+            obj.initializeQP;
 
-            % Ensure that the CombiLED is configured to present our stimuli
-            % properly (if we are not simulating the stimuli)
-            if ~obj.simulateStimuli
-                obj.CombiLEDObj.setDuration(obj.stimulusDurationSecs);
-                obj.CombiLEDObj.setWaveformIndex(1); % sinusoidal flicker
-            end
+            % Initialize the CombiLED
+            obj.initializeDisplay;
 
             % There is a roll-off (attenuation) of the amplitude of
             % modulations with frequency. We can adjust for this property,
@@ -113,13 +115,14 @@ classdef CollectFreqMatchTriplet < handle
         end
 
         % Required methds
-        qpInitialize(obj);
+        initializeQP(obj);
+        initializeDisplay(obj);
         presentTrial(obj);
         [intervalChoice, responseTimeSecs] = getResponse(obj);
         [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,FrequencyParams,ref1Interval);
         waitUntil(obj,stopTimeMicroSeconds)
         [psiParamsQuest, psiParamsFit] = reportParams(obj)
-        figHandle = plotOutcome(obj);
+        figHandle = plotOutcome(obj,visible);
         values = forwardTransformVals(obj,refValues,testValue)
         values = inverseTransVals(obj,refValues,testValue)
     end

@@ -202,7 +202,9 @@ end
 if ~giveFeedback && validResponse
     % If we aren't giving feedback, but the subject did make a valid
     % response, we give the same, pleasing tone after every trial.
-    audioObjs.correct.play;
+    if ~simulateStimuli
+        audioObjs.correct.play;
+    end
 end
 
 % Update questData if a valid response

@@ -1,4 +1,4 @@
-function qpInitialize(obj)
+function initializeQP(obj)
 
 % Pull out some information from the obj
 psiParamsDomainList = obj.psiParamsDomainList;
