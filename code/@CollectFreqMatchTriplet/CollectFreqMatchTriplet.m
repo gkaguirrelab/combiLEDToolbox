@@ -117,7 +117,7 @@ classdef CollectFreqMatchTriplet < handle
         % Required methds
         initializeQP(obj);
         initializeDisplay(obj);
-        presentTrial(obj);
+        validResponse = presentTrial(obj);
         [intervalChoice, responseTimeSecs] = getResponse(obj);
         [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,FrequencyParams,ref1Interval);
         waitUntil(obj,stopTimeMicroSeconds)

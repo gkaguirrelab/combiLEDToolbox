@@ -1,4 +1,4 @@
-function obj = presentTrial(obj)
+function validResponse = presentTrial(obj)
 
 % Get the questData
 questData = obj.questData;

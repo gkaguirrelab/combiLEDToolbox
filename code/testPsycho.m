@@ -144,6 +144,7 @@ while stillLooking
 end
 
 % Set up the variables that hold this session information
+fprintf('Preparing psychometric objects...');
 sessionData = struct();
 sessionData.passIdx = passIdx;
 for ii=1:nTripletsPerPass
@@ -170,7 +171,14 @@ for ii=1:nTripletsPerPass
             'simulateStimuli',simulateStimuli,'simulateResponse',simulateStimuli,...
             'verbose',verbosePsychObj);
     end
+    % Clear out the first, bad "getResponse". Not sure why but the first
+    % call to this function after restart always fails. This fixes the
+    % problem
+    sessionObj{ii}.getResponse;
+    % Update the console text
+    fprintf([num2str(ii) '...']);
 end
+fprintf('\n');
 
 % Start the session
 if ~simulateResponse
@@ -183,15 +191,32 @@ for ii=1:nTripletsPerPass
     sessionObj{ii} .blockStartTimes(end+1) = datetime();
 end
 
-% Present nTrialsPerPass (should be about 5 minutes)
+% Present nTrialsPerPass (should be about 5 minutes). We repeat trials that
+% did not elicit a valid response (wrong key, or outside of response
+% interval)
 psychObjIdx = 1;
-for ii=1:nTrialsPerPass
-    sessionObj{psychObjIdx}.presentTrial;
-    psychObjIdx = psychObjIdx + 1;
-    if psychObjIdx > nTripletsPerPass
-        psychObjIdx = 1;
+trialIdx = 1;
+while trialIdx<=nTrialsPerPass
+    validResponse = sessionObj{psychObjIdx}.presentTrial;
+    if validResponse
+        trialIdx = trialIdx + 1;
+        psychObjIdx = psychObjIdx + 1;
+        if psychObjIdx > nTripletsPerPass
+            psychObjIdx = 1;
+        end
     end
 end
+
+% Play a "done" tone
+Fs = 8192; % Sampling Frequency
+dur = 0.1; % Duration in seconds
+t  = linspace(0, dur, round(Fs*dur));
+lowTone = sin(2*pi*500*t);
+midTone = sin(2*pi*750*t);
+highTone = sin(2*pi*1000*t);
+doneSound = [highTone midTone lowTone];
+donePlayer = audioplayer(doneSound,Fs);
+donePlayer.play;
 
 % Save the sessionObjs and create and save an updated figure
 for ii=1:nTripletsPerPass
@@ -218,9 +243,11 @@ for ff = 1:length(fields)
     end
     measurementRecord.sessionData(end).(fields{ff}) = sessionData.(fields{ff});
 end
+
 % Update the trialCount record
 measurementRecord.trialCount(sessionData.passIdx) = ...
     measurementRecord.trialCount(sessionData.passIdx)+(nTrialsPerPass/nTripletsPerPass);
+
 % Save it
 filename = fullfile(saveDataDir,'measurementRecord.mat');
 save(filename,'measurementRecord');
