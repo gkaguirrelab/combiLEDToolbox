@@ -96,7 +96,8 @@ obj.setCompoundModulation(compoundHarmonics,compoundAmplitudes,compoundPhases);
 end
 
 function modResult = slowLminusM(obj,observerAgeInYears,pupilDiameterMm)
-modResult = designModulation('LminusM_wide','observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+modResult = designModulation('LminusM_wide','primaryHeadroom',0.05,...
+    'observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
 obj.setSettings(modResult);
 obj.setBackground(modResult.settingsBackground);
 obj.setWaveformIndex(1);

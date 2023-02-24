@@ -29,11 +29,11 @@ simulateStimuli = false;
 simulateResponse = false;
 verboseCombiLED = false;
 verbosePsychObj = false;
-updateFigures = false;
+updateFigures = true;
 
 % Define a location to save data
-subjectID = 'hero_gka';
-modDirection = 'LightFlux';
+subjectID = 'HERO_gka';
+modDirection = 'LMS_wide';
 observerAgeInYears = 53;
 pupilDiameterMm = 3;
 saveDataDir = fullfile('~/Desktop/flickerPsych',subjectID,modDirection);
@@ -77,9 +77,10 @@ if isfile(filename)
     nTripletsPerPass = measurementRecord.experimentProperties.nTripletsPerPass;
 else
     % The stimulus and experiment properties
-    RefContrastSet = [0.1, 0.8];
+    RefContrastSet = [0.1, 0.4];
     TestContrastSet = [0.05, 0.1, 0.2, 0.4, 0.8];
-    TestFreqSet = [6,10,14,20,18];
+    TestFreqSet = [6,10,14,20,28];
+    ReferenceFrequencySet = [3, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40];
     nTrialsPerPass = 20; % The number of trials in each pass (about 4.5 minutes)
     nPasses = 5; % The number of nTrialsPerPass trial passes for each triplet
     nTripletsPerPass = 4; % The number of triplets that will be intermixed in a pass
@@ -170,6 +171,7 @@ for ii=1:nTripletsPerPass
     else
         sessionObj{ii} = CollectFreqMatchTriplet(CombiLEDObj,...
             sessionData.TestContrast(ii),sessionData.TestFrequency(ii),sessionData.ReferenceContrast(ii),...
+            'ReferenceFrequencySet',ReferenceFrequencySet,...
             'simulateStimuli',simulateStimuli,'simulateResponse',simulateStimuli,...
             'verbose',verbosePsychObj);
     end
