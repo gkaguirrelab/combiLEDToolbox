@@ -14,13 +14,14 @@ searchBackground = false;
 
 switch whichDirection
     case 'LminusM_wide'
-        whichReceptorsToTarget = [1 2 4 5 7 8];
-        whichReceptorsToIgnore = 10;
-        desiredContrast = [1 -1 1 -1 1 -1];
-    case 'LminusM_foveal'
-        whichReceptorsToTarget = [1 2 7 8];
-        whichReceptorsToIgnore = [4 5 10];
+        whichReceptorsToTarget = [1 2 4 5];
+        whichReceptorsToIgnore = [7 8 9 10];
         desiredContrast = [1 -1 1 -1];
+        matchConstraint = 2;
+    case 'LminusM_foveal'
+        whichReceptorsToTarget = [1 2];
+        whichReceptorsToIgnore = [4 5 7 8 10];
+        desiredContrast = [1 -1];
     case 'L_wide'
         whichReceptorsToTarget = [1 4 7];
         whichReceptorsToIgnore = [10];
@@ -46,15 +47,10 @@ switch whichDirection
         whichReceptorsToTarget = [3];
         whichReceptorsToIgnore = [6 9 10];
         desiredContrast = [1];
-    case 'LMS_wide'
-        whichReceptorsToTarget = 1:9;
-        whichReceptorsToIgnore = 10;
-        desiredContrast = [1 1 1 1 1 1 1 1 1];
-        matchConstraint = 3;
     case 'LightFlux'
-        whichReceptorsToTarget = [4 5 6 7];
-        whichReceptorsToIgnore = [1 2 3];
-        desiredContrast = [1 1 1 1];
+        whichReceptorsToTarget = 1:10;
+        whichReceptorsToIgnore = [];
+        desiredContrast = ones(1,10);
         matchConstraint = 3;
     case 'LMSnoMel'
         % 63% contrast on the peripheral LMS cones with ~1% difference

@@ -33,7 +33,7 @@ updateFigures = true;
 
 % Define a location to save data
 subjectID = 'HERO_gka';
-modDirection = 'LMS_wide';
+modDirection = 'LightFlux';
 observerAgeInYears = 53;
 pupilDiameterMm = 3;
 saveDataDir = fullfile('~/Desktop/flickerPsych',subjectID,modDirection);
@@ -50,7 +50,7 @@ if isfile(filename)
 else
     modResult = designModulation(modDirection,...
         'observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm, ...
-        'primaryHeadroom',0.05);
+        'primaryHeadroom',0.00);
     save(filename,'modResult');
 end
 
