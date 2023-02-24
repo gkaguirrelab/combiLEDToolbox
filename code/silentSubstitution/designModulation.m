@@ -31,12 +31,7 @@ function modResult = designModulation(whichDirection,varargin)
 %  'observerAgeInYears'   - Scalar
 %  'nLEDsToKeep'          - Scalar. The number of LEDs in the final device.
 
-%
-% Examples:
 
-% Save the ToolboxToolbox verbosity pref, and set it to false
-% tbtbVerbose = getpref('ToolboxToolbox','verbose');
-% setpref('ToolboxToolbox','verbose',false);
 
 %% Parse input
 p = inputParser;
@@ -49,8 +44,6 @@ p.addParameter('pupilDiameterMm',2,@isscalar)
 p.addParameter('verbose',true,@islogical)
 p.parse(whichDirection,varargin{:});
 
-% Restore the TbTb verbosity pref
-% setpref('ToolboxToolbox','verbose',tbtbVerbose);
 
 % Pull some variables out of the Results for code clarity
 primaryHeadRoom = p.Results.primaryHeadRoom;
@@ -67,11 +60,7 @@ ambientSpd = cal.processedData.P_ambient;
 nPrimaries = size(B_primary,2);
 
 % Define photoreceptor classes that we'll consider.
-photoreceptorClasses = {...
-    'LConeTabulatedAbsorbance2Deg', 'MConeTabulatedAbsorbance2Deg', 'SConeTabulatedAbsorbance2Deg',...
-    'LConeTabulatedAbsorbance10Deg', 'MConeTabulatedAbsorbance10Deg', 'SConeTabulatedAbsorbance10Deg',...
-    'Melanopsin'};
-photoreceptorClassNames = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel'};
+[photoreceptorClasses, photoreceptorClassNames] = photoreceptorDictionary();
 
 % Get spectral sensitivities. Each row of the matrix T_receptors provides
 % the spectral sensitivity of the photoreceptor class in the corresponding
@@ -91,12 +80,10 @@ T_receptors = GetHumanPhotoreceptorSS(S, photoreceptorClasses, ...
     desiredContrast,x0Background,matchConstraint,searchBackground] = ...
     modDirectionDictionary(whichDirection);
 
-% Define the isolation operation as a function of the background. Always
-% use the background as the starting point of the modulation search
-modulationPrimaryFunc = @(backgroundPrimary) ...
-    isolateReceptors(T_receptors,whichReceptorsToTarget, ...
-    whichReceptorsToIgnore, B_primary,backgroundPrimary,backgroundPrimary, ...
-    primaryHeadRoom,desiredContrast,ambientSpd,matchConstraint);
+% Define the isolation operation as a function of the background.
+modulationPrimaryFunc = @(backgroundPrimary) isolateReceptors(...
+    whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,...
+    T_receptors,B_primary,ambientSpd,backgroundPrimary,primaryHeadRoom,matchConstraint);
 
 % Define a function that returns the contrast on all photoreceptors
 contrastReceptorsFunc = @(modulationPrimary,backgroundPrimary) ...
