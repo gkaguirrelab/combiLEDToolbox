@@ -28,13 +28,14 @@ warning(warnState);
 simulateStimuli = false;
 simulateResponse = false;
 verboseCombiLED = false;
-verbosePsychObj = false;
+verbosePsychObj = true;
+giveFeedback = true;
 updateFigures = true;
 
 % Define a location to save data
-subjectID = 'HERO_gka';
+subjectID = 'Demo';
 modDirection = 'LightFlux';
-observerAgeInYears = 53;
+observerAgeInYears = 40;
 pupilDiameterMm = 3;
 saveDataDir = fullfile('~/Desktop/flickerPsych',subjectID,modDirection);
 
@@ -77,9 +78,9 @@ if isfile(filename)
     nTripletsPerPass = measurementRecord.experimentProperties.nTripletsPerPass;
 else
     % The stimulus and experiment properties
-    RefContrastSet = [0.1, 0.4];
-    TestContrastSet = [0.05, 0.1, 0.2, 0.4, 0.8];
-    TestFreqSet = [6,10,14,20,28];
+    RefContrastSet = [0.4];
+    TestContrastSet = [0.2, 0.8];
+    TestFreqSet = [10,20];
     ReferenceFrequencySet = [3, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40];
     nTrialsPerPass = 20; % The number of trials in each pass (about 4.5 minutes)
     nPasses = 5; % The number of nTrialsPerPass trial passes for each triplet
@@ -169,11 +170,11 @@ for ii=1:nTripletsPerPass
         % Initiate the CombiLED settings
         sessionObj{ii}.initializeDisplay;
     else
-        sessionObj{ii} = PsychDoubleRefAFC(CombiLEDObj,...
+        sessionObj{ii} = CollectFreqMatchTriplet(CombiLEDObj,...
             sessionData.TestContrast(ii),sessionData.TestFrequency(ii),sessionData.ReferenceContrast(ii),...
             'ReferenceFrequencySet',ReferenceFrequencySet,...
             'simulateStimuli',simulateStimuli,'simulateResponse',simulateStimuli,...
-            'verbose',verbosePsychObj);
+            'giveFeedback',giveFeedback,'verbose',verbosePsychObj);
     end
     % Clear out the first, bad "getResponse". Not sure why but the first
     % call to this function after restart always fails. This fixes the

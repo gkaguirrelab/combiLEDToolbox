@@ -1,8 +1,9 @@
-% Object to support conducting a two-interval psychophysical test in which
-% a subject is presented with sequential modulations and selects one.
-% Based upon their response, a parameter of the modulation is adjusted.
+% Object to support conducting a 2AFC contrast threshold detection task,
+% using a two up, one down staircase to reach a 71% correct performance
+% level at asymptote. The measurements continue until a criterion number of
+% reversals are obtained.
 
-classdef CollectFreqMatchTriplet < handle
+classdef PsychDetectionThreshold < handle
 
     properties (Constant)
     end
@@ -20,15 +21,10 @@ classdef CollectFreqMatchTriplet < handle
         giveFeedback
         psiParamsDomainList
         randomizePhase = true;
-        TestContrast
-        TestContrastAdjusted
         TestFrequency
-        ReferenceContrast
-        ReferenceContrastAdjustedByFreq
-        ReferenceFrequencySet
+        TestContrastSet
         stimulusDurationSecs = 1;
         responseDurSecs = 3;
-        interFlickerIntervalSecs = 0.2;
         interStimulusIntervalSecs = 0.75;
     end
 
@@ -36,45 +32,46 @@ classdef CollectFreqMatchTriplet < handle
     properties (SetAccess=public)
 
         % The display object. This is modifiable so that we can re-load
-        % a CollectFreqMatchTriplet, update this handle, and then continue
+        % a PsychDetectionThreshold, update this handle, and then continue
         % to collect data
         CombiLEDObj
 
         % Verbosity
         verbose = true;
         blockStartTimes = datetime();
-        
+
     end
 
     methods
 
         % Constructor
-        function obj = CollectFreqMatchTriplet(CombiLEDObj,TestContrast,TestFrequency,ReferenceContrast,varargin)
+        function obj = PsychDetectionThreshold(CombiLEDObj,TestFrequency,varargin)
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
             p.addParameter('randomizePhase',false,@islogical);
-            p.addParameter('simulateResponse',false,@islogical);
-            p.addParameter('simulateStimuli',false,@islogical);
+            p.addParameter('simulateResponse',true,@islogical);
+            p.addParameter('simulateStimuli',true,@islogical);
             p.addParameter('giveFeedback',false,@islogical);
-            p.addParameter('ReferenceFrequencySet',[3, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40],@isnumeric);
-            p.addParameter('simulatePsiParams',[0.15, 0.05, -0.15],@isnumeric);
-            p.addParameter('psiParamsDomainList',{linspace(0,0.5,51), ...
-                linspace(0,0.5,51),...
-                linspace(-0.25,0.25,51)},@isnumeric);
+            p.addParameter('TestContrastSet',linspace(log10(0.005),log10(0.1),31),@isnumeric);
+            p.addParameter('simulatePsiParams',[log10(0.01), 0.75, 0.5, 0.05],@isnumeric);
+            p.addParameter('psiParamsDomainList',{...
+                linspace(log10(0.005),log10(0.1),31), ...
+                linspace(0,1,31),...
+                0.5,...
+                linspace(0,0.25,11)...
+                },@isnumeric);
             p.addParameter('verbose',true,@islogical);
             p.parse(varargin{:})
 
             % Place various inputs and options into object properties
             obj.CombiLEDObj = CombiLEDObj;
-            obj.TestContrast = TestContrast;
             obj.TestFrequency = TestFrequency;
-            obj.ReferenceContrast = ReferenceContrast;
+            obj.TestContrastSet = p.Results.TestContrastSet;
             obj.randomizePhase = p.Results.randomizePhase;
             obj.simulateResponse = p.Results.simulateResponse;
             obj.simulateStimuli = p.Results.simulateStimuli;
             obj.giveFeedback = p.Results.giveFeedback;
-            obj.ReferenceFrequencySet = p.Results.ReferenceFrequencySet;
             obj.simulatePsiParams = p.Results.simulatePsiParams;
             obj.psiParamsDomainList = p.Results.psiParamsDomainList;
             obj.verbose = p.Results.verbose;
@@ -96,21 +93,13 @@ classdef CollectFreqMatchTriplet < handle
             obj.initializeDisplay;
 
             % There is a roll-off (attenuation) of the amplitude of
-            % modulations with frequency. We can adjust for this property,
-            % and detect those cases which are outside of our ability to
+            % modulations with frequency. Detect those cases which are outside of our ability to
             % correct
-            obj.ReferenceContrastAdjustedByFreq = obj.ReferenceContrast ./ ...
-                contrastAttentionByFreq(obj.ReferenceFrequencySet);
-
-            % Check that the adjusted contrast does not exceed unity
-            mustBeInRange(obj.ReferenceContrastAdjustedByFreq,0,1);
-
-            % Now adjust the test contrast
-            obj.TestContrastAdjusted = obj.TestContrast / ...
+            TestContrastSetAdjusted = (10.^obj.TestContrastSet) ./ ...
                 contrastAttentionByFreq(obj.TestFrequency);
 
             % Check that the adjusted contrast does not exceed unity
-            mustBeInRange(obj.TestContrastAdjusted,0,1);
+            mustBeInRange(TestContrastSetAdjusted,0,1);
 
         end
 
@@ -119,11 +108,9 @@ classdef CollectFreqMatchTriplet < handle
         initializeDisplay(obj);
         validResponse = presentTrial(obj);
         [intervalChoice, responseTimeSecs] = getResponse(obj);
-        [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,FrequencyParams,ref1Interval);
+        [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,TestContrast,testInterval);
         waitUntil(obj,stopTimeMicroSeconds)
         [psiParamsQuest, psiParamsFit] = reportParams(obj)
         figHandle = plotOutcome(obj,visible);
-        values = forwardTransformVals(obj,refValues,testValue)
-        values = inverseTransVals(obj,refValues,testValue)
     end
 end
