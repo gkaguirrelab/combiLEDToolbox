@@ -1,7 +1,7 @@
-function [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,FrequencyParams,ref1Interval)
+function [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,qpStimParams,ref1Interval)
 
 % Get the simulated choice of ref1 or ref2
-outcome = obj.questData.qpOutcomeF(FrequencyParams);
+outcome = obj.questData.qpOutcomeF(qpStimParams);
 
 if outcome==ref1Interval
     intervalChoice = 1;

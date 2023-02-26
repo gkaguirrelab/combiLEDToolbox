@@ -19,6 +19,7 @@ end
 % fitting we now lock the guess rate to 0.5
 lb(3) = 0.5; ub(3) = 0.5;
 
+% Obtain the fit
 psiParamsFit = qpFit(questData.trialData,questData.qpPF,psiParamsQuest,questData.nOutcomes,...
     'lowerBounds', lb,'upperBounds',ub);
 

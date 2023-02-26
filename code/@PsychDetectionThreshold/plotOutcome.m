@@ -8,7 +8,7 @@ end
 
 % Grab some variables
 questData = obj.questData;
-TestContrastSet = obj.TestContrastSet;
+testLogContrastSet = obj.testLogContrastSet;
 nTrials = length(obj.questData.trialData);
 
 % Get the Max Likelihood psi params, temporarily turning off verbosity
@@ -57,11 +57,11 @@ for cc = 1:length(stimCounts)
 end
 
 % Add the psychometric function
-for cc = 1:length(TestContrastSet)
-    outcomes = obj.questData.qpPF(TestContrastSet(cc),psiParamsFit);
+for cc = 1:length(testLogContrastSet)
+    outcomes = obj.questData.qpPF(testLogContrastSet(cc),psiParamsFit);
     fitCorrect(cc) = outcomes(2);
 end
-plot(TestContrastSet,fitCorrect,'-k')
+plot(testLogContrastSet,fitCorrect,'-k')
 
 % Labels and range
 ylim([-0.1 1.1]);
@@ -79,7 +79,7 @@ title('Entropy by trial number')
 
 % Add a supertitle
 str = sprintf('Freq = %d Hz; params = [%2.3f, %2.3f, %2.3f, %2.3f]',...
-    obj.TestFrequency,psiParamsFit);
+    obj.testFreqHz,psiParamsFit);
 sgtitle(str);
 
 end

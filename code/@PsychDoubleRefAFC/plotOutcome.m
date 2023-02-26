@@ -6,11 +6,9 @@ end
 
 % Grab some variables
 questData = obj.questData;
-ReferenceFrequencySet = obj.ReferenceFrequencySet;
-TestFrequency = obj.TestFrequency;
 
-% Transform the ReferenceFrequencySet
-ReferenceFrequencySet = obj.forwardTransformVals(ReferenceFrequencySet,TestFrequency);
+% Transform the stimulus set to relative log space
+refFreqSetRelative = obj.forwardTransformVals(obj.refFreqSetHz,obj.testFrequency);
 
 % Plot trial locations together with maximum likelihood fit. Point
 % transparancy visualizes number of trials (more opaque -> more trials),
@@ -37,8 +35,8 @@ for cc = 1:length(stimCounts)
     hold on
 end
 axis square
-xlim([min(ReferenceFrequencySet)*1.1, max(ReferenceFrequencySet)]*1.1);
-ylim([min(ReferenceFrequencySet)*1.1, max(ReferenceFrequencySet)]*1.1);
+xlim([min(refFreqSetRelative)*1.1, max(refFreqSetRelative)]*1.1);
+ylim([min(refFreqSetRelative)*1.1, max(refFreqSetRelative)]*1.1);
 xlabel('ref2 [difference in log freq from test]');
 ylabel('ref1 [difference in log freq from test]');
 set(gca, 'YDir','reverse')
@@ -53,16 +51,16 @@ obj.verbose = false;
 obj.verbose = storeVerbose;
 
 % Plot the psychometric matrix
-for r1 = ReferenceFrequencySet
-    for r2 = ReferenceFrequencySet
+for r1 = refFreqSetRelative
+    for r2 = refFreqSetRelative
         pChooseR2 = qpPFJoganStocker([r1,r2],psiParamsFit);
         h = scatter(r2,r1,100,'o','MarkerEdgeColor','none','MarkerFaceColor',[pChooseR2(2) 0 pChooseR2(1)],...
             'MarkerFaceAlpha',1,'MarkerEdgeAlpha',1);
     end
 end
 axis square
-xlim([min(ReferenceFrequencySet)*1.1, max(ReferenceFrequencySet)]*1.1);
-ylim([min(ReferenceFrequencySet)*1.1, max(ReferenceFrequencySet)]*1.1);
+xlim([min(refFreqSetRelative)*1.1, max(refFreqSetRelative)]*1.1);
+ylim([min(refFreqSetRelative)*1.1, max(refFreqSetRelative)]*1.1);
 xlabel('ref2 [difference in log freq from test]');
 ylabel('ref1 [difference in log freq from test]');
 set(gca, 'YDir','reverse')
@@ -78,7 +76,7 @@ title('Entropy by trial number')
 
 % Add a supertitle
 str = sprintf('Cref = %2.2f; Ctest = %2.2f; Ftest = %d Hz; params = [%2.3f, %2.3f, %2.3f]',...
-    obj.ReferenceContrast,obj.TestContrast,obj.TestFrequency,psiParamsFit);
+    obj.ReferenceContrast,obj.testContrast,obj.testFreqHz,psiParamsFit);
 sgtitle(str);
 
 end

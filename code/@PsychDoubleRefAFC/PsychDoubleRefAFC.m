@@ -22,14 +22,13 @@ classdef PsychDoubleRefAFC < handle
         giveFeedback
         psiParamsDomainList
         randomizePhase = true;
-        TestContrast
-        TestContrastAdjusted
-        TestFrequency
-        ReferenceContrast
-        ReferenceContrastAdjustedByFreq
-        ReferenceFrequencySet
+        testContrast
+        testContrastAdjusted
+        testFreqHz
+        refContrast
+        refContrastAdjustedByFreq
+        refFreqSetHz
         stimulusDurationSecs = 1;
-        responseDurSecs = 3;
         interFlickerIntervalSecs = 0.2;
         interStimulusIntervalSecs = 0.75;
     end
@@ -45,13 +44,18 @@ classdef PsychDoubleRefAFC < handle
         % Verbosity
         verbose = true;
         blockStartTimes = datetime();
+
+        % We allow this to be modified so we
+        % can set it to be brief during object
+        % initiation when we clear the responses
+        responseDurSecs = 3;
         
     end
 
     methods
 
         % Constructor
-        function obj = PsychDoubleRefAFC(CombiLEDObj,TestContrast,TestFrequency,ReferenceContrast,varargin)
+        function obj = PsychDoubleRefAFC(CombiLEDObj,testContrast,testFreqHz,refContrast,varargin)
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
@@ -59,7 +63,7 @@ classdef PsychDoubleRefAFC < handle
             p.addParameter('simulateResponse',false,@islogical);
             p.addParameter('simulateStimuli',false,@islogical);
             p.addParameter('giveFeedback',false,@islogical);
-            p.addParameter('ReferenceFrequencySet',[3, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40],@isnumeric);
+            p.addParameter('refFreqSetHz',[3, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40],@isnumeric);
             p.addParameter('simulatePsiParams',[0.15, 0.05, -0.15],@isnumeric);
             p.addParameter('psiParamsDomainList',{linspace(0,0.5,51), ...
                 linspace(0,0.5,51),...
@@ -69,14 +73,14 @@ classdef PsychDoubleRefAFC < handle
 
             % Place various inputs and options into object properties
             obj.CombiLEDObj = CombiLEDObj;
-            obj.TestContrast = TestContrast;
-            obj.TestFrequency = TestFrequency;
-            obj.ReferenceContrast = ReferenceContrast;
+            obj.testContrast = testContrast;
+            obj.testFreqHz = testFreqHz;
+            obj.refContrast = refContrast;
             obj.randomizePhase = p.Results.randomizePhase;
             obj.simulateResponse = p.Results.simulateResponse;
             obj.simulateStimuli = p.Results.simulateStimuli;
             obj.giveFeedback = p.Results.giveFeedback;
-            obj.ReferenceFrequencySet = p.Results.ReferenceFrequencySet;
+            obj.refFreqSetHz = p.Results.refFreqSetHz;
             obj.simulatePsiParams = p.Results.simulatePsiParams;
             obj.psiParamsDomainList = p.Results.psiParamsDomainList;
             obj.verbose = p.Results.verbose;
@@ -101,18 +105,18 @@ classdef PsychDoubleRefAFC < handle
             % modulations with frequency. We can adjust for this property,
             % and detect those cases which are outside of our ability to
             % correct
-            obj.ReferenceContrastAdjustedByFreq = obj.ReferenceContrast ./ ...
-                contrastAttentionByFreq(obj.ReferenceFrequencySet);
+            obj.refContrastAdjustedByFreq = obj.refContrast ./ ...
+                contrastAttentionByFreq(obj.refFreqSetHz);
 
             % Check that the adjusted contrast does not exceed unity
-            mustBeInRange(obj.ReferenceContrastAdjustedByFreq,0,1);
+            mustBeInRange(obj.refContrastAdjustedByFreq,0,1);
 
             % Now adjust the test contrast
-            obj.TestContrastAdjusted = obj.TestContrast / ...
-                contrastAttentionByFreq(obj.TestFrequency);
+            obj.testContrastAdjusted = obj.testContrast / ...
+                contrastAttentionByFreq(obj.testFreqHz);
 
             % Check that the adjusted contrast does not exceed unity
-            mustBeInRange(obj.TestContrastAdjusted,0,1);
+            mustBeInRange(obj.testContrastAdjusted,0,1);
 
         end
 
@@ -121,7 +125,7 @@ classdef PsychDoubleRefAFC < handle
         initializeDisplay(obj);
         validResponse = presentTrial(obj);
         [intervalChoice, responseTimeSecs] = getResponse(obj);
-        [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,FrequencyParams,ref1Interval);
+        [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,qpStimParams,ref1Interval);
         waitUntil(obj,stopTimeMicroSeconds)
         [psiParamsQuest, psiParamsFit] = reportParams(obj)
         figHandle = plotOutcome(obj,visible);

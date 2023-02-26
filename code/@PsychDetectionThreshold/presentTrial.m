@@ -16,14 +16,14 @@ giveFeedback = obj.giveFeedback;
 % The test contrast is provided by Quest+ in log units. Convert it hear to
 % linear
 qpStimParams = qpQuery(questData);
-TestContrast = 10^qpStimParams;
+testContrast = 10^qpStimParams;
 
 % The test frequency is set by the calling function
-TestFrequency = obj.TestFrequency;
+testFreqHz = obj.testFreqHz;
 
 % Adjust the test contrast that is sent to the device to account for any
 % device attenuation of the modulation at high temporal frequencies
-TestContrastAdjusted =  TestContrast / contrastAttentionByFreq(TestFrequency);
+testContrastAdjusted =  testContrast / contrastAttentionByFreq(testFreqHz);
 
 % Prepare the sounds
 Fs = 8192; % Sampling Frequency
@@ -46,14 +46,14 @@ audioObjs.bad = audioplayer(badSound,Fs);
 
 % Determine if we have random phase or not
 if obj.randomizePhase
-    TestPhase = round(rand())*pi;
+    testPhase = round(rand())*pi;
 else
-    TestPhase = 0;
+    testPhase = 0;
 end
 
 % Assemble the param sets
-testParams = [TestContrastAdjusted,TestFrequency,TestPhase];
-refParams = [0,TestFrequency,0];
+testParams = [testContrastAdjusted,testFreqHz,testPhase];
+refParams = [0,testFreqHz,0];
 
 % Randomly pick which interval contains the test
 testInterval = 1+logical(round(rand()));
@@ -73,7 +73,7 @@ end
 % Handle verbosity
 if obj.verbose
     fprintf('Trial %d; Freq [%2.2f Hz], contrast [%2.4f]...', ...
-        currTrialIdx,TestFrequency,TestContrast);
+        currTrialIdx,testFreqHz,testContrast);
 end
 
 % Present the stimuli
@@ -182,7 +182,7 @@ if validResponse
     questData = qpUpdate(questData,qpStimParams,outcome);
 
     % Add in the phase and interval information
-    questData.trialData(currTrialIdx).phase = TestPhase;
+    questData.trialData(currTrialIdx).phase = testPhase;
     questData.trialData(currTrialIdx).testInterval = testInterval;
     questData.trialData(currTrialIdx).responseTimeSecs = responseTimeSecs;
 else

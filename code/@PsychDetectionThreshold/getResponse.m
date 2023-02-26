@@ -51,5 +51,4 @@ end
 % Restore echoing key presses to Matlab console
 ListenChar(0);
 
-
 end

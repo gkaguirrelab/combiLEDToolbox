@@ -14,25 +14,25 @@ simulateResponse = obj.simulateResponse;
 giveFeedback = obj.giveFeedback;
 
 % The contrast levels of the stimuli are set by the calling routine
-TestContrast = obj.TestContrastAdjusted;
+testContrastAdjusted = obj.testContrastAdjusted;
 
 % The test frequency is set by the calling function
-TestFrequency = obj.TestFrequency;
+testFreqHz = obj.testFreqHz;
 
 % Get the frequency parameters are provided by Quest+
 qpStimParams = qpQuery(questData);
 
-% These are in relative log units. Conver them here to absolute, linear
-% frequency for presentation to the subject
-ref1Frequency = obj.inverseTransVals(qpStimParams(1),TestFrequency);
-ref2Frequency = obj.inverseTransVals(qpStimParams(2),TestFrequency);
+% The qpStimParams are in relative log units. Convert them here to
+% absolute, linear frequency for presentation to the subject
+ref1FreqHz = obj.inverseTransVals(qpStimParams(1),testFreqHz);
+ref2FreqHz = obj.inverseTransVals(qpStimParams(2),testFreqHz);
 
 % Adjust the contrast of the stimulus to account for device attenuation of
 % the modulation at high temporal frequencies
-[~,ref1FreqIdx] = min(abs(obj.ReferenceFrequencySet-ref1Frequency));
-[~,ref2FreqIdx] = min(abs(obj.ReferenceFrequencySet-ref2Frequency));
-ref1Contrast = obj.ReferenceContrastAdjustedByFreq(ref1FreqIdx);
-ref2Contrast = obj.ReferenceContrastAdjustedByFreq(ref2FreqIdx);
+[~,ref1FreqIdx] = min(abs(obj.refFreqSetHz-ref1FreqHz));
+[~,ref2FreqIdx] = min(abs(obj.refFreqSetHz-ref2FreqHz));
+ref1ContrastAdjusted = obj.refContrastAdjustedByFreq(ref1FreqIdx);
+ref2ContrastAdjusted = obj.refContrastAdjustedByFreq(ref2FreqIdx);
 
 % Prepare the sounds
 Fs = 8192; % Sampling Frequency
@@ -55,17 +55,17 @@ audioObjs.bad = audioplayer(badSound,Fs);
 
 % Determine if we have random phase or not
 if obj.randomizePhase
-    refPhase = rand()*pi/2;
-    testPhase = rand()*pi/2;
+    refPhase = round(rand())*pi;
+    testPhase = round(rand())*pi;
 else
     refPhase = 0;
     testPhase = 0;
 end
 
 % Assemble the param sets
-ref1Params = [ref1Contrast,ref1Frequency,refPhase];
-ref2Params = [ref2Contrast,ref2Frequency,refPhase];
-testParams = [TestContrast,TestFrequency,testPhase];
+ref1Params = [ref1ContrastAdjusted,ref1FreqHz,refPhase];
+ref2Params = [ref2ContrastAdjusted,ref2FreqHz,refPhase];
+testParams = [testContrastAdjusted,testFreqHz,testPhase];
 
 % Randomly pick which interval contains ref1
 ref1Interval = 1+logical(round(rand()));

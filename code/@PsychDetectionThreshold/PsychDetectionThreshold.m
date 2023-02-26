@@ -26,8 +26,8 @@ classdef PsychDetectionThreshold < handle
         giveFeedback
         psiParamsDomainList
         randomizePhase = false;
-        TestFrequency
-        TestContrastSet
+        testFreqHz
+        testLogContrastSet
         stimulusDurationSecs = 1;
         interStimulusIntervalSecs = 0.2;
     end
@@ -54,7 +54,7 @@ classdef PsychDetectionThreshold < handle
     methods
 
         % Constructor
-        function obj = PsychDetectionThreshold(CombiLEDObj,TestFrequency,varargin)
+        function obj = PsychDetectionThreshold(CombiLEDObj,testFreqHz,varargin)
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
@@ -62,7 +62,7 @@ classdef PsychDetectionThreshold < handle
             p.addParameter('simulateResponse',true,@islogical);
             p.addParameter('simulateStimuli',true,@islogical);
             p.addParameter('giveFeedback',false,@islogical);
-            p.addParameter('TestContrastSet',linspace(-3,-0.3,31),@isnumeric);
+            p.addParameter('testLogContrastSet',linspace(-3,-0.3,31),@isnumeric);
             p.addParameter('simulatePsiParams',[-2, 1.5, 0.5, 0.0],@isnumeric);
             p.addParameter('psiParamsDomainList',{...
                 linspace(-2.5,-0.3,21), ...
@@ -75,8 +75,8 @@ classdef PsychDetectionThreshold < handle
 
             % Place various inputs and options into object properties
             obj.CombiLEDObj = CombiLEDObj;
-            obj.TestFrequency = TestFrequency;
-            obj.TestContrastSet = p.Results.TestContrastSet;
+            obj.testFreqHz = testFreqHz;
+            obj.testLogContrastSet = p.Results.testLogContrastSet;
             obj.randomizePhase = p.Results.randomizePhase;
             obj.simulateResponse = p.Results.simulateResponse;
             obj.simulateStimuli = p.Results.simulateStimuli;
@@ -104,11 +104,11 @@ classdef PsychDetectionThreshold < handle
             % There is a roll-off (attenuation) of the amplitude of
             % modulations with frequency. Detect those cases which are outside of our ability to
             % correct
-            TestContrastSetAdjusted = (10.^obj.TestContrastSet) ./ ...
-                contrastAttentionByFreq(obj.TestFrequency);
+            testContrastSetAdjusted = (10.^obj.testLogContrastSet) ./ ...
+                contrastAttentionByFreq(obj.testFreqHz);
 
             % Check that the adjusted contrast does not exceed unity
-            mustBeInRange(TestContrastSetAdjusted,0,1);
+            mustBeInRange(testContrastSetAdjusted,0,1);
 
         end
 
@@ -117,7 +117,7 @@ classdef PsychDetectionThreshold < handle
         initializeDisplay(obj);
         validResponse = presentTrial(obj);
         [intervalChoice, responseTimeSecs] = getResponse(obj);
-        [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,TestContrast,testInterval);
+        [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,qpStimParams,testInterval);
         waitUntil(obj,stopTimeMicroSeconds)
         [psiParamsQuest, psiParamsFit] = reportParams(obj)
         figHandle = plotOutcome(obj,visible);
