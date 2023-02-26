@@ -1,15 +1,16 @@
 % Made measurements using the Tektronix TDS2002B Oscilloscope, with a UDT
-% radiometric filter, model 115-9.
+% photodiode / radiometric filter, model 115-9.
 %
 % The modulation is 90% light flux; we use 5% headroom to keep away from
 % the imperfect gamma control at the boundaries of the settings.
 %
 % Each modulation was measured using the Tektronix and a CSV file saved.
 % 
-% These measurements were made for OneLight and CombiLED modulations. The
-% measurements were repeated for the CombiLED, but using an OSI
-% optoelectronics photodiode (10D, 11-01-004) with reportedly higher
-% temporal sampling.
+% These measurements were made for OneLight and CombiLED modulations. We
+% can assume that the OneLight has essentially zero temporal roll-off in
+% this frequency range. Given that, we use the OneLight measurements to
+% obtain the temporal role-off of the photodiode, and then correct the
+% measurements of the CombiLED for the photodiode attenuation.
 %
 
 % Open a CombiLEDcontrol object

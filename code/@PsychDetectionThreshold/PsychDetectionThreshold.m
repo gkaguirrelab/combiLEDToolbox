@@ -29,8 +29,7 @@ classdef PsychDetectionThreshold < handle
         TestFrequency
         TestContrastSet
         stimulusDurationSecs = 1;
-        interStimulusIntervalSecs = 0.75;
-        responseDurSecs = 3;
+        interStimulusIntervalSecs = 0.2;
     end
 
     % These may be modified after object creation
@@ -45,6 +44,11 @@ classdef PsychDetectionThreshold < handle
         verbose = true;
         blockStartTimes = datetime();
 
+        % We allow this to be modified so we
+        % can set it to be brief during object
+        % initiation when we clear the responses
+        responseDurSecs = 3;
+
     end
 
     methods
@@ -54,14 +58,14 @@ classdef PsychDetectionThreshold < handle
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
-            p.addParameter('randomizePhase',false,@islogical);
+            p.addParameter('randomizePhase',true,@islogical);
             p.addParameter('simulateResponse',true,@islogical);
             p.addParameter('simulateStimuli',true,@islogical);
             p.addParameter('giveFeedback',false,@islogical);
-            p.addParameter('TestContrastSet',linspace(-3,-1,31),@isnumeric);
+            p.addParameter('TestContrastSet',linspace(-3,-0.3,31),@isnumeric);
             p.addParameter('simulatePsiParams',[-2, 1.5, 0.5, 0.0],@isnumeric);
             p.addParameter('psiParamsDomainList',{...
-                linspace(-2.5,-0.5,21), ...
+                linspace(-2.5,-0.3,21), ...
                 logspace(log10(0.75),log10(10),21),...
                 linspace(0.4,0.6,6),...
                 linspace(0,0.25,21)...

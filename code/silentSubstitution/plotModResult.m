@@ -1,4 +1,4 @@
-function plotModResult(modResult)
+function figHandle = plotModResult(modResult)
 
 % Extract some elements
 whichDirection = modResult.meta.whichDirection;
@@ -17,7 +17,7 @@ nPrimaries = length(settingsBackground);
 nPhotoClasses = length(photoreceptorClassNames);
 
 % Create a figure with an appropriate title
-figure('Name',sprintf([whichDirection ': contrast = %2.2f'],contrastReceptorsBipolar(whichReceptorsToTarget(1))));
+figHandle = figure('Name',sprintf([whichDirection ': contrast = %2.2f'],contrastReceptorsBipolar(whichReceptorsToTarget(1))));
 figuresize(800, 200,'pt');
 
 % Modulation spectra

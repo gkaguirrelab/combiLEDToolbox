@@ -13,9 +13,10 @@ simulateResponse = obj.simulateResponse;
 % Determine if we are giving feedback on each trial
 giveFeedback = obj.giveFeedback;
 
-% The test contrast is provided by Quest+
+% The test contrast is provided by Quest+ in log units. Convert it hear to
+% linear
 qpStimParams = qpQuery(questData);
-TestContrast = qpStimParams;
+TestContrast = 10^qpStimParams;
 
 % The test frequency is set by the calling function
 TestFrequency = obj.TestFrequency;
@@ -45,7 +46,7 @@ audioObjs.bad = audioplayer(badSound,Fs);
 
 % Determine if we have random phase or not
 if obj.randomizePhase
-    TestPhase = rand()*pi/2;
+    TestPhase = round(rand())*pi;
 else
     TestPhase = 0;
 end
@@ -71,7 +72,7 @@ end
 
 % Handle verbosity
 if obj.verbose
-    fprintf('Trial %d; Freq [%2.2f Hz], log contrast [%2.4f]...', ...
+    fprintf('Trial %d; Freq [%2.2f Hz], contrast [%2.4f]...', ...
         currTrialIdx,TestFrequency,TestContrast);
 end
 
@@ -87,14 +88,21 @@ if ~simulateStimuli
     for ii=1:2
 
         % Prepare the stimulus
-        stopTime = tic() + obj.interFlickerIntervalSecs*1e9;
+        stopTime = tic() + obj.interStimulusIntervalSecs*1e9;
         obj.CombiLEDObj.setContrast(intervalParams(ii,1));
         obj.CombiLEDObj.setFrequency(intervalParams(ii,2));
         obj.CombiLEDObj.setPhaseOffset(intervalParams(ii,3));
         obj.waitUntil(stopTime);
 
-        % Present the stimulus
-        stopTime = tic() + obj.stimulusDurationSecs*1e9;
+        % Present the stimulus. If it is the first interval, wait the
+        % entire stimulusDuration. If it is the second interval. just wait
+        % half of the stimulus and then move on to the response, thus
+        % allowing the subject to respond during the second stimulus.
+        if ii == 1
+            stopTime = tic() + obj.stimulusDurationSecs*1e9 + obj.interStimulusIntervalSecs*1e9;
+        else
+            stopTime = tic() + 0.5*obj.stimulusDurationSecs*1e9;
+        end
         obj.CombiLEDObj.startModulation;
         if ii==1
             audioObjs.low.play;
@@ -102,12 +110,6 @@ if ~simulateStimuli
             audioObjs.high.play;
         end
         obj.waitUntil(stopTime);
-
-        % ISI
-        if ii==1
-            stopTime = stopTime + obj.interStimulusIntervalSecs*1e9;
-            obj.waitUntil(stopTime);
-        end
 
     end
 end

@@ -19,6 +19,7 @@ function runCDTExperiment(subjectID,modDirection,...
 
 % Parse the parameters
 p = inputParser; p.KeepUnmatched = false;
+p.addParameter('TestFreqSet',[3,6,10,14,20,28,40],@isnumeric);
 p.addParameter('dataDirRoot','~/Desktop/flickerPsych',@ischar);
 p.addParameter('simulateStimuli',false,@islogical);
 p.addParameter('simulateResponse',false,@islogical);
@@ -91,7 +92,7 @@ if isfile(filename)
     nStimsPerPass = measurementRecord.experimentProperties.nStimsPerPass;
 else
     % The stimulus and experiment properties
-    TestFreqSet = [3,6,10,14,20,28,40];
+    TestFreqSet = p.Results.TestFreqSet;
     nTrialsPerPass = 20; % The number of trials in each pass (about 4.5 minutes)
     nPasses = 5; % The number of nTrialsPerPass trial passes for each triplet
     nStimsPerPass = 4; % The number of frequencies that will be intermixed in a pass
@@ -105,9 +106,10 @@ else
 
     % Store the values
     measurementRecord.subjectProperties.subjectID = subjectID;
-    measurementRecord.subjectProperties.modDirection = modDirection;
     measurementRecord.subjectProperties.observerAgeInYears = observerAgeInYears;
-    measurementRecord.subjectProperties.pupilDiameterMm = pupilDiameterMm;
+    measurementRecord.experimentProperties.modDirection = modDirection;
+    measurementRecord.experimentProperties.psychType = psychType;
+    measurementRecord.experimentProperties.pupilDiameterMm = pupilDiameterMm;
     measurementRecord.stimulusProperties.TestFreqSet = TestFreqSet;
     measurementRecord.experimentProperties.nTrialsPerPass = nTrialsPerPass;
     measurementRecord.experimentProperties.nPasses = nPasses;
@@ -120,6 +122,14 @@ end
 % Select the stimuli to test for this pass. We select randomly from the
 % set of stimuli that have the lowest number of collected trials.
 trialCountSet = sort(unique(measurementRecord.trialCount(:)));
+
+% First check if we are done
+if min(trialCountSet) >= (nTrialsPerPass*nPasses)
+    fprintf('Done with this experiment!\n')
+    return
+end
+
+% Find some stimuli that need measuring
 countSetIdx = 1;
 nPassesStillNeeded = nStimsPerPass;
 passIdx = [];
@@ -181,7 +191,10 @@ for ii=1:nStimsPerPass
     % Clear out the first, bad "getResponse". Not sure why but the first
     % call to this function after restart always fails. This fixes the
     % problem
+    storeResponseDur = sessionObj{ii}.responseDurSecs;
+    sessionObj{ii}.responseDurSecs = 0.1;
     sessionObj{ii}.getResponse;
+    sessionObj{ii}.responseDurSecs = storeResponseDur;
     % Update the console text
     fprintf([num2str(ii) '...']);
 end
