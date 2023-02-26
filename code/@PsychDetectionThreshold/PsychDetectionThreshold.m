@@ -1,7 +1,12 @@
 % Object to support conducting a 2AFC contrast threshold detection task,
-% using a two up, one down staircase to reach a 71% correct performance
-% level at asymptote. The measurements continue until a criterion number of
-% reversals are obtained.
+% using the log Weibull CFD under the control of Quest+ to select stimuli.
+% A nuance of the parameterization is that we allow Quest+ to search for
+% the value of the "guess rate", even though by design this rate must be
+% 0.5. By providing this bit of flexibility in the parameter space, Quest+
+% tends to explore the lower end of the contrast range a bit more,
+% resulting in slightly more accurate estimates of the slope of the
+% psychometric function. When we derive the final, maximum likelihood set
+% of parameters, we lock the guess rate to 0.5.
 
 classdef PsychDetectionThreshold < handle
 
@@ -20,12 +25,12 @@ classdef PsychDetectionThreshold < handle
         simulateStimuli
         giveFeedback
         psiParamsDomainList
-        randomizePhase = true;
+        randomizePhase = false;
         TestFrequency
         TestContrastSet
         stimulusDurationSecs = 1;
-        responseDurSecs = 3;
         interStimulusIntervalSecs = 0.75;
+        responseDurSecs = 3;
     end
 
     % These may be modified after object creation
@@ -54,12 +59,12 @@ classdef PsychDetectionThreshold < handle
             p.addParameter('simulateStimuli',true,@islogical);
             p.addParameter('giveFeedback',false,@islogical);
             p.addParameter('TestContrastSet',linspace(-3,-1,31),@isnumeric);
-            p.addParameter('simulatePsiParams',[-2, 3, 0.5, 0.01],@isnumeric);
+            p.addParameter('simulatePsiParams',[-2, 1.5, 0.5, 0.0],@isnumeric);
             p.addParameter('psiParamsDomainList',{...
-                linspace(-2.5,-0.5,31), ...
-                linspace(0.5,5,31),...
-                0.5,...
-                linspace(0,0.25,31)...
+                linspace(-2.5,-0.5,21), ...
+                logspace(log10(0.75),log10(10),21),...
+                linspace(0.4,0.6,6),...
+                linspace(0,0.25,21)...
                 },@isnumeric);
             p.addParameter('verbose',true,@islogical);
             p.parse(varargin{:})

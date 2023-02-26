@@ -71,7 +71,7 @@ end
 
 % Handle verbosity
 if obj.verbose
-    fprintf('Trial %d; freq [%2.2f], contrast [%2.4f]...', ...
+    fprintf('Trial %d; Freq [%2.2f Hz], log contrast [%2.4f]...', ...
         currTrialIdx,TestFrequency,TestContrast);
 end
 

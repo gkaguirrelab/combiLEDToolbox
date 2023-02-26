@@ -1,5 +1,7 @@
 function figHandle = plotOutcome(obj,visible)
+% Create some figures that summarize the psychometric fitting
 
+% Make the figure visible unless we pass "off"
 if nargin==1
     visible='on';
 end
@@ -7,20 +9,34 @@ end
 % Grab some variables
 questData = obj.questData;
 TestContrastSet = obj.TestContrastSet;
-TestFrequency = obj.TestFrequency;
+nTrials = length(obj.questData.trialData);
 
-% Plot trial locations together with maximum likelihood fit. Point
-% transparancy visualizes number of trials (more opaque -> more trials),
-% while point color visualizes percent correct (more blue -> more R1).
+% Get the Max Likelihood psi params, temporarily turning off verbosity
+storeVerbose = obj.verbose;
+obj.verbose = false;
+[~, psiParamsFit] = obj.reportParams;
+obj.verbose = storeVerbose;
+
+% Set up a figure
 figHandle = figure('visible',visible);
 figuresize(750,250,'units','pt');
 
+% First, plot the stimulus values used over trials
 subplot(1,3,1);
 hold on
-plot([obj.questData.trialData.stim],'.r');
+plot(1:nTrials,[obj.questData.trialData.stim],'.r');
+xlabel('trial number');
+ylabel('log stimulus contrast')
+title('stimulus by trial');
 
+% Now the proportion correct for each stimulus type, and the psychometric
+% function fit. Marker transparancy (and size) visualizes number of trials
+% (more opaque -> more trials), while marker color visualizes percent
+% correct (more red -> more correct).
 subplot(1,3,2);
 hold on
+
+% Get the stim percent correct for each stimulus
 stimCounts = qpCounts(qpData(questData.trialData),questData.nOutcomes);
 stim = zeros(length(stimCounts),questData.nStimParams);
 for cc = 1:length(stimCounts)
@@ -28,6 +44,8 @@ for cc = 1:length(stimCounts)
     nTrials(cc) = sum(stimCounts(cc).outcomeCounts);
     pCorrect(cc) = stimCounts(cc).outcomeCounts(2)/nTrials(cc);
 end
+
+% Plot these
 markerSizeIdx = discretize(nTrials,3);
 markerSizeSet = [25,50,100];
 for cc = 1:length(stimCounts)
@@ -37,18 +55,21 @@ for cc = 1:length(stimCounts)
         'MarkerFaceAlpha',nTrials(cc)/max(nTrials));
     hold on
 end
-% Get the Max Likelihood psi params
-storeVerbose = obj.verbose;
-obj.verbose = false;
-[~, psiParamsFit] = obj.reportParams;
-obj.verbose = storeVerbose;
-% Plot the psychometric matrix
-for r1 = 1:length(TestContrastSet)
-        outcomes = obj.questData.qpPF(TestContrastSet(r1),psiParamsFit);
-        fitCorrect(r1) = outcomes(2);
+
+% Add the psychometric function
+for cc = 1:length(TestContrastSet)
+    outcomes = obj.questData.qpPF(TestContrastSet(cc),psiParamsFit);
+    fitCorrect(cc) = outcomes(2);
 end
 plot(TestContrastSet,fitCorrect,'-k')
 
+% Labels and range
+ylim([-0.1 1.1]);
+xlabel('log stimulus contrast')
+ylabel('proportion correct');
+title('Psychometric function');
+
+% Entropy by trial
 subplot(1,3,3);
 hold on
 plot(1:length(questData.entropyAfterTrial),questData.entropyAfterTrial,'.k');
