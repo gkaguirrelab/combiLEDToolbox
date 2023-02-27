@@ -63,6 +63,11 @@ for cc = 1:length(testLogContrastSet)
 end
 plot(testLogContrastSet,fitCorrect,'-k')
 
+% Add a marker for the threshold
+outcomes = obj.questData.qpPF(psiParamsFit(1),psiParamsFit);
+plot([psiParamsFit(1), psiParamsFit(1)],[0, outcomes(2)],':k')
+plot([min(testLogContrastSet), psiParamsFit(1)],[outcomes(2), outcomes(2)],':k')
+
 % Labels and range
 ylim([-0.1 1.1]);
 xlabel('log stimulus contrast')

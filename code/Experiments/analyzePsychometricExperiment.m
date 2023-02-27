@@ -46,13 +46,16 @@ for ii=1:length(fileStems)
     % Save the plot
     filename = fullfile(saveDataDir,[fileStems{ii} '.pdf']);
     saveas(figHandle,filename,'pdf')
-    close(figHandle)
+    close(figHandle)    
     % Now do psychType specific parameter saving
     switch psychType
         case 'CDT'
-            [~,fitParams] = psychObj.reportParams;
+            nBoots = 200; confInterval = 0.68;
+            [~,fitParams,fitParamsCI] = psychObj.reportParams('nBoots',nBoots,'confInterval',confInterval);
             results(ii).freq = psychObj.testFreqHz;
             results(ii).logContrastThresh = fitParams(1);
+            results(ii).logContrastThreshLow = fitParamsCI(1,1);
+            results(ii).logContrastThreshHigh = fitParamsCI(2,1);
     end
 end
 
@@ -61,8 +64,12 @@ switch psychType
     case 'CDT'
         % Make a plot of the temporal contrast sensitivity function
         figure
-        plot(log10([results.freq]),1./(10.^[results.logContrastThresh]),'or');
         hold on
+        for ii=1:length(results)
+            x = log10([results(ii).freq]);
+            plot(x,1./(10.^[results(ii).logContrastThresh]),'or');
+            plot([x x],[1./(10.^[results(ii).logContrastThreshLow]), 1./(10.^[results(ii).logContrastThreshHigh]) ],'-k')
+        end
         xlabel('frequency [Hz]')
         ylabel('Sensitivity (1/contrast)')
         a = gca;

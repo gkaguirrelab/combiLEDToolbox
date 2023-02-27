@@ -1,4 +1,13 @@
-function [psiParamsQuest, psiParamsFit] = reportParams(obj)
+function [psiParamsQuest, psiParamsFit, psiParamsCI] = reportParams(obj,options)
+
+% Only perform bootstrapping if that argument is passed
+arguments
+    obj
+    options.nBoots (1,1) = 0
+    options.confInterval (1,1) = 0.8
+    options.lb = []
+    options.ub = []
+end
 
 % Grab some variables
 questData = obj.questData;
@@ -10,12 +19,45 @@ psiParamsIndex = qpListMaxArg(questData.posterior);
 psiParamsQuest = questData.psiParamsDomain(psiParamsIndex,:);
 
 % Maximum likelihood fit. Create bounds from psiParamsDomainList
-for ii=1:length(psiParamsDomainList)
-    lb(ii) = min(psiParamsDomainList{ii});
-    ub(ii) = max(psiParamsDomainList{ii});
+if isempty(options.lb)
+    for ii=1:length(psiParamsDomainList)
+        options.lb(ii) = min(psiParamsDomainList{ii});
+    end
 end
-psiParamsFit = qpFit(questData.trialData,questData.qpPF,psiParamsQuest,questData.nOutcomes,...
-    'lowerBounds', lb,'upperBounds',ub);
+if isempty(options.ub)
+    for ii=1:length(psiParamsDomainList)
+        options.ub(ii) = max(psiParamsDomainList{ii});
+    end
+end
+
+% Obtain the fit
+if options.nBoots>0
+    % If we have asked for a CI on the psiParams, conduct a bootstrap in
+    % which we resample with replacement from the set of trials in each
+    % stimulus bin.
+    stimCounts = qpCounts(qpData(questData.trialData),questData.nOutcomes);
+    trialDataSource=questData.trialData;
+    for bb=1:options.nBoots
+        bootTrialData = trialDataSource;
+        for ss=1:length(stimCounts)
+            idxSource=find([questData.trialData.stim]==stimCounts(ss).stim);
+            idxBoot=datasample(idxSource,length(idxSource));
+            bootTrialData(idxSource)=trialDataSource(idxBoot);
+        end
+        psiParamsFitBoot(bb,:) = qpFit(bootTrialData,questData.qpPF,psiParamsQuest,questData.nOutcomes,...
+            'lowerBounds',options.lb,'upperBounds',options.ub);
+    end
+    psiParamsFitBoot = sort(psiParamsFitBoot);
+    psiParamsFit = mean(psiParamsFitBoot);
+    idxCI = round(((1-options.confInterval)/2*options.nBoots));
+    psiParamsCI(1,:) = psiParamsFitBoot(idxCI,:);
+    psiParamsCI(2,:) = psiParamsFitBoot(options.nBoots-idxCI,:);
+else
+    % No bootstrap. Just report the best fit params
+    psiParamsFit = qpFit(questData.trialData,questData.qpPF,psiParamsQuest,questData.nOutcomes,...
+        'lowerBounds',options.lb,'upperBounds',options.ub);
+    psiParamsCI = [];
+end
 
 % Report these values
 if verbose

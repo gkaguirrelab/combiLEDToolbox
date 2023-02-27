@@ -121,14 +121,14 @@ classdef PsychDoubleRefAFC < handle
         end
 
         % Required methds
-        initializeQP(obj);
-        initializeDisplay(obj);
-        validResponse = presentTrial(obj);
-        [intervalChoice, responseTimeSecs] = getResponse(obj);
-        [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,qpStimParams,ref1Interval);
+        initializeQP(obj)
+        initializeDisplay(obj)
+        validResponse = presentTrial(obj)
+        [intervalChoice, responseTimeSecs] = getResponse(obj)
+        [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,qpStimParams,ref1Interval)
         waitUntil(obj,stopTimeMicroSeconds)
-        [psiParamsQuest, psiParamsFit] = reportParams(obj)
-        figHandle = plotOutcome(obj,visible);
+        [psiParamsQuest, psiParamsFit, psiParamsCI] = reportParams(obj,options)
+        figHandle = plotOutcome(obj,visible)
         values = forwardTransformVals(obj,refValues,testValue)
         values = inverseTransVals(obj,refValues,testValue)
     end

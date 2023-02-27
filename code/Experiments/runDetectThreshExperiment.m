@@ -28,8 +28,8 @@ p.addParameter('dataDirRoot','~/Desktop/flickerPsych',@ischar);
 p.addParameter('observerAgeInYears',25,@isnumeric);
 p.addParameter('fieldSizeDegrees',30,@isnumeric);
 p.addParameter('pupilDiameterMm',4.2,@isnumeric);
-p.addParameter('simulateStimuli',true,@islogical);
-p.addParameter('simulateResponse',true,@islogical);
+p.addParameter('simulateStimuli',false,@islogical);
+p.addParameter('simulateResponse',false,@islogical);
 p.addParameter('verboseCombiLED',false,@islogical);
 p.addParameter('verbosePsychObj',false,@islogical);
 p.addParameter('updateFigures',false,@islogical);
@@ -246,6 +246,7 @@ if ~simulateResponse
     doneSound = [highTone midTone lowTone];
     donePlayer = audioplayer(doneSound,Fs);
     donePlayer.play;
+    pause(0.5);
 end
 
 % Save the sessionObjs and create and save an updated figure

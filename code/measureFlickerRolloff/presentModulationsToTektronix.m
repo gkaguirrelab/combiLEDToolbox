@@ -23,7 +23,13 @@ obj.setWaveformIndex(1);
 obj.setContrast(1);
 
 
+% Frequencies at which measurements were made with the CombiLED and
+% OneLight
 freqsToTest = [8, 10, 16, 20, 32, 40, 64, 80];
+
+% Frequencies at which measurements were made just with the CombiLED. These
+% are the frequencies used in the perceptual experiments.
+freqsToTest = [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40];
 
 % First loop over frequencies
 for ff=1:length(freqsToTest)

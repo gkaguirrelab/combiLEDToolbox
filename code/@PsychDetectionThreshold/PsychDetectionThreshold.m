@@ -119,7 +119,7 @@ classdef PsychDetectionThreshold < handle
         [intervalChoice, responseTimeSecs] = getResponse(obj);
         [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,qpStimParams,testInterval);
         waitUntil(obj,stopTimeMicroSeconds)
-        [psiParamsQuest, psiParamsFit] = reportParams(obj)
+        [psiParamsQuest, psiParamsFit, psiParamsCI] = reportParams(obj,options)
         figHandle = plotOutcome(obj,visible);
     end
 end
