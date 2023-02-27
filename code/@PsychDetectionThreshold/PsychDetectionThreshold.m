@@ -61,7 +61,7 @@ classdef PsychDetectionThreshold < handle
             p.addParameter('randomizePhase',true,@islogical);
             p.addParameter('simulateResponse',true,@islogical);
             p.addParameter('simulateStimuli',true,@islogical);
-            p.addParameter('giveFeedback',false,@islogical);
+            p.addParameter('giveFeedback',true,@islogical);
             p.addParameter('testLogContrastSet',linspace(-3,-0.3,31),@isnumeric);
             p.addParameter('simulatePsiParams',[-2, 1.5, 0.5, 0.0],@isnumeric);
             p.addParameter('psiParamsDomainList',{...
@@ -119,7 +119,7 @@ classdef PsychDetectionThreshold < handle
         [intervalChoice, responseTimeSecs] = getResponse(obj);
         [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,qpStimParams,testInterval);
         waitUntil(obj,stopTimeMicroSeconds)
-        [psiParamsQuest, psiParamsFit, psiParamsCI] = reportParams(obj,options)
+        [psiParamsQuest, psiParamsFit, psiParamsCI, fVal] = reportParams(obj,options)
         figHandle = plotOutcome(obj,visible);
     end
 end
