@@ -1,4 +1,9 @@
-function figHandle = plotModResult(modResult)
+function figHandle = plotModResult(modResult,visible)
+
+% Set the figure to visible unless we say otherwise
+if nargin==1
+    visible = 'on';
+end
 
 % Extract some elements
 whichDirection = modResult.meta.whichDirection;
@@ -17,7 +22,8 @@ nPrimaries = length(settingsBackground);
 nPhotoClasses = length(photoreceptorClassNames);
 
 % Create a figure with an appropriate title
-figHandle = figure('Name',sprintf([whichDirection ': contrast = %2.2f'],contrastReceptorsBipolar(whichReceptorsToTarget(1))));
+figName = sprintf([whichDirection ': contrast = %2.2f'],contrastReceptorsBipolar(whichReceptorsToTarget(1)));
+figHandle = figure('Visible',visible,'Name',figName);
 figuresize(800, 200,'pt');
 
 % Modulation spectra

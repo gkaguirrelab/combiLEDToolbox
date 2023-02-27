@@ -9,11 +9,16 @@
 %   testFreqSetHz = [3,5,8,12,16]
 %   refFreqSetHz = [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 24];
 %
+
+% prepare the params
 subjectID = 'HERO_gka';
 modDirection = 'LminusM_wide';
 testFreqSetHz = [1,3,5,8,12,16,24];
 observerAgeInYears = 53;
-pupilDiameterMm = 3;
+pupilDiameterMm = wy_getPupilSize(observerAgeInYears, 220, 30, 1, 'Unified');
+
+% run the experiment
 runDetectThreshExperiment(subjectID,modDirection,...
-    observerAgeInYears,pupilDiameterMm,...
+    'observerAgeInYears',observerAgeInYears,...
+    'pupilDiameterMm',pupilDiameterMm,...
     'testFreqSetHz',testFreqSetHz);

@@ -22,9 +22,10 @@ saveDataDir = fullfile(p.Results.dataDirRoot,subjectID,modDirection,psychType);
 % Load and plot the modulation
 filename = fullfile(saveModDir,'modResult.mat');
 load(filename,'modResult');
-figHandle = plotModResult(modResult);
+figHandle = plotModResult(modResult,'off');
 filename = fullfile(saveModDir,'modResult.pdf');
 saveas(figHandle,filename,'pdf')
+close(figHandle)
 
 % Load the measurementRecord
 filename = fullfile(saveDataDir,'measurementRecord.mat');
@@ -45,11 +46,12 @@ for ii=1:length(fileStems)
     % Save the plot
     filename = fullfile(saveDataDir,[fileStems{ii} '.pdf']);
     saveas(figHandle,filename,'pdf')
+    close(figHandle)
     % Now do psychType specific parameter saving
     switch psychType
         case 'CDT'
             [~,fitParams] = psychObj.reportParams;
-            results(ii).freq = psychObj.TestFrequency;
+            results(ii).freq = psychObj.testFreqHz;
             results(ii).logContrastThresh = fitParams(1);
     end
 end
@@ -70,6 +72,5 @@ switch psychType
         filename = fullfile(saveDataDir,'results.mat');
         save(filename,'results');
 end
-
 
 end

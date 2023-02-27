@@ -9,11 +9,15 @@
 %   testFreqSetHz = [6,10,14,20,28]
 %   refFreqSetHz = [4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40];
 
+% prepare the params
 subjectID = 'HERO_gka';
 modDirection = 'LightFlux';
 testFreqSetHz = [4,6,10,14,20,28,40];
 observerAgeInYears = 53;
-pupilDiameterMm = 3;
+pupilDiameterMm = wy_getPupilSize(observerAgeInYears, 220, 30, 1, 'Unified');
+
+% run the experiment
 runDetectThreshExperiment(subjectID,modDirection,...
-    observerAgeInYears,pupilDiameterMm,...
+    'observerAgeInYears',observerAgeInYears,...
+    'pupilDiameterMm',pupilDiameterMm,...
     'testFreqSetHz',testFreqSetHz);

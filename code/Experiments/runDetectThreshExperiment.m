@@ -1,5 +1,5 @@
 function runDetectThreshExperiment(subjectID,modDirection,...
-    observerAgeInYears,pupilDiameterMm,varargin)
+    varargin)
 % Code that interleaves psychometric measurements for measurements of a
 % contrast detection threshold in a 2AFC experiment. The purpose is to
 % measure threshold sensitivity across a range of stimulus frequencies. The
@@ -10,19 +10,26 @@ function runDetectThreshExperiment(subjectID,modDirection,...
 %
 % Examples:
 %{
-    subjectID = 'HERO_gka';
+    subjectID = 'DEMO_001';
     modDirection = 'LightFlux';
-    observerAgeInYears = 53;
-    pupilDiameterMm = 3;
-    runCDTExperiment(subjectID,modDirection,observerAgeInYears,pupilDiameterMm)
+    testFreqSetHz = [4,6,10,14,20,28,40];
+    observerAgeInYears = 35;
+    pupilDiameterMm = 4;
+    runDetectThreshExperiment(subjectID,modDirection,...
+        'observerAgeInYears',observerAgeInYears,...
+        'pupilDiameterMm',pupilDiameterMm,...
+        'testFreqSetHz',testFreqSetHz);
 %}
 
 % Parse the parameters
 p = inputParser; p.KeepUnmatched = false;
-p.addParameter('TestFreqSet',[3,6,10,14,20,28,40],@isnumeric);
+p.addParameter('testFreqSetHz',[3,6,10,14,20,28,40],@isnumeric);
 p.addParameter('dataDirRoot','~/Desktop/flickerPsych',@ischar);
-p.addParameter('simulateStimuli',false,@islogical);
-p.addParameter('simulateResponse',false,@islogical);
+p.addParameter('observerAgeInYears',25,@isnumeric);
+p.addParameter('fieldSizeDegrees',30,@isnumeric);
+p.addParameter('pupilDiameterMm',4.2,@isnumeric);
+p.addParameter('simulateStimuli',true,@islogical);
+p.addParameter('simulateResponse',true,@islogical);
 p.addParameter('verboseCombiLED',false,@islogical);
 p.addParameter('verbosePsychObj',false,@islogical);
 p.addParameter('updateFigures',false,@islogical);
@@ -65,8 +72,9 @@ else
     % We get away with using zero headroom, as we will always be using
     % contrast levels that are less that 100%
     modResult = designModulation(modDirection,...
-        'observerAgeInYears',observerAgeInYears,...
-        'pupilDiameterMm',pupilDiameterMm, ...
+        'observerAgeInYears',p.Results.observerAgeInYears,...
+        'fieldSizeDegrees',p.Results.fieldSizeDegrees,...
+        'pupilDiameterMm',p.Results.pupilDiameterMm, ...
         'primaryHeadroom',0);
     save(filename,'modResult');
 end
@@ -86,15 +94,15 @@ end
 filename = fullfile(saveDataDir,'measurementRecord.mat');
 if isfile(filename)
     load(filename,'measurementRecord');
-    TestFreqSet = measurementRecord.stimulusProperties.TestFreqSet;
+    testFreqSetHz = measurementRecord.stimulusProperties.testFreqSetHz;
     nTrialsPerPass = measurementRecord.experimentProperties.nTrialsPerPass;
     nPasses = measurementRecord.experimentProperties.nPasses;
     nStimsPerPass = measurementRecord.experimentProperties.nStimsPerPass;
 else
     % The stimulus and experiment properties
-    TestFreqSet = p.Results.TestFreqSet;
-    nTrialsPerPass = 20; % The number of trials in each pass (about 4.5 minutes)
-    nPasses = 5; % The number of nTrialsPerPass trial passes for each triplet
+    testFreqSetHz = p.Results.testFreqSetHz;
+    nTrialsPerPass = 40; % The number of trials in each pass
+    nPasses = 10; % The number of nTrialsPerPass trial passes for each stimulus
     nStimsPerPass = 4; % The number of frequencies that will be intermixed in a pass
 
     % Check that we each session will have the same number of trials for
@@ -102,19 +110,19 @@ else
     assert( mod(nTrialsPerPass,nStimsPerPass)==0 );
 
     % Check that we can do an integer number of sessions
-    assert( mod((length(TestFreqSet)*nPasses),(nTrialsPerPass/nStimsPerPass))==0 );
+    assert( mod((length(testFreqSetHz)*nPasses),(nTrialsPerPass/nStimsPerPass))==0 );
 
     % Store the values
     measurementRecord.subjectProperties.subjectID = subjectID;
-    measurementRecord.subjectProperties.observerAgeInYears = observerAgeInYears;
+    measurementRecord.subjectProperties.observerAgeInYears = p.Results.observerAgeInYears;
     measurementRecord.experimentProperties.modDirection = modDirection;
     measurementRecord.experimentProperties.psychType = psychType;
-    measurementRecord.experimentProperties.pupilDiameterMm = pupilDiameterMm;
-    measurementRecord.stimulusProperties.TestFreqSet = TestFreqSet;
+    measurementRecord.experimentProperties.pupilDiameterMm = p.Results.pupilDiameterMm;
+    measurementRecord.stimulusProperties.testFreqSetHz = testFreqSetHz;
     measurementRecord.experimentProperties.nTrialsPerPass = nTrialsPerPass;
     measurementRecord.experimentProperties.nPasses = nPasses;
     measurementRecord.experimentProperties.nStimsPerPass = nStimsPerPass;
-    measurementRecord.trialCount = zeros(1,length(TestFreqSet));
+    measurementRecord.trialCount = zeros(1,length(testFreqSetHz));
     measurementRecord.sessionData = [];
     save(filename,'measurementRecord');
 end
@@ -169,7 +177,7 @@ sessionData.passIdx = passIdx;
 for ii=1:nStimsPerPass
     IdxX = passIdx(ii);
     sessionData.measureIdx(ii) = IdxX;
-    sessionData.TestFrequency(ii) = TestFreqSet(IdxX);
+    sessionData.TestFrequency(ii) = testFreqSetHz(IdxX);
     sessionData.fileStem{ii} = [subjectID '_' modDirection '_' psychType ...
         '_' strrep(num2str(sessionData.TestFrequency(ii)),'.','x')];
 

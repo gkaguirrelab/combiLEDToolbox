@@ -15,10 +15,6 @@ for ii=1:length(psiParamsDomainList)
     ub(ii) = max(psiParamsDomainList{ii});
 end
 
-% While we provide a bit of space on the guess rate in the search, for
-% fitting we now lock the guess rate to 0.5
-lb(3) = 0.5; ub(3) = 0.5;
-
 % Obtain the fit
 psiParamsFit = qpFit(questData.trialData,questData.qpPF,psiParamsQuest,questData.nOutcomes,...
     'lowerBounds', lb,'upperBounds',ub);
