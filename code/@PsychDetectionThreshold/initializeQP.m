@@ -31,4 +31,13 @@ end
 % Perform the initialize operation
 obj.questData = qpInitialize(qpKeyVals{:});
 
+% Store the initial values of expectedNextEntropiesByStim and the posterior
+obj.questData.initialPosterior = ...
+    obj.questData.posterior;
+obj.questData.initialExpectedNextEntropiesByStim = ...
+    obj.questData.expectedNextEntropiesByStim;
+
+% Add the invalidResponseTrials field
+obj.questData.invalidResponseTrials = [];
+
 end

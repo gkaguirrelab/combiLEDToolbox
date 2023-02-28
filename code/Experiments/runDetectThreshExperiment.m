@@ -28,8 +28,8 @@ p.addParameter('dataDirRoot','~/Desktop/flickerPsych',@ischar);
 p.addParameter('observerAgeInYears',25,@isnumeric);
 p.addParameter('fieldSizeDegrees',30,@isnumeric);
 p.addParameter('pupilDiameterMm',4.2,@isnumeric);
-p.addParameter('simulateStimuli',false,@islogical);
-p.addParameter('simulateResponse',false,@islogical);
+p.addParameter('simulateStimuli',true,@islogical);
+p.addParameter('simulateResponse',true,@islogical);
 p.addParameter('verboseCombiLED',false,@islogical);
 p.addParameter('verbosePsychObj',false,@islogical);
 p.addParameter('updateFigures',false,@islogical);
@@ -95,22 +95,30 @@ filename = fullfile(saveDataDir,'measurementRecord.mat');
 if isfile(filename)
     load(filename,'measurementRecord');
     testFreqSetHz = measurementRecord.stimulusProperties.testFreqSetHz;
-    nTrialsPerPass = measurementRecord.experimentProperties.nTrialsPerPass;
-    nPasses = measurementRecord.experimentProperties.nPasses;
-    nStimsPerPass = measurementRecord.experimentProperties.nStimsPerPass;
+    nTrialsPerStim = measurementRecord.experimentProperties.nTrialsPerStim;
+    nTrialsPerSession = measurementRecord.experimentProperties.nTrialsPerSession;
+    nStimsPerSession = measurementRecord.experimentProperties.nStimsPerSession;
+    nTrialsPerSearch = measurementRecord.experimentProperties.nTrialsPerSearch;
 else
     % The stimulus and experiment properties
     testFreqSetHz = p.Results.testFreqSetHz;
-    nTrialsPerPass = 40; % The number of trials in each pass
-    nPasses = 10; % The number of nTrialsPerPass trial passes for each stimulus
-    nStimsPerPass = 4; % The number of frequencies that will be intermixed in a pass
+    nStims = length(testFreqSetHz);
+    nTrialsPerStim = 120; % Total n trials per stimulus
+    nTrialsPerSession = 40; % ntrials in a session
+    nStimsPerSession = 4; % n stimuli that will be intermixed in a session
+    nTrialsPerSearch = 40; % n trials before resetting the QP search
 
-    % Check that we each session will have the same number of trials for
-    % each triplet
-    assert( mod(nTrialsPerPass,nStimsPerPass)==0 );
+    % Check that we will have an integer number of trials for each stimulus
+    % type within a session
+    assert( mod(nTrialsPerSession,nStimsPerSession)==0 );
+    nTrialsPerStimPerSession = nTrialsPerSession/nStimsPerSession;
 
-    % Check that we can do an integer number of sessions
-    assert( mod((length(testFreqSetHz)*nPasses),(nTrialsPerPass/nStimsPerPass))==0 );
+    % Check that we can have an integer number of sessions before we reset
+    % the QP search
+    assert( mod(nTrialsPerSearch,nTrialsPerStimPerSession)==0 );
+    
+    % Check that we will have an integer number of sessions
+    assert( mod(nStims*nTrialsPerStim,nTrialsPerSession)==0);
 
     % Store the values
     measurementRecord.subjectProperties.subjectID = subjectID;
@@ -119,9 +127,10 @@ else
     measurementRecord.experimentProperties.psychType = psychType;
     measurementRecord.experimentProperties.pupilDiameterMm = p.Results.pupilDiameterMm;
     measurementRecord.stimulusProperties.testFreqSetHz = testFreqSetHz;
-    measurementRecord.experimentProperties.nTrialsPerPass = nTrialsPerPass;
-    measurementRecord.experimentProperties.nPasses = nPasses;
-    measurementRecord.experimentProperties.nStimsPerPass = nStimsPerPass;
+    measurementRecord.experimentProperties.nTrialsPerStim = nTrialsPerStim;
+    measurementRecord.experimentProperties.nTrialsPerSession = nTrialsPerSession;
+    measurementRecord.experimentProperties.nStimsPerSession = nStimsPerSession;
+    measurementRecord.experimentProperties.nTrialsPerSearch = nTrialsPerSearch;
     measurementRecord.trialCount = zeros(1,length(testFreqSetHz));
     measurementRecord.sessionData = [];
     save(filename,'measurementRecord');
@@ -132,54 +141,53 @@ end
 trialCountSet = sort(unique(measurementRecord.trialCount(:)));
 
 % First check if we are done
-if min(trialCountSet) >= (nTrialsPerPass*nPasses)
+if min(trialCountSet) >= nTrialsPerStim
     fprintf('Done with this experiment!\n')
     return
 end
 
 % Find some stimuli that need measuring
 countSetIdx = 1;
-nPassesStillNeeded = nStimsPerPass;
-passIdx = [];
+nStimsStillNeeded = nStimsPerSession;
+stimIdx = [];
 stillLooking = true;
 while stillLooking
-    availPassIdx = find(measurementRecord.trialCount==trialCountSet(countSetIdx));
-    nAvail = length(availPassIdx);
+    availStimIdx = find(measurementRecord.trialCount==trialCountSet(countSetIdx));
+    nAvail = length(availStimIdx);
     if nAvail == 0
         countSetIdx = countSetIdx+1;
-        if min(measurementRecord.trialCount(:))<=(nPasses*nTrialsPerPass)
+        if min(measurementRecord.trialCount(:))>=nTrialsPerStim
             fprintf('Done with this experiment!\n')
-            stillLooking = false;
             return
         end
     end
-    if nAvail >= nPassesStillNeeded
-        availPassIdx = availPassIdx(randperm(length(availPassIdx)));
-        passIdx = [passIdx availPassIdx(1:nPassesStillNeeded)];
+    if nAvail >= nStimsStillNeeded
+        availStimIdx = availStimIdx(randperm(length(availStimIdx)));
+        stimIdx = [stimIdx availStimIdx(1:nStimsStillNeeded)];
         stillLooking = false;
     end
-    if nAvail < nStimsPerPass
-        availPassIdx = availPassIdx(randperm(length(availPassIdx)));
-        passIdx = [passIdx availPassIdx];
-        nPassesStillNeeded = nPassesStillNeeded - length(availPassIdx);
+    if nAvail < nStimsPerSession
+        availStimIdx = availStimIdx(randperm(length(availStimIdx)));
+        stimIdx = [stimIdx availStimIdx];
+        nStimsStillNeeded = nStimsStillNeeded - length(availStimIdx);
         countSetIdx = 2;
     end
 end
 
-% Randomly order the passIdx, so that the order of the intermixed stimuli
+% Randomly order the stimIdx, so that the order of the intermixed stimuli
 % will vary on every pass
-passIdx = passIdx(randperm(length(passIdx)));
+stimIdx = stimIdx(randperm(length(stimIdx)));
 
 % Set up the variables that hold this session information
 fprintf('Preparing psychometric objects...');
 sessionData = struct();
-sessionData.passIdx = passIdx;
-for ii=1:nStimsPerPass
-    IdxX = passIdx(ii);
+sessionData.stimIdx = stimIdx;
+for ii=1:nStimsPerSession
+    IdxX = stimIdx(ii);
     sessionData.measureIdx(ii) = IdxX;
-    sessionData.TestFrequency(ii) = testFreqSetHz(IdxX);
+    sessionData.testFreqHz(ii) = testFreqSetHz(IdxX);
     sessionData.fileStem{ii} = [subjectID '_' modDirection '_' psychType ...
-        '_' strrep(num2str(sessionData.TestFrequency(ii)),'.','x')];
+        '_' strrep(num2str(sessionData.testFreqHz(ii)),'.','x')];
 
     % Create or load the psychometric objects
     filename = fullfile(saveDataDir,[sessionData.fileStem{ii} '.mat']);
@@ -192,7 +200,7 @@ for ii=1:nStimsPerPass
         sessionObj{ii}.initializeDisplay;
     else
         sessionObj{ii} = PsychDetectionThreshold(CombiLEDObj,...
-            sessionData.TestFrequency(ii),...
+            sessionData.testFreqHz(ii),...
             'simulateStimuli',simulateStimuli,'simulateResponse',simulateStimuli,...
             'verbose',verbosePsychObj);
     end
@@ -215,21 +223,20 @@ if ~simulateResponse
 end
 
 % Store the block start time
-for ii=1:nStimsPerPass
+for ii=1:nStimsPerSession
     sessionObj{ii} .blockStartTimes(end+1) = datetime();
 end
 
-% Present nTrialsPerPass (should be about 5 minutes). We repeat trials that
-% did not elicit a valid response (wrong key, or outside of response
-% interval)
+% Present nTrialsPerSession. We repeat trials that did not elicit a valid
+% response (wrong key, or outside of response interval)
 psychObjIdx = 1;
 trialIdx = 1;
-while trialIdx<=nTrialsPerPass
+while trialIdx<=nTrialsPerSession
     validResponse = sessionObj{psychObjIdx}.presentTrial;
     if validResponse
         trialIdx = trialIdx + 1;
         psychObjIdx = psychObjIdx + 1;
-        if psychObjIdx > nStimsPerPass
+        if psychObjIdx > nStimsPerSession
             psychObjIdx = 1;
         end
     end
@@ -249,8 +256,21 @@ if ~simulateResponse
     pause(0.5);
 end
 
+% Check if we should reset the search for any of our psych objects, or if
+% we have completed searching and should concatenate the searches
+for ii=1:nStimsPerSession
+    nCompletedTrials = measurementRecord.trialCount(sessionData.stimIdx(ii))+(nTrialsPerSession/nStimsPerSession);
+    if mod(nCompletedTrials,nTrialsPerStim)==0
+        sessionObj{ii}.concatSearches;
+        continue
+    end
+    if mod(nCompletedTrials,nTrialsPerSearch)==0
+        sessionObj{ii}.resetSearch;
+    end
+end
+
 % Save the sessionObjs and create and save an updated figure
-for ii=1:nStimsPerPass
+for ii=1:nStimsPerSession
     % psychometric object
     fileStem = sessionData.fileStem{ii};
     filename = fullfile(saveDataDir,[fileStem '.mat']);
@@ -278,8 +298,8 @@ for ff = 1:length(fields)
 end
 
 % Update the trialCount record
-measurementRecord.trialCount(sessionData.passIdx) = ...
-    measurementRecord.trialCount(sessionData.passIdx)+(nTrialsPerPass/nStimsPerPass);
+measurementRecord.trialCount(sessionData.stimIdx) = ...
+    measurementRecord.trialCount(sessionData.stimIdx)+(nTrialsPerSession/nStimsPerSession);
 
 % Save it
 filename = fullfile(saveDataDir,'measurementRecord.mat');

@@ -186,12 +186,8 @@ if validResponse
     questData.trialData(currTrialIdx).testInterval = testInterval;
     questData.trialData(currTrialIdx).responseTimeSecs = responseTimeSecs;
 else
-    % Store a note that we had an invalid response
-    if ~isfield(questData,'invalidResponseTrials')
-        questData.invalidResponseTrials = currTrialIdx;
-    else
-        questData.invalidResponseTrials(end+1) = currTrialIdx;
-    end
+    % Store a record of the invalid response
+    questData.invalidResponseTrials(end+1) = currTrialIdx;
 end
 
 % Put staircaseData back into the obj

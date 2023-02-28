@@ -51,7 +51,8 @@ for ii=1:length(fileStems)
     switch psychType
         case 'CDT'
             nBoots = 200; confInterval = 0.68;
-            [~,fitParams,fitParamsCI] = psychObj.reportParams('nBoots',nBoots,'confInterval',confInterval);
+            [~,fitParams,fitParamsCI] = psychObj.reportParams(...
+                'nBoots',nBoots,'confInterval',confInterval);
             results(ii).freq = psychObj.testFreqHz;
             results(ii).logContrastThresh = fitParams(1);
             results(ii).logContrastThreshLow = fitParamsCI(1,1);

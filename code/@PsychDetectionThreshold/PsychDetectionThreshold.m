@@ -113,13 +113,14 @@ classdef PsychDetectionThreshold < handle
         end
 
         % Required methds
-        initializeQP(obj);
-        initializeDisplay(obj);
-        validResponse = presentTrial(obj);
-        [intervalChoice, responseTimeSecs] = getResponse(obj);
-        [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,qpStimParams,testInterval);
+        initializeQP(obj)
+        initializeDisplay(obj)
+        validResponse = presentTrial(obj)
+        [intervalChoice, responseTimeSecs] = getResponse(obj)
+        [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,qpStimParams,testInterval)
         waitUntil(obj,stopTimeMicroSeconds)
         [psiParamsQuest, psiParamsFit, psiParamsCI, fVal] = reportParams(obj,options)
-        figHandle = plotOutcome(obj,visible);
+        figHandle = plotOutcome(obj,visible)
+        resetSearch(obj)
     end
 end
