@@ -59,8 +59,8 @@ classdef PsychDetectionThreshold < handle
             % input parser
             p = inputParser; p.KeepUnmatched = false;
             p.addParameter('randomizePhase',true,@islogical);
-            p.addParameter('simulateResponse',true,@islogical);
-            p.addParameter('simulateStimuli',true,@islogical);
+            p.addParameter('simulateResponse',false,@islogical);
+            p.addParameter('simulateStimuli',false,@islogical);
             p.addParameter('giveFeedback',true,@islogical);
             p.addParameter('testLogContrastSet',linspace(-3,-0.3,31),@isnumeric);
             p.addParameter('simulatePsiParams',[-2, 1.5, 0.5, 0.0],@isnumeric);

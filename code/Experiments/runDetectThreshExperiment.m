@@ -28,8 +28,8 @@ p.addParameter('dataDirRoot','~/Desktop/flickerPsych',@ischar);
 p.addParameter('observerAgeInYears',25,@isnumeric);
 p.addParameter('fieldSizeDegrees',30,@isnumeric);
 p.addParameter('pupilDiameterMm',4.2,@isnumeric);
-p.addParameter('simulateStimuli',true,@islogical);
-p.addParameter('simulateResponse',true,@islogical);
+p.addParameter('simulateStimuli',false,@islogical);
+p.addParameter('simulateResponse',false,@islogical);
 p.addParameter('verboseCombiLED',false,@islogical);
 p.addParameter('verbosePsychObj',false,@islogical);
 p.addParameter('updateFigures',false,@islogical);
@@ -201,16 +201,20 @@ for ii=1:nStimsPerSession
     else
         sessionObj{ii} = PsychDetectionThreshold(CombiLEDObj,...
             sessionData.testFreqHz(ii),...
-            'simulateStimuli',simulateStimuli,'simulateResponse',simulateStimuli,...
+            'giveFeedback',true,...
+            'simulateStimuli',simulateStimuli,...
+            'simulateResponse',simulateResponse,...
             'verbose',verbosePsychObj);
     end
     % Clear out the first, bad "getResponse". Not sure why but the first
     % call to this function after restart always fails. This fixes the
     % problem
-    storeResponseDur = sessionObj{ii}.responseDurSecs;
-    sessionObj{ii}.responseDurSecs = 0.1;
-    sessionObj{ii}.getResponse;
-    sessionObj{ii}.responseDurSecs = storeResponseDur;
+    if ~simulateResponse
+        storeResponseDur = sessionObj{ii}.responseDurSecs;
+        sessionObj{ii}.responseDurSecs = 0.1;
+        sessionObj{ii}.getResponse;
+        sessionObj{ii}.responseDurSecs = storeResponseDur;
+    end
     % Update the console text
     fprintf([num2str(ii) '...']);
 end
@@ -256,14 +260,9 @@ if ~simulateResponse
     pause(0.5);
 end
 
-% Check if we should reset the search for any of our psych objects, or if
-% we have completed searching and should concatenate the searches
+% Check if we should reset the search for any of our psych objects
 for ii=1:nStimsPerSession
     nCompletedTrials = measurementRecord.trialCount(sessionData.stimIdx(ii))+(nTrialsPerSession/nStimsPerSession);
-    if mod(nCompletedTrials,nTrialsPerStim)==0
-        sessionObj{ii}.concatSearches;
-        continue
-    end
     if mod(nCompletedTrials,nTrialsPerSearch)==0
         sessionObj{ii}.resetSearch;
     end
