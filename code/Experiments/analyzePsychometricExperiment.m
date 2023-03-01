@@ -66,22 +66,27 @@ switch psychType
         % Get the contrast on the targeted receptors
         modContrast = modResult.contrastReceptorsBipolar(1);
         % Make a plot of the temporal contrast sensitivity function
-        figure
+        figHandle = figure();
+        figuresize(400, 200,'pt');
         hold on
+        yyaxis left
         for ii=1:length(results)
             x = log10([results(ii).freq]);
             plot(x,1./(modContrast*10^[results(ii).logContrastThresh]),'or');
             plot([x x],[1./(modContrast*10.^[results(ii).logContrastThreshLow]), 1./(modContrast*10.^[results(ii).logContrastThreshHigh]) ],'-k')
         end
         xlabel('frequency [Hz]')
-        ylabel(['Sensitivity [1/contrast on ' modDirection ' ]'])
+        ylabel({'Sensitivity',['[1/contrast on ' modDirection ' ]']});
         a = gca;
         a.XTick = log10(sort([results.freq]));
         a.XTickLabel = string(sort([results.freq]));
-        % Expand the range a bit
-        xLimBuffer = min(log10(diff(sort([results.freq]))))/2;
-        xlim([log10(min([results.freq]))-xLimBuffer, log10(max([results.freq]))+xLimBuffer])
         ylim([0, ceil(a.YLim(2)/100)*100]);
+        % Add a right side axis with the absolute device contrast
+        yyaxis right
+        plot(log10([results.freq]),10.^[results.logContrastThresh],"Color","none")
+        ylabel('Device contrast [0 - 1]');
+        % Expand the range a bit
+        xlim([-0.15 1.75]);
         % Create a DoG fit
         x=log10([results.freq]);
         y=1./(modContrast.*10.^[results.logContrastThresh]);
@@ -89,9 +94,13 @@ switch psychType
         myDoG = @(p,x) p(1).*(normpdf(x,p(2),p(3)) - normpdf(x,p(4),p(5)));
         myObj = @(p) sqrt(sum(w.*((myDoG(p,x)-y).^2)));
         p=fmincon(myObj,[100,1.1,0.2,0.8,0.5]);
-        xFit = 0.25:0.01:2.0;
+        xFit = 0:0.01:2.0;
         yFit = myDoG(p,xFit);
+        yyaxis left
         plot(xFit,yFit,'-r')
+        % save the figure
+        filename = fullfile(saveDataDir,'results.pdf');
+        saveas(figHandle,filename);
         % save the key results
         filename = fullfile(saveDataDir,'results.mat');
         save(filename,'results');
