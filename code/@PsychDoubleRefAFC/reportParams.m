@@ -1,4 +1,4 @@
-function [psiParamsQuest, psiParamsFit, psiParamsCI] = reportParams(obj,options)
+function [psiParamsQuest, psiParamsFit, psiParamsCI, fVal] = reportParams(obj,options)
 
 % Only perform bootstrapping if that argument is passed
 arguments
@@ -30,12 +30,14 @@ if isempty(options.ub)
     end
 end
 
+% We require the stimCounts below
+stimCounts = qpCounts(qpData(questData.trialData),questData.nOutcomes);
+
 % Obtain the fit
 if options.nBoots>0
     % If we have asked for a CI on the psiParams, conduct a bootstrap in
     % which we resample with replacement from the set of trials in each
     % stimulus bin.
-    stimCounts = qpCounts(qpData(questData.trialData),questData.nOutcomes);
     trialDataSource=questData.trialData;
     for bb=1:options.nBoots
         bootTrialData = trialDataSource;
@@ -58,6 +60,9 @@ else
         'lowerBounds',options.lb,'upperBounds',options.ub);
     psiParamsCI = [];
 end
+
+% Get the error at the solution
+fVal = qpFitError(psiParamsFit,stimCounts,questData.qpPF);
 
 % Report these values
 if verbose

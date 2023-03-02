@@ -1,29 +1,21 @@
-function runDetectThreshExperiment(subjectID,modDirection,...
-    varargin)
+function runDetectThreshExperiment(subjectID,modDirection,varargin)
 % Code that interleaves psychometric measurements for measurements of a
 % contrast detection threshold in a 2AFC experiment. The purpose is to
 % measure threshold sensitivity across a range of stimulus frequencies. The
 % code manages a series of files that store the data from the experiment.
 % As configured, each testing "session" has 20 trials and is about 4
-% minutes in duration. A complete measurement of 100 trials for each of the
-% 7 frequencies takes about 2 hours and 20 minutes.
+% minutes in duration.
 %
 % Examples:
 %{
     subjectID = 'DEMO_001';
     modDirection = 'LightFlux';
-    testFreqSetHz = [4,6,10,14,20,28,40];
-    observerAgeInYears = 35;
-    pupilDiameterMm = 4;
-    runDetectThreshExperiment(subjectID,modDirection,...
-        'observerAgeInYears',observerAgeInYears,...
-        'pupilDiameterMm',pupilDiameterMm,...
-        'testFreqSetHz',testFreqSetHz);
+    runDetectThreshExperiment(subjectID,modDirection);
 %}
 
 % Parse the parameters
 p = inputParser; p.KeepUnmatched = false;
-p.addParameter('testFreqSetHz',[3,6,10,14,20,28,40],@isnumeric);
+p.addParameter('testFreqSetHz',[4,6,10,14,20,28,40],@isnumeric);
 p.addParameter('dataDirRoot','~/Desktop/flickerPsych',@ischar);
 p.addParameter('observerAgeInYears',25,@isnumeric);
 p.addParameter('fieldSizeDegrees',30,@isnumeric);
@@ -136,7 +128,7 @@ else
     save(filename,'measurementRecord');
 end
 
-% Select the stimuli to test for this pass. We select randomly from the
+% Select the stimuli to test for this session. We select randomly from the
 % set of stimuli that have the lowest number of collected trials.
 trialCountSet = sort(unique(measurementRecord.trialCount(:)));
 

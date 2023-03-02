@@ -31,8 +31,8 @@ ref2FreqHz = obj.inverseTransVals(qpStimParams(2),testFreqHz);
 % the modulation at high temporal frequencies
 [~,ref1FreqIdx] = min(abs(obj.refFreqSetHz-ref1FreqHz));
 [~,ref2FreqIdx] = min(abs(obj.refFreqSetHz-ref2FreqHz));
-ref1ContrastAdjusted = obj.refContrastAdjustedByFreq(ref1FreqIdx);
-ref2ContrastAdjusted = obj.refContrastAdjustedByFreq(ref2FreqIdx);
+ref1ContrastAdjusted = obj.refContrastVectorAdjusted(ref1FreqIdx);
+ref2ContrastAdjusted = obj.refContrastVectorAdjusted(ref2FreqIdx);
 
 % Prepare the sounds
 Fs = 8192; % Sampling Frequency

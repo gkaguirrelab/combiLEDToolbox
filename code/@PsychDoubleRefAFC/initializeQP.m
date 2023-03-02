@@ -6,7 +6,7 @@ simulateResponse = obj.simulateResponse;
 verbose = obj.verbose;
 
 % Transform the stimulus set to relative log space
-refFreqSetRelative = obj.forwardTransformVals(obj.refFreqSetHz,obj.testFrequency);
+refFreqSetRelative = obj.forwardTransformVals(obj.refFreqSetHz,obj.testFreqHz);
 
 % Handle simulation and the outcome function
 if simulateResponse

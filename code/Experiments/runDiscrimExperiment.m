@@ -1,6 +1,4 @@
-function runDiscrimExperiment(subjectID,modDirection,...
-    observerAgeInYears,pupilDiameterMm,...
-    threshContrasts,threshContrastFreqs,varargin)
+function runDiscrimExperiment(subjectID,modDirection,varargin)
 % Code that interleaves psychometric measurements for different "triplets"
 % of stimulus parameters in a measurement of the double-reference 2AFC
 % technique of Jogan & Stocker. The code manages a series of files that
@@ -10,21 +8,27 @@ function runDiscrimExperiment(subjectID,modDirection,...
 %
 %   16 hours 40 mins = 4*(100*50)/20
 %
-% Might need to decrease the number of triplets, or accept fewer than 100
-% trials per triplet.
+%{
+    subjectID = 'HERO_gka';
+    modDirection = 'LightFlux';
+    runDiscrimExperiment(subjectID,modDirection);
+%}
 
 
 % Parse the parameters
 p = inputParser; p.KeepUnmatched = false;
-p.addParameter('refContrastSetDb',[4,6],@isnumeric);
-p.addParameter('testContrastSetDb',[3,4,5,6,7],@isnumeric);
-p.addParameter('testFreqSetHz',[6,10,14,20,28],@isnumeric);
+p.addParameter('refContrastSetDb',[5.5, 8.5],@isnumeric);
+p.addParameter('testContrastSetDb',linspace(4,10,5),@isnumeric);
 p.addParameter('refFreqSetHz',[4,5,6,8,10,12,14,16,20,24,28,32,40],@isnumeric);
+p.addParameter('testFreqSetHz',[6,10,14,20,28],@isnumeric);
 p.addParameter('dataDirRoot','~/Desktop/flickerPsych',@ischar);
-p.addParameter('simulateStimuli',false,@islogical);
-p.addParameter('simulateResponse',false,@islogical);
+p.addParameter('observerAgeInYears',25,@isnumeric);
+p.addParameter('fieldSizeDegrees',30,@isnumeric);
+p.addParameter('pupilDiameterMm',4.2,@isnumeric);
+p.addParameter('simulateStimuli',true,@islogical);
+p.addParameter('simulateResponse',true,@islogical);
 p.addParameter('verboseCombiLED',false,@islogical);
-p.addParameter('verbosePsychObj',false,@islogical);
+p.addParameter('verbosePsychObj',true,@islogical);
 p.addParameter('updateFigures',false,@islogical);
 p.parse(varargin{:})
 
@@ -34,6 +38,9 @@ simulateResponse = p.Results.simulateResponse;
 verboseCombiLED = p.Results.verboseCombiLED;
 verbosePsychObj = p.Results.verbosePsychObj;
 updateFigures = p.Results.updateFigures;
+
+% Set our psychType
+psychType = 'DoubleRef';
 
 % Set a random seed
 rng('shuffle');
@@ -54,14 +61,22 @@ if ~isfolder(saveDataDir)
     mkdir(saveDataDir)
 end
 
-% Create or load a modulation and save it to the dataDir
+% Create or load a modulation and save it to the saveModDir
 filename = fullfile(saveModDir,'modResult.mat');
 if isfile(filename)
     load(filename,'modResult');
 else
+    % Issue a warning, as we should be working with the same modulation
+    % that was used for the calculation of the contrast threshold. It is
+    % possible that we have re-calibrated the device since then and that is
+    % why we are re-creating the modulation
+    warning('modResult not found; was expecting this from the CDT measurements')
+    % We get away with using zero headroom, as we will always be using
+    % contrast levels that are less that 100%
     modResult = designModulation(modDirection,...
-        'observerAgeInYears',observerAgeInYears,...
-        'pupilDiameterMm',pupilDiameterMm, ...
+        'observerAgeInYears',p.Results.observerAgeInYears,...
+        'fieldSizeDegrees',p.Results.fieldSizeDegrees,...
+        'pupilDiameterMm',p.Results.pupilDiameterMm, ...
         'primaryHeadroom',0);
     save(filename,'modResult');
 end
@@ -81,110 +96,168 @@ end
 filename = fullfile(saveDataDir,'measurementRecord.mat');
 if isfile(filename)
     load(filename,'measurementRecord');
+    testFreqSetHz = measurementRecord.stimulusProperties.testFreqSetHz;
+    refFreqSetHz = measurementRecord.stimulusProperties.refFreqSetHz;
     refContrastSetDb = measurementRecord.stimulusProperties.refContrastSetDb;
     testContrastSetDb = measurementRecord.stimulusProperties.testContrastSetDb;
-    testFreqSetHz = measurementRecord.stimulusProperties.testFreqSetHz;
-    nTrialsPerPass = measurementRecord.experimentProperties.nTrialsPerPass;
-    nPasses = measurementRecord.experimentProperties.nPasses;
-    nStimsPerPass = measurementRecord.experimentProperties.nStimsPerPass;
+    refContrastSetMatrix = measurementRecord.stimulusProperties.refContrastSetMatrix;
+    testContrastSetMatrix = measurementRecord.stimulusProperties.testContrastSetMatrix;
+    nTrialsPerStim = measurementRecord.experimentProperties.nTrialsPerStim;
+    nTrialsPerSession = measurementRecord.experimentProperties.nTrialsPerSession;
+    nStimsPerSession = measurementRecord.experimentProperties.nStimsPerSession;
+    nTrialsPerSearch = measurementRecord.experimentProperties.nTrialsPerSearch;
 else
-    % The stimulus and experiment properties
-    threshContrasts = [];
-    threshContrastFreqs = [];
-    refContrastSetDb = [0.1, 0.4];
-    testContrastSetDb = [0.05, 0.1, 0.2, 0.4, 0.8];
-    testFreqSetHz = [6,10,14,20,28];
-    refFreqSetHz = [3, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40];
-    nTrialsPerPass = 20; % The number of trials in each pass (about 4.5 minutes)
-    nPasses = 5; % The number of nTrialsPerPass trial passes for each triplet
-    nStimsPerPass = 4; % The number of triplets that will be intermixed in a pass
+    % The reference and test contrast levels in db multipliers of threshold
+    refContrastSetDb = p.Results.refContrastSetDb;
+    testContrastSetDb = p.Results.testContrastSetDb;
+    % The reference and test frequencies
+    testFreqSetHz = p.Results.testFreqSetHz;
+    refFreqSetHz = p.Results.refFreqSetHz;
 
-    % Check that we each session will have the same number of trials for
-    % each triplet
-    assert( mod(nTrialsPerPass,nStimsPerPass)==0 );
+    % The first thing is we need to calculate absolute device contrast
+    % levels corresponding to multiples of the detection contrast
+    % threshold. We load up the results for this subject and mod direction:
+    filename = fullfile(saveModDir,'CDT','ContrastThresholdByFreq.mat');
+    load(filename,'deviceContrastByFreqHz');
 
-    % Check that we can do an integer number of sessions
-    assert( mod((length(refContrastSetDb)*length(testContrastSetDb)*length(testFreqSetHz)*nPasses),(nStimsPerPass/nTrialsPerPass))==0 );
+    % Calculate the device contrast attenuation across frequency; we need
+    % this to check that our modulations will be within gamut
+    deviceAttenuation = contrastAttentionByFreq(refFreqSetHz);
+
+    % Now create a matrix of frequency x contrast levels, where each entry
+    % is the absolute device contrast to be used for reference stimuli
+    refContrastSetMatrix = [];
+    for ii=1:length(refContrastSetDb)
+        % We express the desired contrast levels in terms of decibels of
+        % threshold contrast. Here we convert the Db value to a power
+        % multiple, and then apply that scaling to function that provides
+        % an interpolated absolute device contrast value as a function of
+        refContrastSetMatrix(ii,:) = ...
+            db2pow(refContrastSetDb(ii)) .* ...
+            deviceContrastByFreqHz(refFreqSetHz);
+        % Check that none of the values exceed the maximum available device
+        % contrast modulation after correcting for device attenuation at
+        % higher temporal frequencies
+        if any((refContrastSetMatrix(ii,:)./deviceAttenuation) > 1)
+            error('A reference contrast is out of gamut; adjust the db range')
+        end
+    end
+
+    % Now do the same for the testContrastSetMatrix
+    deviceAttenuation = contrastAttentionByFreq(testFreqSetHz);
+    testContrastSetMatrix = [];
+    for ii=1:length(testContrastSetDb)
+        testContrastSetMatrix(ii,:) = ...
+            db2pow(testContrastSetDb(ii)) .* ...
+            deviceContrastByFreqHz(testFreqSetHz);
+        if any((testContrastSetMatrix(ii,:)./deviceAttenuation) > 1)
+            error('A test contrast is out of gamut; adjust the db range')
+        end
+    end
+
+    % The number of stims and trials
+    nStims = length(testContrastSetDb)*length(testFreqSetHz)*length(refContrastSetDb);
+    nTrialsPerStim = 80; % Total n trials per stimulus
+    nTrialsPerSession = 40; % ntrials in a session
+    nStimsPerSession = 4; % n stimuli that will be intermixed in a session
+    nTrialsPerSearch = 80; % n trials before resetting the QP search
+
+    % Check that we will have an integer number of trials for each stimulus
+    % type within a session
+    assert( mod(nTrialsPerSession,nStimsPerSession)==0 );
+    nTrialsPerStimPerSession = nTrialsPerSession/nStimsPerSession;
+
+    % Check that we can have an integer number of sessions before we reset
+    % the QP search
+    assert( mod(nTrialsPerSearch,nTrialsPerStimPerSession)==0 );
+    
+    % Check that we will have an integer number of sessions
+    assert( mod(nStims*nTrialsPerStim,nTrialsPerSession)==0);
 
     % Store the values
     measurementRecord.subjectProperties.subjectID = subjectID;
-    measurementRecord.subjectProperties.modDirection = modDirection;
-    measurementRecord.subjectProperties.observerAgeInYears = observerAgeInYears;
-    measurementRecord.subjectProperties.pupilDiameterMm = pupilDiameterMm;
+    measurementRecord.subjectProperties.observerAgeInYears = p.Results.observerAgeInYears;
+    measurementRecord.experimentProperties.modDirection = modDirection;
+    measurementRecord.experimentProperties.psychType = psychType;
+    measurementRecord.experimentProperties.pupilDiameterMm = p.Results.pupilDiameterMm;
     measurementRecord.stimulusProperties.refContrastSetDb = refContrastSetDb;
     measurementRecord.stimulusProperties.testContrastSetDb = testContrastSetDb;
     measurementRecord.stimulusProperties.testFreqSetHz = testFreqSetHz;
-    measurementRecord.experimentProperties.nTrialsPerPass = nTrialsPerPass;
-    measurementRecord.experimentProperties.nPasses = nPasses;
-    measurementRecord.experimentProperties.nStimsPerPass = nStimsPerPass;
-    measurementRecord.trialCount = zeros(length(refContrastSetDb),length(testContrastSetDb),length(testFreqSetHz));
+    measurementRecord.stimulusProperties.refFreqSetHz = refFreqSetHz;
+    measurementRecord.stimulusProperties.refContrastSetMatrix = refContrastSetMatrix;
+    measurementRecord.stimulusProperties.testContrastSetMatrix = testContrastSetMatrix;
+    measurementRecord.experimentProperties.nTrialsPerStim = nTrialsPerStim;
+    measurementRecord.experimentProperties.nTrialsPerSession = nTrialsPerSession;
+    measurementRecord.experimentProperties.nStimsPerSession = nStimsPerSession;
+    measurementRecord.experimentProperties.nTrialsPerSearch = nTrialsPerSearch;
+    measurementRecord.trialCount = zeros(length(testContrastSetDb),length(testFreqSetHz),length(refContrastSetDb));
     measurementRecord.sessionData = [];
+
+    % Save the file
+    filename = fullfile(saveDataDir,'measurementRecord.mat');
     save(filename,'measurementRecord');
 end
 
-% Define the parameter space within which we will make measurements
-nRefContrasts = length(refContrastSetDb);
-nTestContrasts = length(testContrastSetDb);
-nTestFreqs = length(testFreqSetHz);
-
-% Select the triplets to test for this pass. We select randomly from the
-% set of triplets that have the lowest number of collected trials.
+% Select the stimuli to test for this session. We select randomly from the
+% set of stimuli that have the lowest number of collected trials.
 trialCountSet = sort(unique(measurementRecord.trialCount(:)));
 
 % First check if we are done
-if min(trialCountSet) >= (nTrialsPerPass*nPasses)
+if min(trialCountSet) >= nTrialsPerStim
     fprintf('Done with this experiment!\n')
     return
 end
 
 % Find some stimuli that need measuring
 countSetIdx = 1;
-nPassesStillNeeded = nStimsPerPass;
-passIdx = [];
+nStimsStillNeeded = nStimsPerSession;
+stimIdx = [];
 stillLooking = true;
 while stillLooking
-    availPassIdx = find(measurementRecord.trialCount==trialCountSet(countSetIdx));
-    nAvail = length(availPassIdx);
+    availStimIdx = find(measurementRecord.trialCount==trialCountSet(countSetIdx));
+    nAvail = length(availStimIdx);
     if nAvail == 0
         countSetIdx = countSetIdx+1;
-        if min(measurementRecord.trialCount(:))<=(nPasses*nTrialsPerPass)
+        if min(measurementRecord.trialCount(:))>=nTrialsPerStim
             fprintf('Done with this experiment!\n')
-            stillLooking = false;
             return
         end
     end
-    if nAvail >= nPassesStillNeeded
-        availPassIdx = availPassIdx(randperm(length(availPassIdx)));
-        passIdx = [passIdx availPassIdx(1:nPassesStillNeeded)];
+    if nAvail >= nStimsStillNeeded
+        availStimIdx = availStimIdx(randperm(length(availStimIdx)));
+        stimIdx = [stimIdx; availStimIdx(1:nStimsStillNeeded)];
         stillLooking = false;
     end
-    if nAvail < nStimsPerPass
-        availPassIdx = availPassIdx(randperm(length(availPassIdx)));
-        passIdx = [passIdx availPassIdx];
-        nPassesStillNeeded = nPassesStillNeeded - length(availPassIdx);
-        countSetIdx = 2;
+    if nAvail < nStimsStillNeeded
+        availStimIdx = availStimIdx(randperm(length(availStimIdx)));
+        stimIdx = [stimIdx; availStimIdx];
+        nStimsStillNeeded = nStimsStillNeeded - length(availStimIdx);
+        countSetIdx = countSetIdx+1;
     end
 end
 
-% Randomly order the passIdx, so that the order of the intermixed stimuli
+% Randomly order the stimIdx, so that the order of the intermixed stimuli
 % will vary on every pass
-passIdx = passIdx(randperm(length(passIdx)));
+stimIdx = stimIdx(randperm(length(stimIdx)));
 
 % Set up the variables that hold this session information
 fprintf('Preparing psychometric objects...');
 sessionData = struct();
-sessionData.passIdx = passIdx;
-for ii=1:nStimsPerPass
-    [IdxX,IdxY,IdxZ] = ind2sub([nRefContrasts, nTestContrasts, nTestFreqs],passIdx(ii));
-    sessionData.measureIdx(ii,:) = [IdxX,IdxY,IdxZ];
-    sessionData.ReferenceContrast(ii) = refContrastSetDb(IdxX);
-    sessionData.TestContrast(ii) = testContrastSetDb(IdxY);
-    sessionData.TestFrequency(ii) = testFreqSetHz(IdxZ);
-    sessionData.fileStem{ii} = [subjectID '_' modDirection ...
-        '_' strrep(num2str(sessionData.ReferenceContrast(ii)),'.','x') ...
-        '_' strrep(num2str(sessionData.TestContrast(ii)),'.','x') ...
-        '_' strrep(num2str(sessionData.TestFrequency(ii)),'.','x')];
-
+sessionData.stimIdx = stimIdx;
+for ii=1:nStimsPerSession
+    [IdxX,IdxY,IdxZ] = ind2sub([length(testContrastSetDb),length(testFreqSetHz),length(refContrastSetDb)],stimIdx(ii));
+    sessionData.measureIdx(ii) = stimIdx(ii);
+    sessionData.testContrastDb(ii) = testContrastSetDb(IdxX);
+    sessionData.testFreqHz(ii) = testFreqSetHz(IdxY);
+    sessionData.refContrastDb(ii) = refContrastSetDb(IdxZ);    
+    sessionData.fileStem{ii} = [subjectID '_' modDirection '_' psychType ...
+        '_' strrep(num2str(sessionData.testContrastDb(ii)),'.','x') ...
+        '_' strrep(num2str(sessionData.testFreqHz(ii)),'.','x') ...
+        '_' strrep(num2str(sessionData.refContrastDb(ii)),'.','x')];
+    % Assemble the stimulus inputs
+    testFreqHz = sessionData.testFreqHz(ii);
+    testContrast = testContrastSetMatrix(IdxX,IdxY);
+    refContrastVector = refContrastSetMatrix(IdxZ,:);
     % Create or load the psychometric objects
     filename = fullfile(saveDataDir,[sessionData.fileStem{ii} '.mat']);
     if isfile(filename)
@@ -196,19 +269,21 @@ for ii=1:nStimsPerPass
         sessionObj{ii}.initializeDisplay;
     else
         sessionObj{ii} = PsychDoubleRefAFC(CombiLEDObj,...
-            sessionData.TestContrast(ii),sessionData.TestFrequency(ii),sessionData.ReferenceContrast(ii),...
-            'refFreqSetHz',refFreqSetHz,...
+            testFreqHz,testContrast,refFreqSetHz,refContrastVector,...
+            'giveFeedback',false,...
             'simulateStimuli',simulateStimuli,...
-            'simulateResponse',simulateStimuli,...
+            'simulateResponse',simulateResponse,...
             'verbose',verbosePsychObj);
     end
     % Clear out the first, bad "getResponse". Not sure why but the first
     % call to this function after restart always fails. This fixes the
     % problem
-    storeResponseDur = sessionObj{ii}.responseDurSecs;
-    sessionObj{ii}.responseDurSecs = 0.1;
-    sessionObj{ii}.getResponse;
-    sessionObj{ii}.responseDurSecs = storeResponseDur;
+    if ~simulateResponse
+        storeResponseDur = sessionObj{ii}.responseDurSecs;
+        sessionObj{ii}.responseDurSecs = 0.1;
+        sessionObj{ii}.getResponse;
+        sessionObj{ii}.responseDurSecs = storeResponseDur;
+    end
     % Update the console text
     fprintf([num2str(ii) '...']);
 end
@@ -221,21 +296,20 @@ if ~simulateResponse
 end
 
 % Store the block start time
-for ii=1:nStimsPerPass
+for ii=1:nStimsPerSession
     sessionObj{ii} .blockStartTimes(end+1) = datetime();
 end
 
-% Present nTrialsPerPass (should be about 5 minutes). We repeat trials that
-% did not elicit a valid response (wrong key, or outside of response
-% interval)
+% Present nTrialsPerSession. We repeat trials that did not elicit a valid
+% response (wrong key, or outside of response interval)
 psychObjIdx = 1;
 trialIdx = 1;
-while trialIdx<=nTrialsPerPass
+while trialIdx<=nTrialsPerSession
     validResponse = sessionObj{psychObjIdx}.presentTrial;
     if validResponse
         trialIdx = trialIdx + 1;
         psychObjIdx = psychObjIdx + 1;
-        if psychObjIdx > nStimsPerPass
+        if psychObjIdx > nStimsPerSession
             psychObjIdx = 1;
         end
     end
@@ -252,10 +326,19 @@ if ~simulateResponse
     doneSound = [highTone midTone lowTone];
     donePlayer = audioplayer(doneSound,Fs);
     donePlayer.play;
+    pause(0.5);
+end
+
+% Check if we should reset the search for any of our psych objects
+for ii=1:nStimsPerSession
+    nCompletedTrials = measurementRecord.trialCount(sessionData.stimIdx(ii))+(nTrialsPerSession/nStimsPerSession);
+    if mod(nCompletedTrials,nTrialsPerSearch)==0
+        sessionObj{ii}.resetSearch;
+    end
 end
 
 % Save the sessionObjs and create and save an updated figure
-for ii=1:nStimsPerPass
+for ii=1:nStimsPerSession
     % psychometric object
     fileStem = sessionData.fileStem{ii};
     filename = fullfile(saveDataDir,[fileStem '.mat']);
@@ -283,11 +366,12 @@ for ff = 1:length(fields)
 end
 
 % Update the trialCount record
-measurementRecord.trialCount(sessionData.passIdx) = ...
-    measurementRecord.trialCount(sessionData.passIdx)+(nTrialsPerPass/nStimsPerPass);
+measurementRecord.trialCount(sessionData.stimIdx) = ...
+    measurementRecord.trialCount(sessionData.stimIdx)+(nTrialsPerSession/nStimsPerSession);
 
 % Save it
 filename = fullfile(saveDataDir,'measurementRecord.mat');
 save(filename,'measurementRecord');
 
 end
+

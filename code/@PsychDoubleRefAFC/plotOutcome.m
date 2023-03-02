@@ -8,7 +8,7 @@ end
 questData = obj.questData;
 
 % Transform the stimulus set to relative log space
-refFreqSetRelative = obj.forwardTransformVals(obj.refFreqSetHz,obj.testFrequency);
+refFreqSetRelative = obj.forwardTransformVals(obj.refFreqSetHz,obj.testFreqHz);
 
 % Plot trial locations together with maximum likelihood fit. Point
 % transparancy visualizes number of trials (more opaque -> more trials),
@@ -75,8 +75,8 @@ ylabel('entropy');
 title('Entropy by trial number')
 
 % Add a supertitle
-str = sprintf('Cref = %2.2f; Ctest = %2.2f; Ftest = %d Hz; params = [%2.3f, %2.3f, %2.3f]',...
-    obj.ReferenceContrast,obj.testContrast,obj.testFreqHz,psiParamsFit);
+str = sprintf('test contrast = %2.2f; test freq = %d Hz; params = [%2.3f, %2.3f, %2.3f]',...
+    obj.testContrast,obj.testFreqHz,psiParamsFit);
 sgtitle(str);
 
 end
