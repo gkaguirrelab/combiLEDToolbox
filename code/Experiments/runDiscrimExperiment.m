@@ -15,8 +15,8 @@ function runDiscrimExperiment(subjectID,modDirection,varargin)
 
 % Parse the parameters
 p = inputParser; p.KeepUnmatched = false;
-p.addParameter('refContrastSetDb',[4,8],@isnumeric);
-p.addParameter('testContrastSetDb',[2,4,6,8,10],@isnumeric);
+p.addParameter('refContrastSetDb',[6,10],@isnumeric);
+p.addParameter('testContrastSetDb',[4,6,8,10,12],@isnumeric);
 p.addParameter('refFreqSetHz',[4,5,6,8,10,12,14,16,20,24,28,32,40],@isnumeric);
 p.addParameter('testFreqSetHz',[6,10,14,20,28],@isnumeric);
 p.addParameter('dataDirRoot','~/Desktop/flickerPsych',@ischar);
