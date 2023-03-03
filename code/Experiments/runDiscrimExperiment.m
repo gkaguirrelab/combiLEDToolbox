@@ -3,10 +3,8 @@ function runDiscrimExperiment(subjectID,modDirection,varargin)
 % of stimulus parameters in a measurement of the double-reference 2AFC
 % technique of Jogan & Stocker. The code manages a series of files that
 % store the data from the experiment. As configured, each testing "session"
-% has 20 trials and is about 4 minutes in duration. A complete measurement
-% of 100 trials for each of the 50 triplets, would take 4*(100*50)/20
-%
-%   16 hours 40 mins = 4*(100*50)/20
+% has 40 trials and is about 8 minutes in duration. A complete measurement
+% of 80 trials for each of the 50 triplets requires 100 sessions.
 %
 %{
     subjectID = 'HERO_gka';
@@ -17,18 +15,18 @@ function runDiscrimExperiment(subjectID,modDirection,varargin)
 
 % Parse the parameters
 p = inputParser; p.KeepUnmatched = false;
-p.addParameter('refContrastSetDb',[5.5, 8.5],@isnumeric);
-p.addParameter('testContrastSetDb',linspace(4,10,5),@isnumeric);
+p.addParameter('refContrastSetDb',[4,8],@isnumeric);
+p.addParameter('testContrastSetDb',[2,4,6,8,10],@isnumeric);
 p.addParameter('refFreqSetHz',[4,5,6,8,10,12,14,16,20,24,28,32,40],@isnumeric);
 p.addParameter('testFreqSetHz',[6,10,14,20,28],@isnumeric);
 p.addParameter('dataDirRoot','~/Desktop/flickerPsych',@ischar);
 p.addParameter('observerAgeInYears',25,@isnumeric);
 p.addParameter('fieldSizeDegrees',30,@isnumeric);
 p.addParameter('pupilDiameterMm',4.2,@isnumeric);
-p.addParameter('simulateStimuli',true,@islogical);
-p.addParameter('simulateResponse',true,@islogical);
+p.addParameter('simulateStimuli',false,@islogical);
+p.addParameter('simulateResponse',false,@islogical);
 p.addParameter('verboseCombiLED',false,@islogical);
-p.addParameter('verbosePsychObj',true,@islogical);
+p.addParameter('verbosePsychObj',false,@islogical);
 p.addParameter('updateFigures',false,@islogical);
 p.parse(varargin{:})
 
@@ -273,6 +271,8 @@ for ii=1:nStimsPerSession
             'giveFeedback',false,...
             'simulateStimuli',simulateStimuli,...
             'simulateResponse',simulateResponse,...
+            'refContrastLabel',num2str(sessionData.refContrastDb(ii),2),...
+            'testContrastLabel',num2str(sessionData.testContrastDb(ii),2),...
             'verbose',verbosePsychObj);
     end
     % Clear out the first, bad "getResponse". Not sure why but the first
@@ -329,13 +329,13 @@ if ~simulateResponse
     pause(0.5);
 end
 
-% Check if we should reset the search for any of our psych objects
-for ii=1:nStimsPerSession
-    nCompletedTrials = measurementRecord.trialCount(sessionData.stimIdx(ii))+(nTrialsPerSession/nStimsPerSession);
-    if mod(nCompletedTrials,nTrialsPerSearch)==0
-        sessionObj{ii}.resetSearch;
-    end
-end
+% % Check if we should reset the search for any of our psych objects
+% for ii=1:nStimsPerSession
+%     nCompletedTrials = measurementRecord.trialCount(sessionData.stimIdx(ii))+(nTrialsPerSession/nStimsPerSession);
+%     if mod(nCompletedTrials,nTrialsPerSearch)==0
+%         sessionObj{ii}.resetSearch;
+%     end
+% end
 
 % Save the sessionObjs and create and save an updated figure
 for ii=1:nStimsPerSession

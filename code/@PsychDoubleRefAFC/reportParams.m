@@ -42,7 +42,7 @@ if options.nBoots>0
     for bb=1:options.nBoots
         bootTrialData = trialDataSource;
         for ss=1:length(stimCounts)
-            idxSource=find([questData.trialData.stim]==stimCounts(ss).stim);
+            idxSource=find(all(cell2mat(arrayfun(@(x) x.stim,questData.trialData,'UniformOutput',false))==stimCounts(ss).stim,2));
             idxBoot=datasample(idxSource,length(idxSource));
             bootTrialData(idxSource)=trialDataSource(idxBoot);
         end

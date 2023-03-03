@@ -49,6 +49,11 @@ classdef PsychDoubleRefAFC < handle
         % can set it to be brief during object
         % initiation when we clear the responses
         responseDurSecs = 3;
+
+        % Labels to identify the contrast levels used. For example, this
+        % might be the number of decibels relative to the threshold
+        refContrastLabel
+        testContrastLabel
         
     end
 
@@ -66,7 +71,9 @@ classdef PsychDoubleRefAFC < handle
             p.addParameter('simulatePsiParams',[0.15, 0.05, -0.15],@isnumeric);
             p.addParameter('psiParamsDomainList',{linspace(0,0.5,51), ...
                 linspace(0,0.5,51),...
-                linspace(-0.25,0.25,51)},@isnumeric);
+                linspace(-0.25,0.25,51)},@isnumeric);            
+            p.addParameter('testContrastLabel','undefined',@ischar);
+            p.addParameter('refContrastLabel','undefined',@ischar);
             p.addParameter('verbose',true,@islogical);
             p.parse(varargin{:})
 
@@ -82,6 +89,8 @@ classdef PsychDoubleRefAFC < handle
             obj.giveFeedback = p.Results.giveFeedback;
             obj.simulatePsiParams = p.Results.simulatePsiParams;
             obj.psiParamsDomainList = p.Results.psiParamsDomainList;
+            obj.testContrastLabel = p.Results.testContrastLabel;            
+            obj.refContrastLabel = p.Results.refContrastLabel;            
             obj.verbose = p.Results.verbose;
 
             % Detect incompatible simulate settings

@@ -52,7 +52,7 @@ for ii=1:length(fileStems)
     % Save the plot
     filename = fullfile(saveDataDir,[fileStems{ii} '.pdf']);
     saveas(figHandle,filename,'pdf')
-    close(figHandle)    
+    close(figHandle)
     % Now do psychType specific parameter saving
     switch psychType
         case 'CDT'
@@ -63,6 +63,14 @@ for ii=1:length(fileStems)
             results(ii).logContrastThresh = fitParams(1);
             results(ii).logContrastThreshLow = fitParamsCI(1,1);
             results(ii).logContrastThreshHigh = fitParamsCI(2,1);
+        case 'DoubleRef'
+            nBoots = 200; confInterval = 0.68;
+            [~,fitParams,fitParamsCI] = psychObj.reportParams(...
+                'nBoots',nBoots,'confInterval',confInterval);
+            results(ii).freqHz = psychObj.testFreqHz;
+            results(ii).fitParams = fitParams;
+            results(ii).fitParamsCI = fitParamsCI;
+
     end
 end
 
@@ -123,6 +131,11 @@ switch psychType
         % save the key results
         filename = fullfile(saveDataDir,'ContrastThresholdByFreq.mat');
         save(filename,'results','deviceContrastByFreqHz');
+    case 'DoubleRef'
+        % save the key results
+        filename = fullfile(saveDataDir,'DoubleRef2AFCDiscrim.mat');
+        save(filename,'results');
+
 end
 
 end
