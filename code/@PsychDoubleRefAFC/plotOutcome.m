@@ -26,7 +26,7 @@ for cc = 1:length(stimCounts)
     pChooseR2(cc) = stimCounts(cc).outcomeCounts(2)/nTrials(cc);
 end
 markerSizeIdx = discretize(nTrials,3);
-markerSizeSet = [25,50, 100];
+markerSizeSet = [12,25,50];
 for cc = 1:length(stimCounts)
     scatter(stim(cc,2),stim(cc,1),markerSizeSet(markerSizeIdx(cc)),'o', ...
         'MarkerFaceColor',[pChooseR2(cc) 0 1-pChooseR2(cc)], ...
@@ -35,8 +35,8 @@ for cc = 1:length(stimCounts)
     hold on
 end
 axis square
-xlim([min(refFreqSetRelative)*1.1, max(refFreqSetRelative)]*1.1);
-ylim([min(refFreqSetRelative)*1.1, max(refFreqSetRelative)]*1.1);
+xlim([-1 1]);
+ylim([-1 1]);
 xlabel('ref2 [difference in log freq from test]');
 ylabel('ref1 [difference in log freq from test]');
 set(gca, 'YDir','reverse')
@@ -54,13 +54,13 @@ obj.verbose = storeVerbose;
 for r1 = refFreqSetRelative
     for r2 = refFreqSetRelative
         pChooseR2 = qpPFJoganStocker([r1,r2],psiParamsFit);
-        h = scatter(r2,r1,100,'o','MarkerEdgeColor','none','MarkerFaceColor',[pChooseR2(2) 0 pChooseR2(1)],...
+        h = scatter(r2,r1,25,'o','MarkerEdgeColor','none','MarkerFaceColor',[pChooseR2(2) 0 pChooseR2(1)],...
             'MarkerFaceAlpha',1,'MarkerEdgeAlpha',1);
     end
 end
 axis square
-xlim([min(refFreqSetRelative)*1.1, max(refFreqSetRelative)]*1.1);
-ylim([min(refFreqSetRelative)*1.1, max(refFreqSetRelative)]*1.1);
+xlim([-1 1]);
+ylim([-1 1]);
 xlabel('ref2 [difference in log freq from test]');
 ylabel('ref1 [difference in log freq from test]');
 set(gca, 'YDir','reverse')

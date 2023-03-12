@@ -20,14 +20,14 @@ function probPickR2 = qpPFJoganStocker(stimParams,psiParams)
 %   rSigma, tSigma          - Noise parameters for the reference and the
 %                             test
 %   bias                    - Scalar. Difference between perceived value 
-%                             and true value of test (in units of rVal,
-%                             tVal)
+%                             and true value of test (in units of rSigma,
+%                             tSigma)
 %
 % Inputs:
-%     stimParams          - nx3 matrix. Each row contains the stimulus
+%     stimParams          - nx2 matrix. Each row contains the stimulus
 %                           parameters: ref1Val, ref2Val
 %     psiParams           - nx3 matrix. Each row has the psychometric
-%                           parameters: rSigma, tSigma, tVal
+%                           parameters: rSigma, tSigma, bias
 %
 % Output:
 %     probPickR2          - nx2 matrix, where each row is a vector of 
@@ -55,7 +55,7 @@ end
 %% Grab params
 r1Val = stimParams(:,1);
 r2Val = stimParams(:,2);
-tVal = 0; % We could the rVals relative to the tVal;
+tVal = 0; % We code the r2Val relative to the r1Val;
 rSigma = psiParams(:,1);
 tSigma = psiParams(:,2);
 bias = psiParams(:,3);

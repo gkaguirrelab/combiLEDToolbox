@@ -67,7 +67,10 @@ for ii=1:length(fileStems)
             nBoots = 200; confInterval = 0.68;
             [~,fitParams,fitParamsCI] = psychObj.reportParams(...
                 'nBoots',nBoots,'confInterval',confInterval);
-            results(ii).freqHz = psychObj.testFreqHz;
+            results(ii).refContrastDb = str2double(psychObj.testContrastLabel);
+            results(ii).testContrastDb = str2double(psychObj.refContrastLabel);
+            results(ii).testFreqHz = psychObj.testFreqHz;
+            % The params are in the order rSigma, tSigma, bias
             results(ii).fitParams = fitParams;
             results(ii).fitParamsCI = fitParamsCI;
 
@@ -135,7 +138,72 @@ switch psychType
         % save the key results
         filename = fullfile(saveDataDir,'DoubleRef2AFCDiscrim.mat');
         save(filename,'results');
+        % Make a figure
+        figHandle = figure();
+        figuresize(600, 200,'pt');
+        % Plot rSigma vs. reference contrast.
+        subplot(1,3,1);
+        hold on
+        levelSet = unique([results.refContrastDb]);
+        % Create a weighted average of rSigma values at each reference
+        % contrast level
+        for ii=1:length(levelSet)
+            idx = find(levelSet(ii) == [results.refContrastDb]);
+            vals = reshape([results(idx).fitParams],3,length(idx));
+            vals = vals(1,:);
+            weights = reshape(diff([results(idx).fitParamsCI],1),3,length(idx));
+            weights = weights(1,:);
+            weights = 1./weights;
+            weights(isinf(weights)) = max(weights(~isinf(weights)));
+            val = sum(vals.*weights)./sum(weights);
+            plot(levelSet(ii),val,'or')
+        end
+        xlim([2 14]);
+        xlabel('ref contrast [Dbs of threshold]')
+        ylabel('modulation contrast [0-1]')
+        title('ref noise sigma')
 
+        % Plot tSigma vs. reference contrast.
+        subplot(1,3,2);
+        hold on
+        levelSet = unique([results.testContrastDb]);
+        % Create a weighted average of rSigma values at each reference
+        % contrast level
+        for ii=1:length(levelSet)
+            idx = find(levelSet(ii) == [results.testContrastDb]);
+            vals = reshape([results(idx).fitParams],3,length(idx));
+            vals = vals(2,:);
+            weights = reshape(1./diff([results(idx).fitParamsCI],1),3,length(idx));
+            weights = weights(2,:);
+            weights(isinf(weights)) = max(weights(~isinf(weights)));
+            val = sum(vals.*weights)./sum(weights);
+            plot(levelSet(ii),val,'or')
+        end
+        xlim([2 14]);
+        xlabel('test contrast [Dbs of threshold]')
+        ylabel('modulation contrast [0-1]')
+        title('test noise sigma')
+
+        % Plot bias vs. test frequency
+        subplot(1,3,3);
+        hold on
+        levelSet = unique([results.testFreqHz]);
+        % Create a weighted average of bias values at each test freq
+        for ii=1:length(levelSet)
+            idx = find(levelSet(ii) == [results.testFreqHz]);
+            vals = reshape([results(idx).fitParams],3,length(idx));
+            vals = vals(3,:);
+            weights = reshape(1./diff([results(idx).fitParamsCI],1),3,length(idx));
+            weights = weights(3,:);
+            weights(isinf(weights)) = max(weights(~isinf(weights)));
+            val = sum(vals.*weights)./sum(weights);
+            plot(log10(levelSet(ii)),val,'or')
+        end
+        xlim([0.5 1.5]);
+        xlabel('test freq [log Hz]')
+        ylabel('bias')
+        title('test bias')
+        
 end
 
 end
