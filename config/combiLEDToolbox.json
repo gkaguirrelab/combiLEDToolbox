@@ -3,7 +3,7 @@
         "flavor": "",
         "hook": "",
         "importance": "",
-        "localHookTemplate": "configuration/combiLEDToolboxLocalHookTemplate.m",
+        "localHookTemplate": "config/combiLEDToolboxLocalHookTemplate.m",
         "printLocalHookOutput": "1",
         "name": "combiLEDToolbox",
         "pathPlacement": "append",

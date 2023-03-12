@@ -25,13 +25,36 @@ function combiLEDToolboxLocalHook
 %
 
 
-%% Say hello.
+% Say hello.
 projectName = 'combiLEDToolbox';
 
-
-%% Delete any old prefs
+% Delete any old prefs
 if (ispref(projectName))
     rmpref(projectName);
 end
+
+% Obtain the Dropbox path
+[~,hostname] = system('hostname');
+hostname = strtrim(lower(hostname));
+
+% Handle hosts with custom dropbox locations
+switch hostname
+    case 'gka-macbook.local'
+        [~, userName] = system('whoami');
+        userName = strtrim(userName);
+        dropBoxUserFullName = 'Geoffrey Aguirre';
+        assert(strcmp(userName,'aguirre'));
+        dropboxBaseDir = fullfile(filesep,'Users',userName,...
+            'Aguirre-Brainard Lab Dropbox',dropBoxUserFullName);
+    otherwise
+        [~, userName] = system('whoami');
+        userName = strtrim(userName);
+        dropboxBaseDir = ...
+            fullfile('/Users', userName, ...
+            'Aguirre-Brainard Lab Dropbox', userName);
+end
+
+% Set preferences for project output
+setpref(projectName,'dropboxBaseDir',dropboxBaseDir); % main directory path 
 
 end
