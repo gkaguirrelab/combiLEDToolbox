@@ -47,7 +47,7 @@ calFileName = GetWithDefault('Name for the cal file',defaultName);
 OpenSpectroradiometer('measurementOption',false);
 
 % Create the radiometer object
-radiometerOBJ = OLOpenSpectroRadiometerObj('PR-670');
+radiometerOBJ = openSpectroRadiometerObj('PR-670');
 
 % Generate the calibrator object
 calibratorOBJ = generateCalibratorObject(displaySettings, radiometerOBJ, mfilename);
