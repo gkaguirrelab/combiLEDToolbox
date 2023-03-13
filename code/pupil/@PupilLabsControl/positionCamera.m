@@ -8,7 +8,7 @@ end
 % Prepare a figure
 figHandle = figure();
 ButtonHandle = uicontrol('Style', 'PushButton', ...
-    'String', 'Stop loop', ...
+    'String', 'Done adjusting', ...
     'Callback', 'delete(gcbf)');
 
 % Enter the camera adjustment loop
@@ -18,6 +18,7 @@ while stillRecording
     % Record a video snippet
     tmpVid = [tempname '.mp4'];
     vidCommand = obj.recordCommand;
+    vidCommand = strrep(vidCommand,'cameraIdx',num2str(obj.cameraIdx));
     vidCommand = strrep(vidCommand,'trialDurationSecs','0.33');
     vidCommand = strrep(vidCommand,'videoFileOut.mp4',tmpVid);
     system(vidCommand);

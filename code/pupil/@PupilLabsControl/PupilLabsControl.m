@@ -13,7 +13,7 @@ classdef PupilLabsControl < handle
     % Calling function can see, but not modify
     properties (SetAccess=private)
         dataOutDir
-        cameraIdx = '1';
+        cameraIdx = '0';
         trialIdx = 1;
         trialData = [];
     end

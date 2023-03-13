@@ -3,6 +3,7 @@ function recordTrial(obj)
 % Define the video recording command
 vidOutFile = fullfile(obj.dataOutDir,sprintf('trial_%02d.mp4',obj.trialIdx));
 vidCommand = obj.recordCommand;
+vidCommand = strrep(vidCommand,'cameraIdx',num2str(obj.cameraIdx));
 vidCommand = strrep(vidCommand,'trialDurationSecs',num2str(obj.trialDurationSecs));
 vidCommand = strrep(vidCommand,'videoFileOut.mp4',vidOutFile);
 
