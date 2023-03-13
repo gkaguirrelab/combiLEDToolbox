@@ -26,12 +26,12 @@ while stillRecording
     vidCommand = strrep(vidCommand,'cameraIdx',num2str(obj.cameraIdx));
     vidCommand = strrep(vidCommand,'trialDurationSecs','0.33');
     vidCommand = strrep(vidCommand,'videoFileOut.mp4',tmpVid);
-    [foo,bar] = system(vidCommand);
+    [~,~] = system(vidCommand);
 
     % Extact the mid time point of that snippet
     tmpIm = [tempname '.jpg'];
     extractCommand = ['ffmpeg -ss 00:00:00.17 -i ' tmpVid ' -vframes 1 -q:v 2 ' tmpIm];
-    [foo,bar] = system(extractCommand);
+    [~,~] = system(extractCommand);
 
     % Display the image
     im = imread(tmpIm);

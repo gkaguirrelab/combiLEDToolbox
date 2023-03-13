@@ -10,15 +10,21 @@ vidCommand = strrep(vidCommand,'videoFileOut.mp4',vidOutFile);
 % Store this trial data
 obj.trialData(obj.trialIdx).startTime = datetime;
 obj.trialData(obj.trialIdx).vidOutFile = vidOutFile;
+obj.trialData(obj.trialIdx).backgroundRecording = obj.backgroundRecording;
 
 % Alert the user
 if obj.verbose
     fprintf('starting trial %d...',obj.trialIdx)
 end
 
+% Determine if we are recording in the background
+if obj.backgroundRecording
+    vidCommand = [vidCommand ' &'];
+end
+
 % Start the recording
 tic;
-[foo,bar] = system(vidCommand);
+[~,~] = system(vidCommand);
 elapsedTimeSecs = toc;
 
 % Record the finish time

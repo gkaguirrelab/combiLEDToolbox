@@ -25,6 +25,9 @@ classdef PupilLabsControl < handle
         % How long to record
         trialDurationSecs = 4;
 
+        % How long to record
+        backgroundRecording = true;
+
         % Verbosity
         verbose = true;
         
@@ -40,10 +43,12 @@ classdef PupilLabsControl < handle
             p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
             p.addParameter('projectName','combiLED',@ischar);
             p.addParameter('approachName','pupillometry',@ischar);
+            p.addParameter('backgroundRecording',true,@islogical);
             p.addParameter('verbose',true,@islogical);
             p.parse(varargin{:})
 
             % Place various inputs and options into object properties
+            obj.backgroundRecording = p.Results.backgroundRecording;
             obj.verbose = p.Results.verbose;
 
             % Define the dir in which to save pupil videos
@@ -63,6 +68,6 @@ classdef PupilLabsControl < handle
         % Required methds
         identifyCamera(obj)
         positionCamera(obj)
-        collectTrial(obj)
+        recordTrial(obj)
     end
 end
