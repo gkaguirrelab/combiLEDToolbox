@@ -8,8 +8,8 @@ vidCommand = strrep(vidCommand,'trialDurationSecs',num2str(obj.trialDurationSecs
 vidCommand = strrep(vidCommand,'videoFileOut.mp4',vidOutFile);
 
 % Store this trial data
-obj.trialData(trialIdx).startTime = datetime;
-obj.trialData(trialIdx).vidOutFile = vidOutFile;
+obj.trialData(obj.trialIdx).startTime = datetime;
+obj.trialData(obj.trialIdx).vidOutFile = vidOutFile;
 
 % Alert the user
 if obj.verbose
@@ -17,7 +17,12 @@ if obj.verbose
 end
 
 % Start the recording
-system(vidCommand);
+tic;
+[foo,bar] = system(vidCommand);
+elapsedTimeSecs = toc;
+
+% Record the finish time
+obj.trialData(obj.trialIdx).elapsedTimeSecs = elapsedTimeSecs;
 
 % Alert the user
 if obj.verbose

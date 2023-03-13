@@ -10,9 +10,14 @@ figHandle = figure();
 ButtonHandle = uicontrol('Style', 'PushButton', ...
     'String', 'Done adjusting', ...
     'Callback', 'delete(gcbf)');
+hold on
+axis off
+set(gca, 'YDir','reverse')
 
 % Enter the camera adjustment loop
 stillRecording = true;
+firstImage = true;
+
 while stillRecording
 
     % Record a video snippet
@@ -21,17 +26,21 @@ while stillRecording
     vidCommand = strrep(vidCommand,'cameraIdx',num2str(obj.cameraIdx));
     vidCommand = strrep(vidCommand,'trialDurationSecs','0.33');
     vidCommand = strrep(vidCommand,'videoFileOut.mp4',tmpVid);
-    system(vidCommand);
+    [foo,bar] = system(vidCommand);
 
     % Extact the mid time point of that snippet
     tmpIm = [tempname '.jpg'];
     extractCommand = ['ffmpeg -ss 00:00:00.17 -i ' tmpVid ' -vframes 1 -q:v 2 ' tmpIm];
-    system(extractCommand);
+    [foo,bar] = system(extractCommand);
 
     % Display the image
-    imagesc(imread(tmpIm));
-    axis off
-    hold on
+    im = imread(tmpIm);
+    if firstImage
+        h=imagesc(im);
+        firstImage = false;
+    else
+        h.CData = im;
+    end
     drawnow
 
     % Delete the temp files
@@ -44,8 +53,5 @@ while stillRecording
     end
 
 end
-
-% Close the figure
-close(figHandle);
 
 end

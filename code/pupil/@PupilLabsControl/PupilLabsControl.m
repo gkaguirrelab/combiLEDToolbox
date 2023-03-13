@@ -7,7 +7,8 @@ classdef PupilLabsControl < handle
 
     % Private properties
     properties (GetAccess=private)
-        recordCommand = 'ffmpeg -hide_banner -video_size 640x480 -framerate 60.500094 -f avfoundation -i "cameraIdx" -t trialDurationSecs "videoFileOut.mp4"';
+%        recordCommand = 'ffmpeg -hide_banner -video_size 640x480 -framerate 60.500094 -f avfoundation -i "cameraIdx" -t trialDurationSecs "videoFileOut.mp4"';
+        recordCommand = 'ffmpeg -hide_banner -video_size 640x480 -framerate 30.0 -f avfoundation -i "cameraIdx" -t trialDurationSecs "videoFileOut.mp4"';
     end
 
     % Calling function can see, but not modify
