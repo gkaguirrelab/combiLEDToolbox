@@ -7,8 +7,14 @@ classdef PupilLabsControl < handle
 
     % Private properties
     properties (GetAccess=private)
-%        recordCommand = 'ffmpeg -hide_banner -video_size 640x480 -framerate 60.500094 -f avfoundation -i "cameraIdx" -t trialDurationSecs "videoFileOut.mp4"';
+
+        % A record command suitable for the pupilLabs camera
+        recordCommand = 'ffmpeg -hide_banner -video_size 800x600 -framerate 60.000240 -f avfoundation -i "cameraIdx" -t trialDurationSecs "videoFileOut.mp4"';
+
+        % A record command for the FaceTime camera
+        %{
         recordCommand = 'ffmpeg -hide_banner -video_size 640x480 -framerate 30.0 -f avfoundation -i "cameraIdx" -t trialDurationSecs "videoFileOut.mp4"';
+        %}
     end
 
     % Calling function can see, but not modify
