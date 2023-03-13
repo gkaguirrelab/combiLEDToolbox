@@ -30,14 +30,14 @@
 //
 // There is a minimum amount of time required to address an LED (about 250
 // microseconds). The routine will attempt to update LEDs at this interval,
-// but computational overhead results in about 850 microseconds (0.85 msecs)
+// but computational overhead results in about 870 microseconds (0.87 msecs)
 // per LED update. The program clock advances and, for each cycle, determines
 // where we are in the waveform and updates the settings on the next LED. As
 // a consequence, different LEDs oscillate at different phase delays of the
 // waveform.
 //
-// Given 8 LEDs to update, and a maximum update rate of 0.85 msecs / LED, the
-// Nyquist frequency of the device is ~147 Hz, limiting us to roughly 70 Hz as a
+// Given 8 LEDs to update, and a maximum update rate of 0.87 msecs / LED, the
+// Nyquist frequency of the device is ~140 Hz, limiting us to roughly 70 Hz as a
 // max modulation frequency. We can do better than this by limiting ourselves to
 // fewer than 8 active LEDs. If an LED has the same high and low setting value,
 // then that LED is marked as "inactive", and skipped in the sequential
@@ -90,12 +90,13 @@
 //                        4 - saw-tooth off
 //                        5 - compound modulation
 //  fmCycleDur          Scalar. The duration in microseconds of the fm waveform.
-//  phaseOffset         Float, 0-1. Used to shift the phase of the fm waveform.
+//  fmPhaseOffset       Float, 0-1. Used to shift the phase of the fm waveform.
 //  amplitudeIndex      Scalar. Defines the amplitude modulation profile:
 //                        0 - none
 //                        1 - sinusoid modulation
 //                        2 - half-cosine window
 //  amCycleDur          Scalar. The duration in microseconds of the am waveform.
+//  amPhaseOffset       Float, 0-1. Used to shift the phase of the am waveform.
 //  amplitudeVals       2x1 float array. Values control the amplitude modulation,
 //                      varying by the amplitudeIndex.
 //  blinkDurationMSecs  Scalar. Duration of attention event in milliseconds.
@@ -234,7 +235,8 @@ unsigned long modulationStartTime = micros();  // Initialize these with the cloc
 unsigned long lastLEDUpdateTime = micros();    // Initialize these with the clock
 int blinkDurationMSecs = 100;                  // Blink even duration
 uint8_t ledCycleIdx = 0;                       // Counter across LED updates
-float phaseOffset = 0;                         // 0-1; shifts the waveform phase
+float fmPhaseOffset = 0;                       // 0-1; shifts the waveform phase
+float amPhaseOffset = 0;                       // 0-1; shifts the waveform phase
 float modulationDurSecs = 0;                   // Set to 0 for continuous
 unsigned long cycleCount = 0;                  // Cycles elapsed since mod start
 
@@ -384,13 +386,13 @@ void getConfig() {
     Serial.println(fmContrast);
   }
   if (strncmp(inputString, "PH", 2) == 0) {
-    // Phase offset. Takes a 0-2pi float and
+    // fmPhaseOffset. Takes a 0-2pi float and
     // converts it to the 0-1 domain
     Serial.println("PH:");
     clearInputString();
     waitForNewString();
-    phaseOffset = atof(inputString) / (2 * pi);
-    Serial.println(phaseOffset);
+    fmPhaseOffset = atof(inputString) / (2 * pi);
+    Serial.println(fmPhaseOffset);
   }
   if (strncmp(inputString, "AM", 2) == 0) {
     // Amplitude modulation index
@@ -411,6 +413,15 @@ void getConfig() {
     amCycleDur = 1e6 / atof(inputString);
     Serial.println(atof(inputString));
     updateAmModTable();
+  }
+  if (strncmp(inputString, "AH", 2) == 0) {
+    // amPhaseOffset. Takes a 0-2pi float and
+    // converts it to the 0-1 domain
+    Serial.println("AH:");
+    clearInputString();
+    waitForNewString();
+    amPhaseOffset = atof(inputString) / (2 * pi);
+    Serial.println(amPhaseOffset);
   }
   if (strncmp(inputString, "AV", 2) == 0) {
     // Amplitude modulation values for the current index
@@ -701,14 +712,18 @@ void setToOff() {
 }
 
 void updateLED(float fmCyclePhase, float amCyclePhase, int ledIndex) {
-  // Adjust the cyclePhase for the phaseOffset
-  fmCyclePhase = fmCyclePhase + phaseOffset;
-  // Get the level for the current cyclePhase
+  // Adjust the fmCyclePhase for the fmPhaseOffset
+  fmCyclePhase = fmCyclePhase + fmPhaseOffset;
+  fmCyclePhase = fmCyclePhase - floor(fmCyclePhase);
+  // Get the level for the current fmCyclePhase
   float floatLevel = returnFrequencyModulation(fmCyclePhase);
   // Get the background level for this LED
   float offset = float(background[ledIndex]) / float(settingScale);
   // Scale according to the fmContrast value
   floatLevel = fmContrast * (floatLevel - offset) + offset;
+  // Adjust the amCyclePhase for the amPhaseOffset
+  amCyclePhase = amCyclePhase + amPhaseOffset;
+  amCyclePhase = amCyclePhase - floor(amCyclePhase);
   // Apply any amplitude modulation
   floatLevel = applyAmplitudeModulation(amCyclePhase, floatLevel, offset);
   // ensure that level is within the 0-1 range
