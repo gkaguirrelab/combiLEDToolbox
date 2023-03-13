@@ -1,20 +1,20 @@
-% Object to stream video from a PupilLabs video recorder to disk
+% Object to stream EEG data from a biopack unit via a LabJack connection
 
-classdef PupilLabsControl < handle
+classdef BiopackControl < handle
 
     properties (Constant)
     end
 
     % Private properties
     properties (GetAccess=private)
-%        recordCommand = 'ffmpeg -hide_banner -video_size 640x480 -framerate 60.500094 -f avfoundation -i "cameraIdx" -t trialDurationSecs "videoFileOut.mp4"';
-        recordCommand = 'ffmpeg -hide_banner -video_size 640x480 -framerate 30.0 -f avfoundation -i "cameraIdx" -t trialDurationSecs "videoFileOut.mp4"';
+        labjackOBJ
     end
 
     % Calling function can see, but not modify
     properties (SetAccess=private)
+        recordingFreqHz = 2000;
+        channelIdx = 1;
         dataOutDir
-        cameraIdx = '0';
         trialIdx = 1;
         trialData = [];
     end
@@ -33,36 +33,40 @@ classdef PupilLabsControl < handle
     methods
 
         % Constructor
-        function obj = PupilLabsControl(subjectID,modDirection,experimentName,varargin)
+        function obj = BiopackControl(subjectID,modDirection,experimentName,varargin)
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
             p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
             p.addParameter('projectName','combiLED',@ischar);
-            p.addParameter('approachName','pupillometry',@ischar);
+            p.addParameter('approachName','ssVEP',@ischar);
             p.addParameter('verbose',true,@islogical);
             p.parse(varargin{:})
 
             % Place various inputs and options into object properties
             obj.verbose = p.Results.verbose;
 
-            % Define the dir in which to save pupil videos
+            % Define the dir in which to save EEG data
             obj.dataOutDir = fullfile(...
                 p.Results.dropBoxBaseDir,...
                 p.Results.projectName,...
                 p.Results.approachName,...
-                subjectID,modDirection,experimentName,'rawPupilVideos');
+                subjectID,modDirection,experimentName,'rawEEGData');
 
             % Create the directory if it isn't there
             if ~isfolder(obj.dataOutDir)
                 mkdir(obj.dataOutDir)
             end
 
+            % Open a labjack connection
+            obj.labjackOBJ = LabJackU6('verbosity', double(p.Results.verbose));
+
+            % Configure analog input sampling
+            obj.labjackOBJ.configureAnalogDataStream(obj.channelIdx,obj.recordingFreqHz);
+
         end
 
         % Required methds
-        identifyCamera(obj)
-        positionCamera(obj)
         collectTrial(obj)
     end
 end
