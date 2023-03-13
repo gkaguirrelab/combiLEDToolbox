@@ -1,7 +1,7 @@
 function recordTrial(obj)
 
 % Define the save location
-dataOutFile = fullfile(obj.dataOutDir,sprintf('trial_%02d.mp4',obj.trialIdx));
+dataOutFile = fullfile(obj.dataOutDir,sprintf([obj.filePrefix 'trial_%02d.mat'],obj.trialIdx));
 
 % Store this trial data
 obj.trialData(obj.trialIdx).startTime = datetime;

@@ -28,14 +28,17 @@ classdef PupilLabsControl < handle
     % These may be modified after object creation
     properties (SetAccess=public)
 
-        % How long to record
-        trialDurationSecs = 4;
+        % A prefix to be added to the video files
+        filePrefix
 
         % How long to record
-        backgroundRecording = true;
+        trialDurationSecs
+
+        % How long to record
+        backgroundRecording
 
         % Verbosity
-        verbose = true;
+        verbose
         
     end
 
@@ -46,6 +49,8 @@ classdef PupilLabsControl < handle
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
+            p.addParameter('filePrefix','',@ischar);
+            p.addParameter('trialDurationSecs',4,@isnumeric);
             p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
             p.addParameter('projectName','combiLED',@ischar);
             p.addParameter('approachName','pupillometry',@ischar);
@@ -53,7 +58,9 @@ classdef PupilLabsControl < handle
             p.addParameter('verbose',true,@islogical);
             p.parse(varargin{:})
 
-            % Place various inputs and options into object properties
+            % Place various inputs and options into object properties            
+            obj.filePrefix = p.Results.filePrefix;
+            obj.trialDurationSecs = p.Results.trialDurationSecs;            
             obj.backgroundRecording = p.Results.backgroundRecording;
             obj.verbose = p.Results.verbose;
 

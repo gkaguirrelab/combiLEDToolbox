@@ -42,7 +42,7 @@ classdef CombiLEDcontrol < handle
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
-            p.addParameter('verbose',true,@islogical);
+            p.addParameter('verbose',false,@islogical);
             p.parse(varargin{:})
 
             % Store the verbosity

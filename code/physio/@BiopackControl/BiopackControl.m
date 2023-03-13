@@ -22,11 +22,14 @@ classdef BiopackControl < handle
     % These may be modified after object creation
     properties (SetAccess=public)
 
+        % A prefix to be added to the data files
+        filePrefix
+
         % How long to record
-        trialDurationSecs = 4;
+        trialDurationSecs
 
         % Verbosity
-        verbose = true;
+        verbose
         
     end
 
@@ -37,6 +40,8 @@ classdef BiopackControl < handle
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
+            p.addParameter('filePrefix','',@ischar);
+            p.addParameter('trialDurationSecs',4,@isnumeric);
             p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
             p.addParameter('projectName','combiLED',@ischar);
             p.addParameter('approachName','ssVEP',@ischar);
@@ -44,6 +49,8 @@ classdef BiopackControl < handle
             p.parse(varargin{:})
 
             % Place various inputs and options into object properties
+            obj.filePrefix = p.Results.filePrefix;
+            obj.trialDurationSecs = p.Results.trialDurationSecs;            
             obj.verbose = p.Results.verbose;
 
             % Define the dir in which to save EEG data
