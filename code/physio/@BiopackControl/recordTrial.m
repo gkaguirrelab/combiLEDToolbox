@@ -17,14 +17,14 @@ end
 try
     % Acquire the data
     tic;
-    labjackOBJ.startDataStreamingForSpecifiedDuration(p.Results.recordingDurationSecs);
+    obj.labjackOBJ.startDataStreamingForSpecifiedDuration(obj.trialDurationSecs);
     elapsedTimeSecs = toc;
     % Place the data in a response structure
-    vepDataStruct.timebase = labjackOBJ.timeAxis;
-    vepDataStruct.response = labjackOBJ.data';
+    vepDataStruct.timebase = obj.labjackOBJ.timeAxis;
+    vepDataStruct.response = obj.labjackOBJ.data';
     vepDataStruct.elapsedTimeSecs = elapsedTimeSecs;
     % Close-up shop
-    labjackOBJ.shutdown();
+%    obj.labjackOBJ.shutdown();
 catch err
     % Close up shop
     labjackOBJ.shutdown();
