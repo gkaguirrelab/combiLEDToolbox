@@ -48,8 +48,10 @@ if ~simulateStimuli
     obj.pupilObj.recordTrial;
     obj.waitUntil(tic() + 1e9);
 
-    % Set the ssVEP recording in motion
-%    obj.vepObj.recordTrial;
+    % Set the ssVEP recording in motion using a parfeval so it occurs in
+    % the background
+    p = gcp();
+    parevalHandle = parfeval(p,@obj.vepObj.recordTrial,1);
 
     % Start the stimulus
     stopTime = tic() + obj.trialDurationSecs*1e9;
@@ -57,6 +59,10 @@ if ~simulateStimuli
 
     % Wait for the trial duration
     obj.waitUntil(stopTime);
+
+    % Store the ssVEP data
+    [~,vepDataStruct]=fetchNext(parevalHandle);
+    obj.vepObj.storeTrial(vepDataStruct);
 
     % Play the finished tone
     audioObjs.finished.play;

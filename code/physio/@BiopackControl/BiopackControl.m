@@ -17,6 +17,7 @@ classdef BiopackControl < handle
         dataOutDir
         trialIdx = 1;
         trialData = [];
+        simulateResponse
     end
 
     % These may be modified after object creation
@@ -30,7 +31,7 @@ classdef BiopackControl < handle
 
         % Verbosity
         verbose
-        
+
     end
 
     methods
@@ -45,12 +46,14 @@ classdef BiopackControl < handle
             p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
             p.addParameter('projectName','combiLED',@ischar);
             p.addParameter('approachName','ssVEP',@ischar);
+            p.addParameter('simulateResponse',false,@islogical);
             p.addParameter('verbose',true,@islogical);
             p.parse(varargin{:})
 
             % Place various inputs and options into object properties
             obj.filePrefix = p.Results.filePrefix;
-            obj.trialDurationSecs = p.Results.trialDurationSecs;            
+            obj.trialDurationSecs = p.Results.trialDurationSecs;
+            obj.simulateResponse = p.Results.simulateResponse;
             obj.verbose = p.Results.verbose;
 
             % Define the dir in which to save EEG data
@@ -65,15 +68,22 @@ classdef BiopackControl < handle
                 mkdir(obj.dataOutDir)
             end
 
-            % Open a labjack connection
-            obj.labjackOBJ = LabJackU6('verbosity', double(p.Results.verbose));
+            % If we are not in simulate mode, setup the labjack
+            if ~obj.simulateResponse
 
-            % Configure analog input sampling
-            obj.labjackOBJ.configureAnalogDataStream(obj.channelIdx,obj.recordingFreqHz);
+                % Open a labjack connection
+                obj.labjackOBJ = LabJackU6('verbosity',double(obj.verbose));
+
+                % Configure analog input sampling
+                obj.labjackOBJ.configureAnalogDataStream(obj.channelIdx,obj.recordingFreqHz);
+
+            end
 
         end
 
         % Required methds
-        collectTrial(obj)
+        vepDataStruct = recordTrial(obj)
+        storeTrial(obj,vepDataStruct)
+        
     end
 end
