@@ -7,15 +7,17 @@ classdef BiopackControl < handle
 
     % Private properties
     properties (GetAccess=private)
-        labjackOBJ
     end
 
     % Calling function can see, but not modify
     properties (SetAccess=private)
+        labjackOBJ
         recordingFreqHz = 2000;
         channelIdx = 1;
         dataOutDir
         trialIdx = 1;
+        subTrialIdx = 1;
+        nSubTrials;
         trialData = [];
         simulateResponse
     end
@@ -43,6 +45,7 @@ classdef BiopackControl < handle
             p = inputParser; p.KeepUnmatched = false;
             p.addParameter('filePrefix','',@ischar);
             p.addParameter('trialDurationSecs',4,@isnumeric);
+            p.addParameter('nSubTrials',5,@isnumeric);
             p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
             p.addParameter('projectName','combiLED',@ischar);
             p.addParameter('approachName','ssVEP',@ischar);
@@ -53,6 +56,7 @@ classdef BiopackControl < handle
             % Place various inputs and options into object properties
             obj.filePrefix = p.Results.filePrefix;
             obj.trialDurationSecs = p.Results.trialDurationSecs;
+            obj.nSubTrials = p.Results.nSubTrials;
             obj.simulateResponse = p.Results.simulateResponse;
             obj.verbose = p.Results.verbose;
 

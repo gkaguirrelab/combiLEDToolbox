@@ -29,7 +29,9 @@ if ~simulateStimuli
 
     % Alert the subject the trial is about to start
     audioObjs.ready.play;
-    stopTime = tic() + 1e9;
+
+    % Add a pre-trial jitter so that the start time is less predicatable
+    stopTime = tic() + 1e9 * (rand()*range(obj.preTrialJitterRangeSecs)+obj.preTrialJitterRangeSecs(1));
 
     % While we are waiting, configure the CombiLED
     obj.CombiLEDObj.setContrast(stimContrastAdjusted);
@@ -38,31 +40,45 @@ if ~simulateStimuli
     obj.CombiLEDObj.setAMFrequency(obj.amFreqHz);
     obj.CombiLEDObj.setAMPhase(pi);
     obj.CombiLEDObj.setAMValues([obj.halfCosineRampDurSecs, 0]);
-    obj.CombiLEDObj.setDuration(obj.trialDurationSecs)
+    obj.CombiLEDObj.setDuration(obj.cycleDurationSecs)
 
     % Finish waiting
     obj.waitUntil(stopTime);
 
-    % Set the video recording in motion, and wait 250 msecs to cover the
-    % file and communication latency
+    % Set the video recording in motion, and give it one second for the
+    % recording to get going
     obj.pupilObj.recordTrial;
     obj.waitUntil(tic() + 1e9);
 
-    % Set the ssVEP recording in motion using a parfeval so it occurs in
-    % the background
-    p = gcp();
-    parevalHandle = parfeval(p,@obj.vepObj.recordTrial,1);
+    % Loop over the cycles of the amplitude modulation
+    vepDataStructs={};
+    cycleStopTimes = [];
+    modulationStartTime = tic();
+    for ii=1:obj.nSubTrials
 
-    % Start the stimulus
-    stopTime = tic() + obj.trialDurationSecs*1e9;
-    obj.CombiLEDObj.startModulation;
+        % Start the stimulus
+        stopTime = tic() + obj.cycleDurationSecs*1e9;
+        obj.CombiLEDObj.startModulation;
 
-    % Wait for the trial duration
-    obj.waitUntil(stopTime);
+        % Set the ssVEP recording in motion. Want to return to this and try and
+        % get the VEP recording working in the background
+        vepDataStructs{ii} = obj.vepObj.recordTrial;
+
+        % Wait for the trial duration
+        obj.waitUntil(stopTime);
+
+        % Calculate and store the cycle overage, so we can adjust for the
+        % actual modulation frequency in the pupil analysis
+        cycleStopTimes(ii)=tic()-modulationStartTime;
+    end
 
     % Store the ssVEP data
-    [~,vepDataStruct]=fetchNext(parevalHandle);
-    obj.vepObj.storeTrial(vepDataStruct);
+    for ii=1:obj.nSubTrials
+        obj.vepObj.storeTrial(vepDataStructs{ii});
+    end
+
+    % Store the cycleStopTimes
+    obj.trialData(obj.pupilObj.trialIdx-1).cycleStopTimes = cycleStopTimes;
 
     % Play the finished tone
     audioObjs.finished.play;

@@ -8,14 +8,17 @@ classdef FlickerPhysio < handle
 
     % Private properties
     properties (GetAccess=private)
-        pupilObj
-        vepObj
     end
 
     % Calling function can see, but not modify
     properties (SetAccess=private)
-        simulateStimuli
+        pupilObj
+        vepObj
+        parpoolHandle
+
         dataOutDir
+
+        simulateStimuli
 
         % Some stimulus properties
         stimFreqHz
@@ -24,7 +27,10 @@ classdef FlickerPhysio < handle
         amFreqHz
         halfCosineRampDurSecs
         trialDurationSecs
-
+        trialData
+        preTrialJitterRangeSecs
+        cycleDurationSecs
+        nSubTrials
     end
 
     % These may be modified after object creation
@@ -40,7 +46,7 @@ classdef FlickerPhysio < handle
 
         % Verbosity
         verbose;
-        
+
     end
 
     methods
@@ -50,11 +56,12 @@ classdef FlickerPhysio < handle
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
-            p.addParameter('stimFreqHz',24,@isnumeric);
+            p.addParameter('stimFreqHz',20,@isnumeric);
             p.addParameter('stimContrast',0.75,@isnumeric);
             p.addParameter('amFreqHz',0.25,@isnumeric);
-            p.addParameter('halfCosineRampDurSecs',0.25,@isnumeric);
+            p.addParameter('halfCosineRampDurSecs',0.1,@isnumeric);
             p.addParameter('trialDurationSecs',20,@isnumeric);
+            p.addParameter('preTrialJitterRangeSecs',[0,1],@isnumeric);
             p.addParameter('simulateStimuli',false,@islogical);
             p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
             p.addParameter('projectName','combiLED',@ischar);
@@ -67,10 +74,15 @@ classdef FlickerPhysio < handle
             obj.stimFreqHz = p.Results.stimFreqHz;
             obj.stimContrast = p.Results.stimContrast;
             obj.amFreqHz = p.Results.amFreqHz;
-            obj.halfCosineRampDurSecs = p.Results.halfCosineRampDurSecs;            
+            obj.halfCosineRampDurSecs = p.Results.halfCosineRampDurSecs;
             obj.trialDurationSecs = p.Results.trialDurationSecs;
+            obj.preTrialJitterRangeSecs = p.Results.preTrialJitterRangeSecs;            
             obj.simulateStimuli = p.Results.simulateStimuli;
             obj.verbose = p.Results.verbose;
+
+            % Figure out the cycleDurationSecs and the number of subtrials
+            obj.cycleDurationSecs = 1/obj.amFreqHz;
+            obj.nSubTrials = ceil(obj.trialDurationSecs/obj.cycleDurationSecs);
 
             % Define the dir in which to save the trial
             obj.dataOutDir = fullfile(...
@@ -97,8 +109,11 @@ classdef FlickerPhysio < handle
             % Create a file prefix for the raw data from the stimulus
             % properties
             filePrefix = sprintf('freq_%2.1f_contrast_%2.3f_',obj.stimFreqHz,obj.stimContrast);
-                
-            % Initialize the pupil recording object
+
+            % Initialize the pupil recording object. We set it to be one
+            % seconds longer, as there is a delay in starting the
+            % recording, so we initiate the recording one second before
+            % giving the command to start the stimulus.
             obj.pupilObj = PupilLabsControl(subjectID,modDirection,experimentName,...
                 'filePrefix',filePrefix,...
                 'trialDurationSecs',obj.trialDurationSecs+1,...
@@ -108,12 +123,10 @@ classdef FlickerPhysio < handle
             % Initialize the ssVEP recording object
             obj.vepObj = BiopackControl(subjectID,modDirection,experimentName,...
                 'filePrefix',filePrefix,...
-                'trialDurationSecs',obj.trialDurationSecs+1,...
-                'approachName',p.Results.approachName);            
+                'trialDurationSecs',obj.cycleDurationSecs,...
+                'nSubTrials',obj.nSubTrials, ...
+                'approachName',p.Results.approachName);
 
-            % Make sure the that parpool is active, as we will be
-            % collecting trials in the background
-            gcp();
 
         end
 
