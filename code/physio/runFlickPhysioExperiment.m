@@ -1,4 +1,4 @@
-function runPupilVEPExperiment(subjectID,modDirection,varargin)
+function runFlickPhysioExperiment(subjectID,modDirection,varargin)
 % 
 %
 %{
@@ -43,7 +43,7 @@ saveModDir = fullfile(...
     p.Results.dropBoxBaseDir,...
     p.Results.projectName,...
     p.Results.approachName,...
-    subjectID,modDirection,experimentName);
+    subjectID,modDirection);
 
 saveDataDir = fullfile(saveModDir,experimentName);
 
