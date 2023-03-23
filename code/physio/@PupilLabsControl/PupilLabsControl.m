@@ -9,7 +9,7 @@ classdef PupilLabsControl < handle
     properties (GetAccess=private)
 
         % A record command suitable for the pupilLabs camera
-        recordCommand = 'ffmpeg -hide_banner -video_size 800x600 -framerate 60.000240 -f avfoundation -i "cameraIdx" -t trialDurationSecs "videoFileOut.mp4"';
+        recordCommand = 'ffmpeg -y -f avfoundation -framerate 60.000240 -pix_fmt uyvy422 -t trialDurationSecs -i "Pupil" "videoFileOut.mpg"';
 
         % A record command for the FaceTime camera
         %{
@@ -79,8 +79,8 @@ classdef PupilLabsControl < handle
         end
 
         % Required methds
-        identifyCamera(obj)
         positionCamera(obj)
         recordTrial(obj)
+        calcVidDelay(obj,trialIdx)
     end
 end

@@ -23,22 +23,15 @@ if (ispref(projectName))
     rmpref(projectName);
 end
 
-% Obtain the Dropbox path
-[~,hostname] = system('hostname');
-hostname = strtrim(lower(hostname));
-
 % Handle hosts with custom dropbox locations
-switch hostname
-    case 'gka-macbook.local'
-        [~, userName] = system('whoami');
-        userName = strtrim(userName);
+[~, userName] = system('whoami');
+userName = strtrim(userName);
+switch userName
+    case 'aguirre'
         dropBoxUserFullName = 'Geoffrey Aguirre';
-        assert(strcmp(userName,'aguirre'));
         dropboxBaseDir = fullfile(filesep,'Users',userName,...
             'Aguirre-Brainard Lab Dropbox',dropBoxUserFullName,'MELA_data');
     otherwise
-        [~, userName] = system('whoami');
-        userName = strtrim(userName);
         dropboxBaseDir = ...
             fullfile('/Users', userName, ...
             'Aguirre-Brainard Lab Dropbox',userName,'MELA_data');
