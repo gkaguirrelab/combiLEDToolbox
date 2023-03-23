@@ -5,7 +5,6 @@ simulateStimuli = obj.simulateStimuli;
 
 % Pull out the stimulus frequency and contrast
 stimFreqHz = obj.stimFreqHz;
-stimContrastAdjusted = obj.stimContrastAdjusted;
 
 % Prepare the sounds
 Fs = 8192; % Sampling Frequency
@@ -20,21 +19,20 @@ audioObjs.finished = audioplayer(fliplr(readySound),Fs);
 
 % Handle verbosity
 if obj.verbose
-    fprintf('Trial %d; Freq [%2.2f Hz], contrast [%2.4f]...', ...
-        obj.pupilObj.trialIdx,obj.stimFreqHz,obj.stimContrast);
+    fprintf('Freq [%2.2f Hz]...', obj.stimFreqHz);
 end
 
 % Present the stimuli
 if ~simulateStimuli
 
+    % Set the video recording in motion.
+    stopTime = tic() + 1e9 * obj.pupilVidStartDelaySec;
+    obj.pupilObj.recordTrial;
+
     % Alert the subject the trial is about to start
     audioObjs.ready.play;
 
-    % Add a pre-trial jitter so that the start time is less predicatable
-    stopTime = tic() + 1e9 * (rand()*range(obj.preTrialJitterRangeSecs)+obj.preTrialJitterRangeSecs(1));
-
-    % While we are waiting, configure the CombiLED
-    obj.CombiLEDObj.setContrast(stimContrastAdjusted);
+    % configure the CombiLED overall
     obj.CombiLEDObj.setFrequency(stimFreqHz);
     obj.CombiLEDObj.setAMIndex(2); % half-cosine ramped
     obj.CombiLEDObj.setAMFrequency(obj.amFreqHz);
@@ -42,26 +40,29 @@ if ~simulateStimuli
     obj.CombiLEDObj.setAMValues([obj.halfCosineRampDurSecs, 0]);
     obj.CombiLEDObj.setDuration(obj.cycleDurationSecs)
 
-    % Finish waiting
+    % Finish waiting for pupil recording to have started
     obj.waitUntil(stopTime);
 
-    % Set the video recording in motion, and give it one second for the
-    % recording to get going
-    obj.pupilObj.recordTrial;
-    obj.waitUntil(tic() + 1e9);
-
-    % Loop over the cycles of the amplitude modulation
+    % Loop over the elements of stimContrastOrder
     vepDataStructs={};
     cycleStopTimes = [];
     modulationStartTime = tic();
-    for ii=1:obj.nSubTrials
+    for ii=1:length(obj.stimContrastOrder)
+
+        % Update the contrast for the stimulus
+        contrastIdx = obj.stimContrastOrder(ii);
+        obj.CombiLEDObj.setContrast(obj.stimContrastSetAdjusted(contrastIdx));
+
+        % Handle verbosity
+        if obj.verbose
+            fprintf('contrast %2.2f...', obj.stimContrastSet(contrastIdx));
+        end
 
         % Start the stimulus
         stopTime = tic() + obj.cycleDurationSecs*1e9;
         obj.CombiLEDObj.startModulation;
 
-        % Set the ssVEP recording in motion. Want to return to this and try and
-        % get the VEP recording working in the background
+        % Set the ssVEP recording in motion
         vepDataStructs{ii} = obj.vepObj.recordTrial;
 
         % Wait for the trial duration
@@ -73,8 +74,10 @@ if ~simulateStimuli
     end
 
     % Store the ssVEP data
-    for ii=1:obj.nSubTrials
-        obj.vepObj.storeTrial(vepDataStructs{ii});
+    for ii=1:length(obj.stimContrastOrder)
+        contrastIdx = obj.stimContrastOrder(ii);
+        contrastLabel = sprintf('contrast_%2.1f_',obj.stimContrastSet(contrastIdx));
+        obj.vepObj.storeTrial(vepDataStructs{ii},contrastLabel);
     end
 
     % Store the cycleStopTimes

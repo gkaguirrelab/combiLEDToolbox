@@ -16,8 +16,6 @@ classdef BiopackControl < handle
         channelIdx = 1;
         dataOutDir
         trialIdx = 1;
-        subTrialIdx = 1;
-        nSubTrials;
         trialData = [];
         simulateResponse
     end
@@ -45,18 +43,16 @@ classdef BiopackControl < handle
             p = inputParser; p.KeepUnmatched = false;
             p.addParameter('filePrefix','',@ischar);
             p.addParameter('trialDurationSecs',4,@isnumeric);
-            p.addParameter('nSubTrials',5,@isnumeric);
             p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
             p.addParameter('projectName','combiLED',@ischar);
             p.addParameter('approachName','ssVEP',@ischar);
             p.addParameter('simulateResponse',false,@islogical);
-            p.addParameter('verbose',true,@islogical);
+            p.addParameter('verbose',false,@islogical);
             p.parse(varargin{:})
 
             % Place various inputs and options into object properties
             obj.filePrefix = p.Results.filePrefix;
             obj.trialDurationSecs = p.Results.trialDurationSecs;
-            obj.nSubTrials = p.Results.nSubTrials;
             obj.simulateResponse = p.Results.simulateResponse;
             obj.verbose = p.Results.verbose;
 
@@ -87,7 +83,7 @@ classdef BiopackControl < handle
 
         % Required methds
         vepDataStruct = recordTrial(obj)
-        storeTrial(obj,vepDataStruct)
+        storeTrial(obj,vepDataStruct,trialLabel)
         
     end
 end

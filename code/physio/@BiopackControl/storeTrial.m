@@ -1,7 +1,7 @@
-function storeTrial(obj,vepDataStruct)
+function storeTrial(obj,vepDataStruct,trialLabel)
 
 % Define the save location
-dataOutFile = fullfile(obj.dataOutDir,sprintf([obj.filePrefix 'trial_%02d_%02d.mat'],obj.trialIdx,obj.subTrialIdx));
+dataOutFile = fullfile(obj.dataOutDir,sprintf([obj.filePrefix trialLabel 'trial_%02d.mat'],obj.trialIdx));
 
 % Save the data
 save(dataOutFile,'vepDataStruct');
@@ -15,8 +15,6 @@ end
 obj.trialData(obj.trialIdx).startTime = vepDataStruct.startTime;
 
 % Iterate the trial index
-obj.subTrialIdx = obj.subTrialIdx+1;
-if obj.subTrialIdx > obj.nSubTrials
-    obj.subTrialIdx = 1;
-    obj.trialIdx = obj.trialIdx+1;
+obj.trialIdx = obj.trialIdx+1;
+
 end

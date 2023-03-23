@@ -21,16 +21,15 @@ firstImage = true;
 while stillRecording
 
     % Record a video snippet
-    tmpVid = [tempname '.mp4'];
+    tmpVid = tempname;
     vidCommand = obj.recordCommand;
-    vidCommand = strrep(vidCommand,'cameraIdx',num2str(obj.cameraIdx));
     vidCommand = strrep(vidCommand,'trialDurationSecs','0.33');
-    vidCommand = strrep(vidCommand,'videoFileOut.mp4',tmpVid);
+    vidCommand = strrep(vidCommand,'videoFileOut',tmpVid);
     [~,~] = system(vidCommand);
 
     % Extact the mid time point of that snippet
     tmpIm = [tempname '.jpg'];
-    extractCommand = ['ffmpeg -ss 00:00:00.17 -i ' tmpVid ' -vframes 1 -q:v 2 ' tmpIm];
+    extractCommand = ['ffmpeg -i ' tmpVid ' -vf "select=eq(n\,0)" -q:v 3 "' tmpIm '"'];
     [~,~] = system(extractCommand);
 
     % Display the image

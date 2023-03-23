@@ -9,7 +9,7 @@ classdef PupilLabsControl < handle
     properties (GetAccess=private)
 
         % A record command suitable for the pupilLabs camera
-        recordCommand = 'ffmpeg -y -f avfoundation -framerate 60.000240 -pix_fmt uyvy422 -t trialDurationSecs -i "Pupil" "videoFileOut.mpg"';
+        recordCommand = 'ffmpeg -y -f avfoundation -s 800x600 -framerate 20 -pix_fmt uyvy422 -t trialDurationSecs -i "Pupil" "videoFileOut.mkv"';
 
         % A record command for the FaceTime camera
         %{
@@ -55,7 +55,7 @@ classdef PupilLabsControl < handle
             p.addParameter('projectName','combiLED',@ischar);
             p.addParameter('approachName','pupillometry',@ischar);
             p.addParameter('backgroundRecording',true,@islogical);
-            p.addParameter('verbose',true,@islogical);
+            p.addParameter('verbose',false,@islogical);
             p.parse(varargin{:})
 
             % Place various inputs and options into object properties            
@@ -81,6 +81,6 @@ classdef PupilLabsControl < handle
         % Required methds
         positionCamera(obj)
         recordTrial(obj)
-        calcVidDelay(obj,trialIdx)
+        vidDelaySecs = calcVidDelay(obj,trialIdx)
     end
 end

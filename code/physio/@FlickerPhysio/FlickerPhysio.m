@@ -14,23 +14,21 @@ classdef FlickerPhysio < handle
     properties (SetAccess=private)
         pupilObj
         vepObj
-        parpoolHandle
-
         dataOutDir
-
+        pupilVidStartDelaySec
         simulateStimuli
 
         % Some stimulus properties
         stimFreqHz
-        stimContrast
-        stimContrastAdjusted
+        stimContrastSet
+        stimContrastSetAdjusted
+        stimContrastOrder
         amFreqHz
         halfCosineRampDurSecs
         trialDurationSecs
         trialData
         preTrialJitterRangeSecs
         cycleDurationSecs
-        nSubTrials
     end
 
     % These may be modified after object creation
@@ -56,12 +54,13 @@ classdef FlickerPhysio < handle
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
+            p.addParameter('blockIdx',1,@isnumeric);
+            p.addParameter('pupilVidStartDelaySec',2.5,@isnumeric);
             p.addParameter('stimFreqHz',20,@isnumeric);
-            p.addParameter('stimContrast',0.75,@isnumeric);
+            p.addParameter('stimContrastSet',[0,0.05,0.1,0.2,0.4,0.8],@isnumeric);
+            p.addParameter('stimContrastOrder',[1,1,2,3,4,5,6,6,4,3,2,1,5,5,3,1,6,2,4,4,1,3,6,5,2,2,5,1,4,6,3,3,5,4,2,6,1],@isnumeric);
             p.addParameter('amFreqHz',0.25,@isnumeric);
             p.addParameter('halfCosineRampDurSecs',0.1,@isnumeric);
-            p.addParameter('trialDurationSecs',20,@isnumeric);
-            p.addParameter('preTrialJitterRangeSecs',[0,1],@isnumeric);
             p.addParameter('simulateStimuli',false,@islogical);
             p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
             p.addParameter('projectName','combiLED',@ischar);
@@ -71,18 +70,17 @@ classdef FlickerPhysio < handle
 
             % Place various inputs and options into object properties
             obj.CombiLEDObj = CombiLEDObj;
+            obj.pupilVidStartDelaySec = p.Results.pupilVidStartDelaySec;
             obj.stimFreqHz = p.Results.stimFreqHz;
-            obj.stimContrast = p.Results.stimContrast;
+            obj.stimContrastSet = p.Results.stimContrastSet;
+            obj.stimContrastOrder = p.Results.stimContrastOrder;            
             obj.amFreqHz = p.Results.amFreqHz;
             obj.halfCosineRampDurSecs = p.Results.halfCosineRampDurSecs;
-            obj.trialDurationSecs = p.Results.trialDurationSecs;
-            obj.preTrialJitterRangeSecs = p.Results.preTrialJitterRangeSecs;            
             obj.simulateStimuli = p.Results.simulateStimuli;
             obj.verbose = p.Results.verbose;
 
             % Figure out the cycleDurationSecs and the number of subtrials
             obj.cycleDurationSecs = 1/obj.amFreqHz;
-            obj.nSubTrials = ceil(obj.trialDurationSecs/obj.cycleDurationSecs);
 
             % Define the dir in which to save the trial
             obj.dataOutDir = fullfile(...
@@ -100,23 +98,27 @@ classdef FlickerPhysio < handle
             % modulations with frequency. We can adjust for this property,
             % and detect those cases which are outside of our ability to
             % correct
-            obj.stimContrastAdjusted = obj.stimContrast ./ ...
+            obj.stimContrastSetAdjusted = obj.stimContrastSet ./ ...
                 contrastAttentionByFreq(obj.stimFreqHz);
 
             % Check that the adjusted contrast does not exceed unity
-            mustBeInRange(obj.stimContrastAdjusted,0,1);
+            mustBeInRange(obj.stimContrastSetAdjusted,0,1);
 
             % Create a file prefix for the raw data from the stimulus
             % properties
-            filePrefix = sprintf('freq_%2.1f_contrast_%2.3f_',obj.stimFreqHz,obj.stimContrast);
+            filePrefix = sprintf('freq_%2.1f_block_%02d_',obj.stimFreqHz,p.Results.blockIdx);
 
-            % Initialize the pupil recording object. We set it to be one
-            % seconds longer, as there is a delay in starting the
-            % recording, so we initiate the recording one second before
-            % giving the command to start the stimulus.
+            % Calculate the length of pupil recording needed. We add a
+            % second at the end to account for each cycle being slightly
+            % longer than the specified cycle duration
+            pupilRecordingTime = ...
+                length(obj.stimContrastOrder)*obj.cycleDurationSecs + ...
+                obj.pupilVidStartDelaySec + 1;            
+
+            % Initialize the pupil recording object.
             obj.pupilObj = PupilLabsControl(subjectID,modDirection,experimentName,...
                 'filePrefix',filePrefix,...
-                'trialDurationSecs',obj.trialDurationSecs+1,...
+                'trialDurationSecs',pupilRecordingTime,...
                 'approachName',p.Results.approachName,...
                 'backgroundRecording',true);
 
@@ -124,13 +126,11 @@ classdef FlickerPhysio < handle
             obj.vepObj = BiopackControl(subjectID,modDirection,experimentName,...
                 'filePrefix',filePrefix,...
                 'trialDurationSecs',obj.cycleDurationSecs,...
-                'nSubTrials',obj.nSubTrials, ...
                 'approachName',p.Results.approachName);
-
 
         end
 
-        % Required methds
+        % Required methods
         collectTrial(obj)
         waitUntil(obj,stopTimeMicroSeconds)
     end
