@@ -3,8 +3,23 @@ function collectTrial(obj)
 % Determine if we are simulating the stimuli
 simulateStimuli = obj.simulateStimuli;
 
-% Pull out the stimulus frequency and contrast
+% Get the time we started
+    startTime = datetime();
+
+% There is a roll-off (attenuation) of the amplitude of
+% modulations with frequency. We can adjust for this property,
+% and detect those cases which are outside of our ability to
+% correct
 stimFreqHz = obj.stimFreqHz;
+stimContrastSet = obj.stimContrastSet;
+stimContrastSetAdjusted = stimContrastSet ./ ...
+    contrastAttentionByFreq(stimFreqHz);
+
+% Get the stimulus order
+stimContrastOrder = obj.stimContrastOrder;
+
+% Check that the adjusted contrast does not exceed unity
+mustBeInRange(stimContrastSetAdjusted,0,1);
 
 % Prepare the sounds
 Fs = 8192; % Sampling Frequency
@@ -19,12 +34,25 @@ audioObjs.finished = audioplayer(fliplr(readySound),Fs);
 
 % Handle verbosity
 if obj.verbose
-    fprintf('Freq [%2.2f Hz]...', obj.stimFreqHz);
+    fprintf('Freq [%2.2f Hz]...contrast: ', stimFreqHz);
 end
+
+% Update the file prefix for the pupil and VEP objects
+filePrefix = sprintf('freq_%2.1f_trial_%02d_',obj.stimFreqHz,obj.trialIdx);
+obj.vepObj.filePrefix = filePrefix;
+obj.vepObj.trialIdx = 1;
+filePrefix = sprintf('freq_%2.1f_',obj.stimFreqHz);
+obj.pupilObj.filePrefix = filePrefix;
+obj.pupilObj.trialIdx = obj.trialIdx;
 
 % Present the stimuli
 if ~simulateStimuli
 
+    % Jittered inter trial interval
+    jitterTimeSecs = (rand*range(obj.preTrialJitterRangeSecs) + min(obj.preTrialJitterRangeSecs));
+    stopTime = tic() + 1e9 * jitterTimeSecs;
+    obj.waitUntil(stopTime);
+    
     % Set the video recording in motion.
     stopTime = tic() + 1e9 * obj.pupilVidStartDelaySec;
     obj.pupilObj.recordTrial;
@@ -32,13 +60,14 @@ if ~simulateStimuli
     % Alert the subject the trial is about to start
     audioObjs.ready.play;
 
-    % configure the CombiLED overall
+    % configure the CombiLED overall. This is a half-cosine windowed step
+    % pulse.
     obj.CombiLEDObj.setFrequency(stimFreqHz);
     obj.CombiLEDObj.setAMIndex(2); % half-cosine ramped
-    obj.CombiLEDObj.setAMFrequency(obj.amFreqHz);
-    obj.CombiLEDObj.setAMPhase(pi);
+    obj.CombiLEDObj.setAMFrequency(1/(2*obj.pulseDurSecs));
+    obj.CombiLEDObj.setAMPhase(0);
     obj.CombiLEDObj.setAMValues([obj.halfCosineRampDurSecs, 0]);
-    obj.CombiLEDObj.setDuration(obj.cycleDurationSecs)
+    obj.CombiLEDObj.setDuration(obj.pulseDurSecs)
 
     % Finish waiting for pupil recording to have started
     obj.waitUntil(stopTime);
@@ -47,22 +76,23 @@ if ~simulateStimuli
     vepDataStructs={};
     cycleStopTimes = [];
     modulationStartTime = tic();
-    for ii=1:length(obj.stimContrastOrder)
+    for ii=1:length(stimContrastOrder)
 
         % Update the contrast for the stimulus
-        contrastIdx = obj.stimContrastOrder(ii);
-        obj.CombiLEDObj.setContrast(obj.stimContrastSetAdjusted(contrastIdx));
+        contrastIdx = stimContrastOrder(ii);
+        obj.CombiLEDObj.setContrast(stimContrastSetAdjusted(contrastIdx));
 
         % Handle verbosity
         if obj.verbose
-            fprintf('contrast %2.2f...', obj.stimContrastSet(contrastIdx));
+            fprintf('%2.2f, ', stimContrastSet(contrastIdx));
         end
 
         % Start the stimulus
-        stopTime = tic() + obj.cycleDurationSecs*1e9;
+        stopTime = tic() + 1e9 * (obj.pulseDurSecs + obj.interStimIntervalSecs);
         obj.CombiLEDObj.startModulation;
 
-        % Set the ssVEP recording in motion
+        % Set the ssVEP recording in motion. This results in about a 75
+        % msec delay until recording starts
         vepDataStructs{ii} = obj.vepObj.recordTrial;
 
         % Wait for the trial duration
@@ -74,20 +104,40 @@ if ~simulateStimuli
     end
 
     % Store the ssVEP data
-    for ii=1:length(obj.stimContrastOrder)
-        contrastIdx = obj.stimContrastOrder(ii);
-        contrastLabel = sprintf('contrast_%2.1f_',obj.stimContrastSet(contrastIdx));
+    for ii=1:length(stimContrastOrder)
+        contrastIdx = stimContrastOrder(ii);
+        contrastLabel = sprintf('contrast_%2.1f_',stimContrastSet(contrastIdx));
         obj.vepObj.storeTrial(vepDataStructs{ii},contrastLabel);
     end
 
+    % Get the vid delay
+    vidDelaySecs = nan;
+    while isnan(vidDelaySecs)
+        vidDelaySecs = obj.pupilObj.calcVidDelay(obj.trialIdx);
+    end
+    obj.trialData(obj.trialIdx).vidDelaySecs = vidDelaySecs;
+
     % Store the cycleStopTimes
-    obj.trialData(obj.pupilObj.trialIdx-1).cycleStopTimes = cycleStopTimes;
+    obj.trialData(obj.trialIdx).cycleStopTimes = cycleStopTimes;
+
+    % Store the stimulus properties    
+    obj.trialData(obj.trialIdx).jitterTimeSecs = jitterTimeSecs;
+    obj.trialData(obj.trialIdx).stimFreqHz = stimFreqHz;
+    obj.trialData(obj.trialIdx).stimContrastSet = stimContrastSet;
+    obj.trialData(obj.trialIdx).stimContrastSetAdjusted = stimContrastSetAdjusted;
+    obj.trialData(obj.trialIdx).stimContrastOrder = stimContrastOrder;
 
     % Play the finished tone
     audioObjs.finished.play;
     obj.waitUntil(tic() + 1e9);
     
 end
+
+% Store the startTime
+obj.trialData(obj.trialIdx).startTime = startTime;
+
+% Iterate the trialIdx
+obj.trialIdx = obj.trialIdx+1;
 
 % Finish the line of text output
 if obj.verbose

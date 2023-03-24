@@ -15,13 +15,14 @@ classdef BiopackControl < handle
         recordingFreqHz = 2000;
         channelIdx = 1;
         dataOutDir
-        trialIdx = 1;
         trialData = [];
         simulateResponse
     end
 
     % These may be modified after object creation
     properties (SetAccess=public)
+
+                trialIdx = 1;
 
         % A prefix to be added to the data files
         filePrefix

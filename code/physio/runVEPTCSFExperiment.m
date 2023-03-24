@@ -5,7 +5,6 @@ function runVEPTCSFExperiment(subjectID,modDirection,varargin)
     subjectID = 'HERO_gka1';
     modDirection = 'LightFlux';
     runVEPTCSFExperiment(subjectID,modDirection);
-
 %}
 
 
@@ -14,6 +13,7 @@ p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
             p.addParameter('projectName','combiLED',@ischar);
             p.addParameter('approachName','flickerPhysio',@ischar);
+p.addParameter('nTrialsToCollect',10,@isnumeric);
 p.addParameter('stimContrastSet',[0,0.05,0.1,0.2,0.4,0.8],@isnumeric);
 p.addParameter('stimFreqSetHz',[4,6,10,14,20,28,40],@isnumeric);
 p.addParameter('observerAgeInYears',25,@isnumeric);
@@ -81,12 +81,15 @@ end
 filename = fullfile(saveDataDir,'measurementRecord.mat');
 if isfile(filename)
     load(filename,'measurementRecord');
+    trialIdx = measurementRecord.trialIdx;
+
     stimFreqSetHz = measurementRecord.stimulusProperties.stimFreqSetHz;
     stimContrastSet = measurementRecord.stimulusProperties.stimContrastSet;
-    blockIdx = measurementRecord.blockIdx;
     freqIdxOrder = measurementRecord.experimentProperties.freqIdxOrder;
     contrastIdxOrderMatrix = measurementRecord.experimentProperties.contrastIdxOrderMatrix;
 else
+
+
     % The trial sequence order
     freqIdxOrder = [4, 1, 6, 5, 3, 7, 2, 2, 5, 1, 7, 4, 6, 3, 3, 1, 5, 2, 4, 7, 6, 6, 1, 4, 2, 7, 3, 5, 5, 4, 3, 2, 6, 7, 1, 1, 2, 3, 6, 4, 5, 7, 7, 5, 6, 2, 1, 3, 4];
     contrastIdxOrderMatrix = readmatrix(fullfile(fileparts(mfilename('fullpath')),'t1i1_n6_Seqs.csv'));
@@ -94,9 +97,6 @@ else
     % The contrasts and frequencies themselves
     stimContrastSet = p.Results.stimContrastSet;
     stimFreqSetHz = p.Results.stimFreqSetHz;
-
-    % The blockIdx
-    blockIdx = 1;
 
     % Store the values
     measurementRecord.experimentProperties.freqIdxOrder = freqIdxOrder;
@@ -108,8 +108,8 @@ else
     measurementRecord.subjectProperties.observerAgeInYears = p.Results.observerAgeInYears;
     measurementRecord.stimulusProperties.stimContrastSet = stimContrastSet;
     measurementRecord.stimulusProperties.stimFreqSetHz = stimFreqSetHz;
-    measurementRecord.blockIdx = blockIdx;
-    measurementRecord.blockData = [];
+    measurementRecord.trialData = [];
+    measurementRecord.trialIdx = 1;
 
     % Save the file
     filename = fullfile(saveDataDir,'measurementRecord.mat');
@@ -117,50 +117,48 @@ else
 end
 
 % First check if we are done
-if blockIdx > length(freqIdxOrder)
+if measurementRecord.trialIdx > length(freqIdxOrder)
     fprintf('Done with this experiment!\n')
     return
 end
 
-% Create the physio object
-freqIdx = freqIdxOrder(blockIdx);
-stimFreqHz = stimFreqSetHz(freqIdx);
-stimContrastOrder = contrastIdxOrderMatrix(blockIdx,:);
+% How many trials to collect?
+nTrialsToCollect = p.Results.nTrialsToCollect;
+nTrialsToCollect = min([nTrialsToCollect,1+length(freqIdxOrder)-measurementRecord.trialIdx]);
 
-obj = FlickerPhysio(CombiLEDObj,subjectID,modDirection,experimentName,...
-    'blockIdx',blockIdx,...
-    'stimFreqHz',stimFreqHz,...
-    'stimContrastSet',stimContrastSet, ...
-    'stimContrastOrder',stimContrastOrder);
+% Create a flickerPhysioObj object
+flickerPhysioObj = FlickerPhysio(CombiLEDObj,subjectID,modDirection,experimentName);
 
-% Start the block
-if ~simulateResponse
-    fprintf('Press any key to start trials\n');
+% Loop over the trials to collect data
+for ii=1:nTrialsToCollect
+
+    % Wait for subject readiness
+        fprintf('Press any key to start trial\n');
     pause
-    startTime = datetime();
-    obj.collectTrial;
-end
 
-% Update and save the measurementRecord
-measurementRecord.blockData(blockIdx).startTime = startTime;
+    % Update the stimulus settings for the flickerPhysioObj
+    flickerPhysioObj.trialIdx = measurementRecord.trialIdx;
+    flickerPhysioObj.stimFreqHz = stimFreqSetHz(freqIdxOrder(measurementRecord.trialIdx));
+    flickerPhysioObj.stimContrastSet = stimContrastSet;
+    flickerPhysioObj.stimContrastOrder = contrastIdxOrderMatrix(measurementRecord.trialIdx,:);
 
-% Get the vid delay
-vidDelaySecs = nan;
-while isnan(vidDelaySecs)
-    vidDelaySecs = obj.pupilObj.calcVidDelay(1);
+    % Start the trial
+    flickerPhysioObj.collectTrial;
+
+    % Copy the trial data over to the measurementRecord
+    for fn = fieldnames(flickerPhysioObj.trialData(measurementRecord.trialIdx))'
+        measurementRecord.trialData(measurementRecord.trialIdx).(fn{1})=flickerPhysioObj.trialData(measurementRecord.trialIdx).(fn{1});
+    end
+
+    % Iterate the trialIdx and save
+    measurementRecord.trialIdx = measurementRecord.trialIdx+1;
+    filename = fullfile(saveDataDir,'measurementRecord.mat');
+    save(filename,'measurementRecord');
+
 end
-measurementRecord.blockData(blockIdx).vidDelaySecs = vidDelaySecs;
 
 % Close the labjack
-obj.vepObj.labjackOBJ.shutdown
-
-% Update the trialCount record
-measurementRecord.blockIdx = ...
-    measurementRecord.blockIdx + 1;
-
-% Save it
-filename = fullfile(saveDataDir,'measurementRecord.mat');
-save(filename,'measurementRecord');
+flickerPhysioObj.vepObj.labjackOBJ.shutdown
 
 end
 

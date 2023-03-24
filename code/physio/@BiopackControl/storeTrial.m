@@ -1,7 +1,7 @@
 function storeTrial(obj,vepDataStruct,trialLabel)
 
 % Define the save location
-dataOutFile = fullfile(obj.dataOutDir,sprintf([obj.filePrefix trialLabel 'trial_%02d.mat'],obj.trialIdx));
+dataOutFile = fullfile(obj.dataOutDir,sprintf([obj.filePrefix trialLabel 'stim_%02d.mat'],obj.trialIdx));
 
 % Save the data
 save(dataOutFile,'vepDataStruct');

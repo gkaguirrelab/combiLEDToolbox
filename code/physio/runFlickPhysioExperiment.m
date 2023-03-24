@@ -13,6 +13,7 @@ p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
             p.addParameter('projectName','combiLED',@ischar);
             p.addParameter('approachName','flickerPhysio',@ischar);
+p.addParameter('nBlocksToCollect',5,@isnumeric);
 p.addParameter('testContrastSet',[0.05,0.1,0.2,0.4,0.8],@isnumeric);
 p.addParameter('testFreqSetHz',[4,6,10,14,20,28,40],@isnumeric);
 p.addParameter('observerAgeInYears',25,@isnumeric);
