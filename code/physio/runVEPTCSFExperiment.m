@@ -11,8 +11,8 @@ function runVEPTCSFExperiment(subjectID,modDirection,varargin)
 % Parse the parameters
 p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
-            p.addParameter('projectName','combiLED',@ischar);
-            p.addParameter('approachName','flickerPhysio',@ischar);
+p.addParameter('projectName','combiLED',@ischar);
+p.addParameter('approachName','flickerPhysio',@ischar);
 p.addParameter('nTrialsToCollect',10,@isnumeric);
 p.addParameter('stimContrastSet',[0,0.05,0.1,0.2,0.4,0.8],@isnumeric);
 p.addParameter('stimFreqSetHz',[4,6,10,14,20,28,40],@isnumeric);
@@ -20,7 +20,6 @@ p.addParameter('observerAgeInYears',25,@isnumeric);
 p.addParameter('fieldSizeDegrees',30,@isnumeric);
 p.addParameter('pupilDiameterMm',4.2,@isnumeric);
 p.addParameter('simulateStimuli',false,@islogical);
-p.addParameter('simulateResponse',false,@islogical);
 p.addParameter('verboseCombiLED',false,@islogical);
 p.addParameter('verbosePhysioObj',true,@islogical);
 p.addParameter('updateFigures',false,@islogical);
@@ -28,7 +27,6 @@ p.parse(varargin{:})
 
 %  Pull out of the p.Results structure
 simulateStimuli = p.Results.simulateStimuli;
-simulateResponse = p.Results.simulateResponse;
 verboseCombiLED = p.Results.verboseCombiLED;
 
 % Set our experimentName
@@ -38,21 +36,21 @@ experimentName = 'ssVEPTCSF';
 rng('shuffle');
 
 % Define a location to save data
-saveModDir = fullfile(...
+modDir = fullfile(...
     p.Results.dropBoxBaseDir,...
     p.Results.projectName,...
     p.Results.approachName,...
     subjectID,modDirection);
 
-saveDataDir = fullfile(saveModDir,experimentName);
+dataDir = fullfile(modDir,experimentName);
 
 % Create a directory for the subject
-if ~isfolder(saveDataDir)
-    mkdir(saveDataDir)
+if ~isfolder(dataDir)
+    mkdir(dataDir)
 end
 
 % Create or load a modulation and save it to the saveModDir
-filename = fullfile(saveModDir,'modResult.mat');
+filename = fullfile(modDir,'modResult.mat');
 if isfile(filename)
     load(filename,'modResult');
 else
@@ -78,7 +76,7 @@ else
 end
 
 % Create or load the measurementRecord
-filename = fullfile(saveDataDir,'measurementRecord.mat');
+filename = fullfile(dataDir,'measurementRecord.mat');
 if isfile(filename)
     load(filename,'measurementRecord');
     trialIdx = measurementRecord.trialIdx;
@@ -112,7 +110,7 @@ else
     measurementRecord.trialIdx = 1;
 
     % Save the file
-    filename = fullfile(saveDataDir,'measurementRecord.mat');
+    filename = fullfile(dataDir,'measurementRecord.mat');
     save(filename,'measurementRecord');
 end
 
@@ -152,7 +150,7 @@ for ii=1:nTrialsToCollect
 
     % Iterate the trialIdx and save
     measurementRecord.trialIdx = measurementRecord.trialIdx+1;
-    filename = fullfile(saveDataDir,'measurementRecord.mat');
+    filename = fullfile(dataDir,'measurementRecord.mat');
     save(filename,'measurementRecord');
 
 end
