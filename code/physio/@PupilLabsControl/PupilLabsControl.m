@@ -21,12 +21,13 @@ classdef PupilLabsControl < handle
     properties (SetAccess=private)
         dataOutDir
         cameraIdx = '0';
-        trialIdx = 1;
         trialData = [];
     end
 
     % These may be modified after object creation
     properties (SetAccess=public)
+
+                trialIdx = 1;
 
         % A prefix to be added to the video files
         filePrefix
