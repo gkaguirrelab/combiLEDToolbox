@@ -115,14 +115,14 @@ else
 end
 
 % First check if we are done
-if measurementRecord.trialIdx > length(freqIdxOrder)
+if measurementRecord.trialIdx > length(freqIdxOrder)*2
     fprintf('Done with this experiment!\n')
     return
 end
 
 % How many trials to collect?
 nTrialsToCollect = p.Results.nTrialsToCollect;
-nTrialsToCollect = min([nTrialsToCollect,1+length(freqIdxOrder)-measurementRecord.trialIdx]);
+nTrialsToCollect = min([nTrialsToCollect,1+(2*length(freqIdxOrder))-measurementRecord.trialIdx]);
 
 % Create a flickerPhysioObj object
 flickerPhysioObj = FlickerPhysio(CombiLEDObj,subjectID,modDirection,experimentName);
@@ -135,10 +135,11 @@ for ii=1:nTrialsToCollect
     pause
 
     % Update the stimulus settings for the flickerPhysioObj
+    idx = mod(measurementRecord.trialIdx-1,length(freqIdxOrder))+1;
     flickerPhysioObj.trialIdx = measurementRecord.trialIdx;
-    flickerPhysioObj.stimFreqHz = stimFreqSetHz(freqIdxOrder(measurementRecord.trialIdx));
+    flickerPhysioObj.stimFreqHz = stimFreqSetHz(freqIdxOrder(idx));
     flickerPhysioObj.stimContrastSet = stimContrastSet;
-    flickerPhysioObj.stimContrastOrder = contrastIdxOrderMatrix(measurementRecord.trialIdx,:);
+    flickerPhysioObj.stimContrastOrder = contrastIdxOrderMatrix(idx,:);
 
     % Start the trial
     flickerPhysioObj.collectTrial;

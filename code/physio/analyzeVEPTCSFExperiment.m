@@ -34,7 +34,6 @@ stimFreqSetHz = p.Results.stimFreqSetHz;
 stimContrastSet = p.Results.stimContrastSet;
 
 Fs = 2000;
-testFreqHz = 20;
 sampleShift = -150;
 stimDurSecs = 2;
 
@@ -44,7 +43,9 @@ load(filename,'measurementRecord');
 nTrials = length(measurementRecord.trialData);
 
 % Loop through the stimuli
-data = cell(length(stimFreqSetHz),length(stimContrastSet));
+dataTime = cell(length(stimFreqSetHz),length(stimContrastSet));
+dataFourier = cell(length(stimFreqSetHz),length(stimContrastSet));
+
 for ff = 1:length(stimFreqSetHz)
     for cc = 1:length(stimContrastSet)
         for tt = 1:nTrials
@@ -63,14 +64,19 @@ for ff = 1:length(stimFreqSetHz)
                     % Multiple by 100 to set as microvolt units
                     signal = circshift(vepDataStruct.response*100,sampleShift);
                     signal = signal-mean(signal);
+                    [frq,amp] = simpleFFT(signal, Fs);
 
                     % Add to the data
-                    if isempty(data{ff,cc})
-                        data{ff,cc} = signal;
+                    if isempty(dataTime{ff,cc})
+                        dataTime{ff,cc} = signal;
+                        dataFourier{ff,cc} = amp;
                     else
-                        signalMat = data{ff,cc};
+                        signalMat = dataTime{ff,cc};
                         signalMat(end+1,:) = signal;
-                        data{ff,cc} = signalMat;
+                        dataTime{ff,cc} = signalMat;
+                        signalMat = dataFourier{ff,cc};
+                        signalMat(end+1,:) = amp;
+                        dataFourier{ff,cc} = signalMat;
                     end
                 end
             end
@@ -79,57 +85,206 @@ for ff = 1:length(stimFreqSetHz)
 end
 
 % Save a timebase
-x = vepDataStruct.timebase;
+xTime = vepDataStruct.timebase;
+xFreq = frq;
 
 % Create the half-cosine ramp
-ramp = ones(size(x));
+ramp = ones(size(xTime));
 rampDur = 0.1;
 ramp(1:rampDur*Fs)=(cos(pi+pi*(1:rampDur*Fs)/(rampDur*Fs))+1)/2;
 ramp(length(ramp)-rampDur*Fs+1:end)=(cos(pi*(1:rampDur*Fs)/(rampDur*Fs))+1)/2;
 
 % Loop through frequencies and contrasts and obtain the amplitude of the
 % evoked response
-figure
-t = tiledlayout(length(stimFreqSetHz),length(stimContrastSet));
+f1 = figure();
+t = tiledlayout(length(stimContrastSet),length(stimFreqSetHz));
 t.TileSpacing = 'compact';
 t.Padding = 'compact';
 
-ampResp = [];
-for ff = 1:length(stimFreqSetHz)
-    for cc = 1:length(stimContrastSet)
+f2 = figure();
+t = tiledlayout(length(stimContrastSet),length(stimFreqSetHz));
+t.TileSpacing = 'compact';
+t.Padding = 'compact';
+
+
+avgResponse = [];
+for cc = 1:length(stimContrastSet)
+    for ff = 1:length(stimFreqSetHz)
+
         % Get this signal matrix
-        signalMat = data{ff,cc};
+        signalMat = dataTime{ff,cc};
 
         % Create the X regression matrix
-        X(:,1) = ramp.*sin(stimDurSecs*2*pi*(x./max(x))*stimFreqSetHz(ff));
-        X(:,2) = ramp.*cos(stimDurSecs*2*pi*(x./max(x))*stimFreqSetHz(ff));
+        X(:,1) = ramp.*sin(stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+        X(:,2) = ramp.*cos(stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+        X(:,3) = ramp.*sin(2*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+        X(:,4) = ramp.*cos(2*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
 
-        % Get the Fourier regression fit to the mean response 
-        meanData = mean(signalMat)';
-        b=X\meanData;
-        fitY = X*b;
-
-        ampResp(ff,cc)=norm(b);
+        % Bootstrap the Fourier regression fit
+        for bb = 1:1000
+            bootIdx = datasample(1:size(signalMat,1),size(signalMat,1));
+            meanData = mean(signalMat(bootIdx,:))';
+            b(:,bb)=X\meanData;
+        end
+        fitY = X*mean(b,2);
+        phaseVec = sort(-atan(b(2,:)./b(1,:)));
+        avgPhase(ff,cc) = mean(phaseVec);
+        harmonicRatioVec = sort(vecnorm(b(3:4,:),2,1)./vecnorm(b(1:2,:),2,1));
+        avgHarmonicRatio(ff,cc) = mean(harmonicRatioVec);
+        avgHarmonicRatioLow(ff,cc) = harmonicRatioVec(50);
+        avgHarmonicRatioHigh(ff,cc) = harmonicRatioVec(950);
+        respVec = sort(vecnorm(b,2,1));
+        avgBetas(ff,cc,:)=mean(b,2);
+        semBetas(ff,cc,:)=std(b,0,2);
+        avgResponse(ff,cc)=mean(respVec);
+        avgResponseLow(ff,cc)=respVec(50);
+        avgResponseHigh(ff,cc)=respVec(950);
 
         % Plot the mean response and fit
+        figure(f1);
         nexttile
-
-        plot(x,meanData,'-','Color',[0.75 0.75 0.75],'LineWidth',1.25);
+        plot(xTime,meanData,'-','Color',[0.75 0.75 0.75],'LineWidth',1.25);
         hold on
-        plot(x,fitY,'-','Color','r','LineWidth',1.25);
+        plot(xTime,fitY,'-','Color','r','LineWidth',1.25);
+        ylim([-5 5]);
+        if cc==1
+            title(sprintf('freq %2.2f',stimFreqSetHz(ff)))
+            if ff==1
+                xlabel('time [secs]')
+                ylabel('microvolts')
+            end
+        end
 
+        % Plot the mean psd
+        signalMat = dataFourier{ff,cc};
+        meanData = mean(signalMat)'/length(xFreq);
+
+        % Nan the multiples of 60 Hz
+        for ii=1:15
+            idx = abs(frq-60*ii)<1.5;
+            meanData(idx)=nan;
+        end
+
+        figure(f2);
+        nexttile
+        a=gca();
+        a.XScale='log';
+
+        % Put up a patch to indicate the stimulus freq
+        for hh = 1:2
+            [~,xIdx] = min(abs(xFreq-hh*stimFreqSetHz(ff)));
+            pWidth = 1;
+            patch( ...
+                [xFreq(xIdx)*0.9,xFreq(xIdx)*0.9,xFreq(xIdx)*1.1,xFreq(xIdx)*1.1], ...
+                [0 3 3 0],'r','EdgeColor','none','FaceColor','r','FaceAlpha',0.1);
+            hold on
+        end
+        plot(xFreq,meanData,'-','Color',[0.25 0.25 0.25],'LineWidth',1.25);
+        ylim([0 3]);
+        xlim([0.5 200]);
+
+    end
+end
+
+
+figure
+logX = log10(stimFreqSetHz);
+logX(1) = 0.4;
+cmap = cool;
+for cc = 1:length(stimContrastSet)
+    vec = avgResponse(:,cc);
+    color = cmap(1+255*((cc-1)/(length(stimContrastSet)-1)),:);
+    if cc==1
+        low = mean(avgResponseLow(:,cc));
+        high = mean(avgResponseHigh(:,cc));
+        patch(...
+            [logX(1),logX(1),logX(end),logX(end)],...
+            [low high high low],'g','EdgeColor','none','FaceColor','r','FaceAlpha',0.1);
+        hold on
+    else
+        plot(logX,vec,'-','Color',color)
+        hold on
+        for ff = 1:length(stimFreqSetHz)
+            plot([logX(ff) logX(ff)],[avgResponseLow(ff,cc) avgResponseHigh(ff,cc)],'-','Color',color,'LineWidth',2)
+            plot(logX(ff),avgResponse(ff,cc),'.','Color',color,'MarkerSize',20)
+        end
+    end
+end
+xlabel('log freq [Hz]')
+ylabel('amplitude [micro volts]')
+
+figure
+logX = log10(stimContrastSet);
+logX(1) = -1.6;
+cmap = cool;
+for ff = 3:length(stimFreqSetHz)
+    color = cmap(round(1+255*((ff-1)/(length(stimFreqSetHz)-1))),:);
+    vec = avgResponse(ff,:);
+    vec = vec ./ max(vec);
+    plot(logX,vec,'-','Color',color)
+    hold on
+    plot(logX,vec,'.','Color',color,'MarkerSize',20)
+end
+xlabel('log contrast');
+ylabel('relative response');
+
+
+figure
+logX = log10(stimFreqSetHz);
+logX(1) = 0.4;
+cmap = cool;
+for cc = 1:length(stimContrastSet)
+    color = cmap(round(1+255*((cc-1)/(length(stimContrastSet)-1))),:);
+    if cc==1
+        low = mean(avgResponseLow(:,cc));
+        high = mean(avgResponseHigh(:,cc));
+        patch(...
+            [logX(1),logX(1),logX(end),logX(end)],...
+            [low high high low],'g','EdgeColor','none','FaceColor','r','FaceAlpha',0.1);
+        hold on
+    else
+        vec = avgResponse(:,cc);
+        plot(logX,vec,'-','Color',color)
+        hold on
+        for ff = 1:length(stimFreqSetHz)
+            plot([logX(ff) logX(ff)],[avgResponseLow(ff,cc) avgResponseHigh(ff,cc)],'-','Color',color,'LineWidth',2)
+            plot(logX(ff),avgResponse(ff,cc),'.','Color',color,'MarkerSize',20)
+        end
     end
 end
 
 figure
 logX = log10(stimFreqSetHz);
 logX(1) = 0.4;
-    for cc = 1:length(stimContrastSet)
-        vec = ampResp(:,cc);
-        cVal = 0.6 - (cc/10);
-        color = [cVal cVal cVal];
-        plot(logX,vec,'-','Color',color)
-        hold on
+cmap = cool;
+for cc = [3 6] %6:length(stimContrastSet)
+    color = cmap(round(1+255*((cc-1)/(length(stimContrastSet)-1))),:);
+    vec = avgPhase(:,cc);
+    plot(logX,vec,'-','Color',color)
+    hold on
+    % for ff = 1:length(stimFreqSetHz)
+    %     plot([logX(ff) logX(ff)],[avgResponseLow(ff,cc) avgResponseHigh(ff,cc)],'-','Color',color,'LineWidth',2)
+    %     plot(logX(ff),avgResponse(ff,cc),'.','Color',color,'MarkerSize',20)
+    % end
+end
+
+
+figure
+logX = log10(stimFreqSetHz);
+logX(1) = 0.4;
+cmap = cool;
+for cc = 6:length(stimContrastSet)
+    color = cmap(1+255*((cc-1)/(length(stimContrastSet)-1)),:);
+    vec = avgHarmonicRatio(:,cc);
+    plot(logX,vec,'-','Color',color)
+    hold on
+    for ff = 1:length(stimFreqSetHz)
+        plot([logX(ff) logX(ff)],[avgHarmonicRatioLow(ff,cc) avgHarmonicRatioHigh(ff,cc)],'-','Color',color,'LineWidth',2)
+        plot(logX(ff),avgHarmonicRatio(ff,cc),'.','Color',color,'MarkerSize',20)
     end
+end
+xlabel('log freq [Hz]')
+ylabel('h2 amp / h1 amp')
+
 
 end
