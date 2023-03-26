@@ -1,8 +1,7 @@
 % The ActLumus measures light using 10 separate channels, each with a
-% different spectral sensitivity function. T
+% different spectral sensitivity function.
 
-adminDir = fullfile(fileparts(getpref('combiLEDToolbox','dropboxBaseDir')),'MELA_admin');
-actLumusDataDir = fullfile(adminDir,'Technical Documents','ActLumus','ActLumus_Radiometer_Comparisons');
+actLumusDataDir = fileparts(mfilename('fullpath'));
 
 % Load ActLumus normalized sensitivity functions
 actLumusChannelSPDs = fullfile(actLumusDataDir,'ActLumusNormResponse.csv');
