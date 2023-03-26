@@ -42,6 +42,89 @@ filename = fullfile(dataDir,'measurementRecord.mat');
 load(filename,'measurementRecord');
 nTrials = length(measurementRecord.trialData);
 
+% Get the carry-over matrix
+emptyDataMatrix = cell(length(stimContrastSet),length(stimContrastSet));
+contrastCarryOverRaw = cell(length(stimFreqSetHz));
+for tt = 1:nTrials
+    stimFreqHz = measurementRecord.trialData(tt).stimFreqHz;
+    ff = find(stimFreqSetHz==stimFreqHz);
+    if isempty(contrastCarryOverRaw{ff})
+        dataMatrix = emptyDataMatrix;
+    else
+        dataMatrix = contrastCarryOverRaw{ff};
+    end
+    stimContrastOrder = measurementRecord.trialData(tt).stimContrastOrder;
+    for ss = 2:length(stimContrastOrder)
+        filename = sprintf('freq_%2.1f_trial_%02d_contrast_%2.1f_stim_%02d.mat',...
+            stimFreqSetHz(ff),...
+            tt,...
+            stimContrastSet(stimContrastOrder(ss)),...
+            ss );
+        load(fullfile(dataDir,'rawEEGData',filename),'vepDataStruct');
+
+        % Multiple by 100 to set as microvolt units
+        signal = circshift(vepDataStruct.response*100,sampleShift);
+        signal = signal-mean(signal);
+
+        % Add to the data
+        rr = stimContrastOrder(ss-1);
+        cc = stimContrastOrder(ss);
+
+        if isempty(dataMatrix{rr,cc})
+            dataMatrix{rr,cc} = signal;
+        else
+            signalMat = dataMatrix{rr,cc};
+            signalMat(end+1,:) = signal;
+            dataMatrix{rr,cc} = signalMat;
+        end
+    end
+    contrastCarryOverRaw{ff}=dataMatrix;
+end
+
+% Save a timebase
+xTime = vepDataStruct.timebase;
+
+% Create the half-cosine ramp
+ramp = ones(size(xTime));
+rampDur = 0.1;
+ramp(1:rampDur*Fs)=(cos(pi+pi*(1:rampDur*Fs)/(rampDur*Fs))+1)/2;
+ramp(length(ramp)-rampDur*Fs+1:end)=(cos(pi*(1:rampDur*Fs)/(rampDur*Fs))+1)/2;
+
+% Now get the amplitude in each matrix
+contrastCarryOverAmplitude = cell(1,length(stimFreqSetHz));
+for ff = 1:length(stimFreqSetHz)
+
+    % Get this data matrix
+    dataMatrix = contrastCarryOverRaw{ff};
+
+        % Create the X regression matrix
+        X(:,1) = ramp.*sin(stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+        X(:,2) = ramp.*cos(stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+        X(:,3) = ramp.*sin(2*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+        X(:,4) = ramp.*cos(2*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+
+        % Loop through rows and columns
+        ampMatrix = [];
+        for rr=1:length(stimContrastSet)
+        for cc=1:length(stimContrastSet)
+            signalMat = dataMatrix{rr,cc};
+               meanData = mean(signalMat)';
+            b=X\meanData; 
+            ampMatrix(rr,cc) = norm(b);
+        end
+        end
+    contrastCarryOverAmplitude{ff}= ampMatrix;
+end
+
+% Create the average carry-over effect across frequencies
+averageCarryOverEffect = zeros(length(stimContrastSet),length(stimContrastSet));
+for ff=1:length(stimFreqSetHz)
+    k=contrastCarryOverAmplitude{ff};
+    k=k./max(k(:));
+    averageCarryOverEffect=averageCarryOverEffect+k;
+end
+averageCarryOverEffect = averageCarryOverEffect/length(stimFreqSetHz);
+
 % Loop through the stimuli
 dataTime = cell(length(stimFreqSetHz),length(stimContrastSet));
 dataFourier = cell(length(stimFreqSetHz),length(stimContrastSet));
@@ -84,15 +167,9 @@ for ff = 1:length(stimFreqSetHz)
     end
 end
 
-% Save a timebase
-xTime = vepDataStruct.timebase;
+% Save the xFreq
 xFreq = frq;
 
-% Create the half-cosine ramp
-ramp = ones(size(xTime));
-rampDur = 0.1;
-ramp(1:rampDur*Fs)=(cos(pi+pi*(1:rampDur*Fs)/(rampDur*Fs))+1)/2;
-ramp(length(ramp)-rampDur*Fs+1:end)=(cos(pi*(1:rampDur*Fs)/(rampDur*Fs))+1)/2;
 
 % Loop through frequencies and contrasts and obtain the amplitude of the
 % evoked response
@@ -229,29 +306,6 @@ xlabel('log contrast');
 ylabel('relative response');
 
 
-figure
-logX = log10(stimFreqSetHz);
-logX(1) = 0.4;
-cmap = cool;
-for cc = 1:length(stimContrastSet)
-    color = cmap(round(1+255*((cc-1)/(length(stimContrastSet)-1))),:);
-    if cc==1
-        low = mean(avgResponseLow(:,cc));
-        high = mean(avgResponseHigh(:,cc));
-        patch(...
-            [logX(1),logX(1),logX(end),logX(end)],...
-            [low high high low],'g','EdgeColor','none','FaceColor','r','FaceAlpha',0.1);
-        hold on
-    else
-        vec = avgResponse(:,cc);
-        plot(logX,vec,'-','Color',color)
-        hold on
-        for ff = 1:length(stimFreqSetHz)
-            plot([logX(ff) logX(ff)],[avgResponseLow(ff,cc) avgResponseHigh(ff,cc)],'-','Color',color,'LineWidth',2)
-            plot(logX(ff),avgResponse(ff,cc),'.','Color',color,'MarkerSize',20)
-        end
-    end
-end
 
 figure
 logX = log10(stimFreqSetHz);
@@ -286,5 +340,64 @@ end
 xlabel('log freq [Hz]')
 ylabel('h2 amp / h1 amp')
 
+
+
+figure
+figuresize(325,400,'pt')
+subplot(5,4,[1 2 3]);
+logX = log10(stimContrastSet);
+logX(1) = -1.6;
+meanZeroContrast = mean(averageCarryOverEffect(:,1));
+plot([min(logX),max(logX)],[meanZeroContrast,meanZeroContrast],':k')
+hold on
+plot(logX,mean(averageCarryOverEffect),'-k','LineWidth',2);
+ylabel('response');
+xlabel('contrast')
+ylim([0 1]);
+xlim([min(logX)-mean(diff(logX))/2, max(logX)+mean(diff(logX))/2]);
+a = gca();
+a.XAxis.Visible = 'off';
+box off
+
+subplot(5,4,[8 12 16]);
+logX = log10(stimContrastSet);
+logX(1) = -1.6;
+meanVal = mean(averageCarryOverEffect(:));
+plot([0 0],[min(logX) max(logX)],':k')
+hold on
+plot(mean(averageCarryOverEffect,2)-meanVal,logX,'-k','LineWidth',2);
+xlabel('modulation');
+ylabel('contrast')
+xlim([-0.2 +0.2]);
+ylim([min(logX)-mean(diff(logX))/2, max(logX)+mean(diff(logX))/2]);
+a = gca();
+a.YAxisLocation = "right";
+a.YAxis.Visible = 'off';
+box off
+
+% Color map
+subplot(5,4,[5 6 7 9 10 11 13 14 15]);
+cmap = [ linspace(0,1,255);[linspace(0,0.5,127) linspace(0.5,0,128)];[linspace(0,0.5,127) linspace(0.5,0,128)]]';
+im = 2*(averageCarryOverEffect - 0.5);
+im = round(im * 128 + 128);
+image(im);
+colormap(cmap)
+axis normal
+a = gca();
+a.YDir = 'normal';
+a.XTick = 1:length(stimContrastSet);
+a.YTick = 1:length(stimContrastSet);
+a.XTickLabels = arrayfun(@(x) {num2str(x)},stimContrastSet);
+a.YTickLabels = arrayfun(@(x) {num2str(x)},stimContrastSet);
+a.XAxis.TickLength = [0 0];
+a.YAxis.TickLength = [0 0];
+xlabel('current contrast');
+ylabel('prior contrast');
+box off
+
+subplot(5,4,[17 18 19]);
+hCB = colorbar('south','AxisLocation','in');
+hCB.Label.String = 'relative ssVEP response';
+set(gca,'Visible',false)
 
 end
