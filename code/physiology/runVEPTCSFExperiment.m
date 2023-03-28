@@ -38,6 +38,7 @@ rng('shuffle');
 % Define a location to save data
 modDir = fullfile(...
     p.Results.dropBoxBaseDir,...
+    'MELA_data',...
     p.Results.projectName,...
     p.Results.approachName,...
     subjectID,modDirection);
@@ -115,14 +116,14 @@ else
 end
 
 % First check if we are done
-if measurementRecord.trialIdx > length(freqIdxOrder)*2
+if measurementRecord.trialIdx > length(freqIdxOrder)*3
     fprintf('Done with this experiment!\n')
     return
 end
 
 % How many trials to collect?
 nTrialsToCollect = p.Results.nTrialsToCollect;
-nTrialsToCollect = min([nTrialsToCollect,1+(2*length(freqIdxOrder))-measurementRecord.trialIdx]);
+nTrialsToCollect = min([nTrialsToCollect,1+(3*length(freqIdxOrder))-measurementRecord.trialIdx]);
 
 % Create a flickerPhysioObj object
 flickerPhysioObj = FlickerPhysio(CombiLEDObj,subjectID,modDirection,experimentName);

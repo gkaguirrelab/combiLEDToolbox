@@ -23,6 +23,7 @@ experimentName = 'ssVEPTCSF';
 % Define a location to save data
 modDir = fullfile(...
     p.Results.dropBoxBaseDir,...
+    'MELA_data',...
     p.Results.projectName,...
     p.Results.approachName,...
     subjectID,modDirection);
@@ -125,6 +126,7 @@ for ff=1:length(stimFreqSetHz)
 end
 averageCarryOverEffect = averageCarryOverEffect/length(stimFreqSetHz);
 
+
 % Loop through the stimuli
 dataTime = cell(length(stimFreqSetHz),length(stimContrastSet));
 dataFourier = cell(length(stimFreqSetHz),length(stimContrastSet));
@@ -171,6 +173,7 @@ end
 xFreq = frq;
 
 
+%% Sub-plots of the SPDs and average response
 % Loop through frequencies and contrasts and obtain the amplitude of the
 % evoked response
 f1 = figure();
@@ -264,6 +267,7 @@ for cc = 1:length(stimContrastSet)
 end
 
 
+%% Temporal sensitivity
 figure
 logX = log10(stimFreqSetHz);
 logX(1) = 0.4;
@@ -290,11 +294,13 @@ end
 xlabel('log freq [Hz]')
 ylabel('amplitude [micro volts]')
 
+
+%% Contrast response function
 figure
 logX = log10(stimContrastSet);
 logX(1) = -1.6;
 cmap = cool;
-for ff = 3:length(stimFreqSetHz)
+for ff = 1:length(stimFreqSetHz)
     color = cmap(round(1+255*((ff-1)/(length(stimFreqSetHz)-1))),:);
     vec = avgResponse(ff,:);
     vec = vec ./ max(vec);
@@ -307,6 +313,7 @@ ylabel('relative response');
 
 
 
+%% Phase of response
 figure
 logX = log10(stimFreqSetHz);
 logX(1) = 0.4;
@@ -323,6 +330,7 @@ for cc = [3 6] %6:length(stimContrastSet)
 end
 
 
+%% Relative contribution of 2nd harmonic
 figure
 logX = log10(stimFreqSetHz);
 logX(1) = 0.4;
@@ -341,7 +349,7 @@ xlabel('log freq [Hz]')
 ylabel('h2 amp / h1 amp')
 
 
-
+%% Carry-over figure
 figure
 figuresize(325,400,'pt')
 subplot(5,4,[1 2 3]);
@@ -359,6 +367,7 @@ a = gca();
 a.XAxis.Visible = 'off';
 box off
 
+
 subplot(5,4,[8 12 16]);
 logX = log10(stimContrastSet);
 logX(1) = -1.6;
@@ -368,7 +377,7 @@ hold on
 plot(mean(averageCarryOverEffect,2)-meanVal,logX,'-k','LineWidth',2);
 xlabel('modulation');
 ylabel('contrast')
-xlim([-0.2 +0.2]);
+xlim([-0.1 +0.1]);
 ylim([min(logX)-mean(diff(logX))/2, max(logX)+mean(diff(logX))/2]);
 a = gca();
 a.YAxisLocation = "right";

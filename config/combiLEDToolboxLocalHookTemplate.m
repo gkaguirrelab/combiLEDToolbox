@@ -30,11 +30,11 @@ switch userName
     case 'aguirre'
         dropBoxUserFullName = 'Geoffrey Aguirre';
         dropboxBaseDir = fullfile(filesep,'Users',userName,...
-            'Aguirre-Brainard Lab Dropbox',dropBoxUserFullName,'MELA_data');
+            'Aguirre-Brainard Lab Dropbox',dropBoxUserFullName);
     otherwise
         dropboxBaseDir = ...
             fullfile('/Users', userName, ...
-            'Aguirre-Brainard Lab Dropbox',userName,'MELA_data');
+            'Aguirre-Brainard Lab Dropbox',userName);
 end
 
 % Set preferences for project output
