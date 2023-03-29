@@ -1,8 +1,10 @@
 function deriveVideoSpectrograms(subjectID,sessionDate,varargin)
-
+% The actual duration of each video is 53 minutes and ~20 seconds (or 3200
+% seconds), as opposed to the nominal 60 minutes. Consequently, the frame
+% rate is 112.5 fps, as opposed to the nominal 100 fps.
 %{
 subjectID = 'HERO_gka1';
-sessionDate = '28-03-2023';
+sessionDate = '29-03-2023';
 deriveVideoSpectrograms(subjectID,sessionDate);
 %}
 
@@ -11,7 +13,7 @@ p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
 p.addParameter('projectName','combiLED',@ischar);
 p.addParameter('approachName','environmentalSampling',@ischar);
-p.addParameter('fps',100,@isnumeric);
+p.addParameter('fps',112.5,@isnumeric);
 p.addParameter('windowDurSecs',100,@isnumeric);
 p.addParameter('windowStepSecs',25,@isnumeric);
 p.parse(varargin{:})
@@ -48,33 +50,41 @@ allSpectrograms = cell(1,length(videoList));
 
 % Loop through the videos
 for vv = 1:length(videoList)
+
+    % Open the video object
     vidFilename = fullfile(videoList(vv).folder,videoList(vv).name);
     resultFilename = fullfile(analysisDir,[videoList(vv).name '_spectrogram.mat']);
-
     vObj = VideoReader(vidFilename);
-    timePointSecs = 0:windowStepSecs:vObj.Duration-windowDurSecs;
-    nSamples = length(timePointSecs);
-    vecLength = (windowDurSecs * fps)/2+1;
+
+    % Set the read length to be the closest even multiple of 4
+    windowLengthFrames = round(fps*windowDurSecs);
+    windowLengthFrames = windowLengthFrames + mod(windowLengthFrames,4);
+    windowStepFrames = windowLengthFrames/4;
+
+    % Define the properties of the Fourier transform
+    framePoints = 1:windowStepFrames:vObj.NumFrames-windowLengthFrames;
+    nSamples = length(framePoints);
+    vecLength = windowLengthFrames/2+1;
 
     % Set up some variables
     spectrogram=zeros(3,nSamples,vecLength);
     luminanceVec = [];
 
-    % Loop over the time samples
+    % Loop over the time samples.
     for ii=1:nSamples
-        startFrame = timePointSecs(ii)*fps+1;
+        startFrame = framePoints(ii);
         % Check if we can use a portion of the last loaded video snippet
         if ii<4
-            video = read(vObj,[startFrame,startFrame+fps*windowDurSecs-1]);
+            video = read(vObj,[startFrame,startFrame+windowLengthFrames-1]);
             % Trim the top 10 frames that have the time code
             % and get the average
             video = video(11:end,:,:,:);
         else
-            lastStart = timePointSecs(ii-1)*fps+1;
-            lastEnd = lastStart+fps*windowDurSecs-1;
-            video(:,:,:,1:fps*(windowDurSecs-windowStepSecs)) = video(:,:,:,1+fps*windowStepSecs:end);
-            newVidSeg = read(vObj,[lastEnd+1,lastEnd+fps*windowStepSecs]);
-            video(:,:,:,fps*(windowDurSecs-windowStepSecs)+1:end) = newVidSeg(11:end,:,:,:);
+            lastStart = framePoints(ii-1);
+            lastEnd = lastStart+windowLengthFrames-1;
+            video(:,:,:,1:windowLengthFrames-windowStepFrames) = video(:,:,:,1+windowStepFrames:end);
+            newVidSeg = read(vObj,[lastEnd+1,lastEnd+windowStepFrames]);
+            video(:,:,:,windowLengthFrames-windowStepFrames+1:end) = newVidSeg(11:end,:,:,:);
         end
 
         % Get the dimensions of the video
@@ -103,6 +113,9 @@ for vv = 1:length(videoList)
                 case 3
                     signal = mean(videoVec(:,:,3)-0.5*(videoVec(:,:,1)+videoVec(:,:,2)),1);
             end
+            % Mean center the signal and convert to % change
+            m = mean(signal);
+            signal = (signal - m)/m;
             [frq,amp] = simpleFFT(signal,fps);
             spectrogram(ff,ii,:) = amp;
         end

@@ -44,9 +44,10 @@ T=readtable(filename,'FileType','text','NumHeaderLines',31,'ReadRowNames',true);
 
 % Find the first event
 startIdx = find(T.EVENT==1,1);
+%startIdx = 1;
 
 % Extract 3 hours and 35 minutes of data
-nSamples = 5600;
+nSamples = 4*60*30;
 totalIrradianceVec = T.LIGHT(startIdx:startIdx+nSamples);
 deltaHour = 2/60/60;
 xHours = 0:deltaHour:(nSamples*2/60/60);
