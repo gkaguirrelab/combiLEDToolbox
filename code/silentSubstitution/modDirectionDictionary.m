@@ -15,42 +15,42 @@ searchBackground = false;
 switch whichDirection
     case 'LminusM_wide'
         whichReceptorsToTarget = [1 2 4 5];
-        whichReceptorsToIgnore = [7 8 9 10];
+        whichReceptorsToIgnore = [7];
         desiredContrast = [1 -1 1 -1];
         matchConstraint = 2;
     case 'LminusM_foveal'
         whichReceptorsToTarget = [1 2];
-        whichReceptorsToIgnore = [4 5 7 8 10];
+        whichReceptorsToIgnore = [4 5 7];
         desiredContrast = [1 -1];
     case 'L_wide'
-        whichReceptorsToTarget = [1 4 7];
-        whichReceptorsToIgnore = [10];
-        desiredContrast = [1 1 1];
+        whichReceptorsToTarget = [1 4];
+        whichReceptorsToIgnore = [7];
+        desiredContrast = [1 1];
     case 'L_foveal'
         whichReceptorsToTarget = [1];
-        whichReceptorsToIgnore = [4 5 6 7 8 9 10];
+        whichReceptorsToIgnore = [4 5 6 7];
         desiredContrast = [1];
     case 'M_wide'
-        whichReceptorsToTarget = [2 5 8];
-        whichReceptorsToIgnore = [10];
+        whichReceptorsToTarget = [2 5];
+        whichReceptorsToIgnore = [7];
         desiredContrast = [1 1];
         matchConstraint = 2;
     case 'M_foveal'
         whichReceptorsToTarget = [2];
-        whichReceptorsToIgnore = [4 5 6 7 8 9 10];
+        whichReceptorsToIgnore = [4 5 6 7];
         desiredContrast = [1];
     case 'S_wide'
-        whichReceptorsToTarget = [3 6 9];
-        whichReceptorsToIgnore = [10];
-        desiredContrast = [1 1 1];
+        whichReceptorsToTarget = [3 6];
+        whichReceptorsToIgnore = [7];
+        desiredContrast = [1 1];
     case 'S_foveal'
         whichReceptorsToTarget = [3];
-        whichReceptorsToIgnore = [6 9 10];
+        whichReceptorsToIgnore = [4 5 6 7];
         desiredContrast = [1];
     case 'LightFlux'
-        whichReceptorsToTarget = 1:10;
+        whichReceptorsToTarget = 1:7;
         whichReceptorsToIgnore = [];
-        desiredContrast = ones(1,10);
+        desiredContrast = ones(1,7);
         matchConstraint = 3;
     case 'LMSnoMel'
         % 63% contrast on the peripheral LMS cones with ~1% difference
@@ -63,11 +63,11 @@ switch whichDirection
         searchBackground = true;
     case 'Mel'
         % 90% contrast on Mel
-        whichReceptorsToTarget = 10;
+        whichReceptorsToTarget = 7;
         whichReceptorsToIgnore = [1 2 3];
         desiredContrast = 1;
         x0Background = [ 0.0823    0.0000    0.0000    0.0655    0.0007    0.3248    0.5499    0.4275 ]';
-        searchBackground = true;
+        searchBackground = false;
     case 'SnoMel'
         % 91% contrast on peripheral S-cones
         whichReceptorsToTarget = [6];
