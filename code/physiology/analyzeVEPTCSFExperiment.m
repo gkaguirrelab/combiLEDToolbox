@@ -312,24 +312,6 @@ xlabel('log contrast');
 ylabel('relative response');
 
 
-
-%% Phase of response
-figure
-logX = log10(stimFreqSetHz);
-logX(1) = 0.4;
-cmap = cool;
-for cc = [3 6] %6:length(stimContrastSet)
-    color = cmap(round(1+255*((cc-1)/(length(stimContrastSet)-1))),:);
-    vec = avgPhase(:,cc);
-    plot(logX,vec,'-','Color',color)
-    hold on
-    % for ff = 1:length(stimFreqSetHz)
-    %     plot([logX(ff) logX(ff)],[avgResponseLow(ff,cc) avgResponseHigh(ff,cc)],'-','Color',color,'LineWidth',2)
-    %     plot(logX(ff),avgResponse(ff,cc),'.','Color',color,'MarkerSize',20)
-    % end
-end
-
-
 %% Relative contribution of 2nd harmonic
 figure
 logX = log10(stimFreqSetHz);
