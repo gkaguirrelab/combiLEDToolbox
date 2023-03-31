@@ -39,81 +39,132 @@ videoList =dir(fullfile(videoDir,'*','*.avi'));
 allSpectrograms = cell(1,length(videoList));
 
 % Load the spectrograms
-for cc = 1:3
-    spectSet{cc} = [];
-end
+for cc = 1:3; spectSet{cc} = []; end
 for vv = 1:length(videoList)
     resultFilename = fullfile(analysisDir,[videoList(vv).name '_spectrogram.mat']);
 
     load(resultFilename,'spectrogram','frq');
+    [~,OneHzIdx] = min(abs(frq-1));
 
     % log-transform and smooth the spectrogram
+    %    figure
+    plotColors = {'k','r','b'};
     for cc=1:3
         k = log10(squeeze(spectrogram(cc,:,:)));
         s = size(k);
-        k = reshape(smooth(k(:),10),s(1),s(2));
-        spectSet{cc} = [spectSet{cc},k'];
+        k = reshape(smooth(k(:),10),s(1),s(2))';
+        spectSet{cc} = [spectSet{cc},k,nan(size(k,1),4)];
+        %        loglog(frq(OneHzIdx:end),mean(squeeze(spectrogram(cc,:,OneHzIdx:end)),1),['-' plotColors{cc}]); hold on;
     end
 
 end % Loop over the videos
 
-% Get the irradiance
-[xHours,totalIrradianceVec]=processActLumusRecording(subjectID,sessionDate);
+% Get the irradiance and activity
+[xHours,totalIrradianceVec,activityVec]=processActLumusRecording(subjectID,sessionDate);
 
-% Code the activity
-indoorMinuteIdx = [1:53,74:121,148:156,161:163,167:172,195:241];
-outdoorMinuteIdx = [54:73,122:147,157:160,164:166,173:194];
-walkingMinuteIdx = [1:7,42:62,73:77,122:126,147:172,192:205];
-sittingMinuteIdx = [8:41,63:72,78:121,206:241];
-drivingMinuteIdx = [127:146,173:191];
-
+% Code the activity; 1 = walking, 2 = sitting, 3 = driving
+indoorMinuteIdx = {1:55,74:123,148:156,160:162,167:172,195:241};
+activityIdx = {1:7,8:41,42:64,65:72,73:77,78:121,122:127,128:146,147:172,173:191,192:200,201:241};
+activityCode = {1,2,1,2,1,2,1,3,1,3,1,2};
+activityColor = {'b','w','r'};
 
 figure
+figuresize(400,800,'pt');
 
-subplot(5,1,1);
-plot(indoorMinuteIdx,repmat(2,size(indoorMinuteIdx)),'.','Color',[0.25 0.25 0.25]);
-hold on
-plot(outdoorMinuteIdx,repmat(2,size(outdoorMinuteIdx)),'.','Color',[0.95 0.95 0.95]);
-plot(walkingMinuteIdx,repmat(1,size(walkingMinuteIdx)),'.','Color','y');
-plot(sittingMinuteIdx,repmat(1,size(sittingMinuteIdx)),'.','Color','r');
-plot(drivingMinuteIdx,repmat(1,size(drivingMinuteIdx)),'.','Color','g');
-xlim([1 241]);
-ylim([0 5]);
-axis off
+t = tiledlayout(9,1);
+t.TileSpacing = 'compact';
+t.Padding = 'compact';
 
-xFreq = frq(101:end);
-subplot(5,1,2);
+[~,xLimIdx] = min(abs(xHours*60-(3200*4)));
+
+% Irradiance and indoor/outdoor status
+nexttile;
+
+% Patches to indicate inside / outside
+a = gca();
+a.YScale = 'log';
+for pp = 1:length(indoorMinuteIdx)
+    idx1 = min(indoorMinuteIdx{pp}) / 60;
+    idx2 = max(indoorMinuteIdx{pp}) / 60;
+    patch( ...
+        [idx1,idx1,idx2,idx2], ...
+        [10^0 10^5 10^5 10^0],'k','EdgeColor','none','FaceColor','k','FaceAlpha',0.1);
+    hold on
+end
+
+% The irradiance vector
 semilogy(xHours,smooth(totalIrradianceVec,25),'-','Color',[0.25 0.25 0.25],'LineWidth',1.5);
-ylabel('log irradiance [W/m2]');
-xlim([0 max(xHours)]);
+ylabel({'log irradiance','[W/m2]'});
+xlim([0 xHours(xLimIdx)]);
 ylim([10^0 10^5])
-    a = gca;
-    a.TickDir = 'out';
-    box off
+a = gca;
+a.TickDir = 'out';
+a.XTick = [];
+box off
 
+
+nexttile;
+
+% Dots to indicate activity
+%plot(walkingMinuteIdx/60,repmat(10^0.5,size(walkingMinuteIdx)),'.','Color','g');
+%plot(sittingMinuteIdx/60,repmat(10^0.5,size(sittingMinuteIdx)),'.','Color','r');
+%plot(drivingMinuteIdx/60,repmat(10^0.5,size(drivingMinuteIdx)),'.','Color','b');
+
+for pp = 1:length(activityIdx)
+    idx1 = min(activityIdx{pp}) / 60;
+    idx2 = max(activityIdx{pp}) / 60;
+    patch( ...
+        [idx1,idx1,idx2,idx2], ...
+        [0 20 20 0],activityColor{activityCode{pp}},'EdgeColor','none','FaceColor',activityColor{activityCode{pp}},'FaceAlpha',0.1);
+    hold on
+end
+
+% The activity vector
+plot(xHours,smooth(activityVec,25),'-','Color',[0.25 0.25 0.25],'LineWidth',1.5);
+ylabel({'activity'});
+xlim([0 xHours(xLimIdx)]);
+%ylim([10^0 10^5])
+a = gca;
+a.TickDir = 'out';
+a.XTick = [];
+box off
+
+
+
+% The three spectrograms
+xFreq = frq(OneHzIdx:end);
+directions = {'LMS','L–M','S'};
 for cc = 1:3
-    subplot(5,1,cc+2);
+    nexttile([2 1]);
     k = spectSet{cc};
-    k = k(101:end,:);
-    imagesc(k(101:end,:));
+    k = k(OneHzIdx:end,:);
+    imagesc(k);
     a = gca;
     a.TickDir = 'out';
     a.YDir = 'normal';
     a.YTick = [1,901,1901:1000:length(xFreq)];
-    a.YTickLabel = arrayfun(@(x) {num2str(x)},xFreq(a.YTick));
+    a.YTickLabel = arrayfun(@(x) {num2str(x)},round(xFreq(a.YTick)));
     ylim([1 length(xFreq)+1])
-    a.XTick = 1:(60*60)/windowStepSecs:(60*60/windowStepSecs)*round((size(k,2)*windowStepSecs)/60/60);
-    a.XTickLabel = arrayfun(@(x) {num2str(x)},0:round((size(k,2)*windowStepSecs)/60/60));
+    thirtyMins = (30*60)/windowStepSecs;
+    a.XTick = 1:thirtyMins:thirtyMins*ceil((size(k,2)/thirtyMins));
+    a.XTickLabel = arrayfun(@(x) {num2str(x)},0:0.5:(1+length(a.XTick))*0.5);
     ylabel('Freq [Hz]');
-    xlim([1 (60*60/windowStepSecs)*round((size(k,2)*windowStepSecs)/60/60)]);
     xlabel('time [hours]')
-    if cc < 3
-        axis off
-    else
-    box off
+    if cc ~= 1
+        a.YTick = [];
+            ylabel('')
     end
-
+    if cc ~= 3
+        a.XTick = [];
+            xlabel('')
+    end
+    title(directions{cc});
 end
+
+nexttile;
+hCB = colorbar('north','AxisLocation','in');
+hCB.Label.String = 'relative power';
+set(gca,'Visible',false)
 colormap(turbo);
 
 end % Function

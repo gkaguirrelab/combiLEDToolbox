@@ -1,8 +1,8 @@
-function [xHours,totalIrradianceVec]=processActLumusRecording(subjectID,sessionDate,varargin)
+function [xHours,totalIrradianceVec,activityVec]=processActLumusRecording(subjectID,sessionDate,varargin)
 
 %{
 subjectID = 'HERO_gka1';
-sessionDate = '28-03-2023';
+sessionDate = '29-03-2023';
 processActLumusRecording(subjectID,sessionDate);
 %}
 
@@ -44,11 +44,11 @@ T=readtable(filename,'FileType','text','NumHeaderLines',31,'ReadRowNames',true);
 
 % Find the first event
 startIdx = find(T.EVENT==1,1);
-%startIdx = 1;
 
-% Extract 3 hours and 35 minutes of data
-nSamples = 4*60*30;
+% Extract 4 * 5 minutes and 20 seconds.
+nSamples = 4*3200/2;
 totalIrradianceVec = T.LIGHT(startIdx:startIdx+nSamples);
+activityVec = T.TATn(startIdx:startIdx+nSamples);
 deltaHour = 2/60/60;
 xHours = 0:deltaHour:(nSamples*2/60/60);
 
