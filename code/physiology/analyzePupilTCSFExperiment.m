@@ -15,6 +15,8 @@ p.addParameter('projectName','combiLED',@ischar);
 p.addParameter('approachName','flickerPhysio',@ischar);
 p.addParameter('stimContrastSet',[0,0.05,0.1,0.2,0.4,0.8],@isnumeric);
 p.addParameter('stimFreqSetHz',[4,6,10,14,20,28,40],@isnumeric);
+p.addParameter('nBoots',1000,@isnumeric);
+p.addParameter('savePlots',true,@islogical);
 p.parse(varargin{:})
 
 % Set our experimentName
@@ -31,6 +33,19 @@ dataDir = fullfile(...
 analysisDir = fullfile(...
     p.Results.dropBoxBaseDir,...
     'MELA_analysis',...
+    p.Results.projectName,...
+    p.Results.approachName,...
+    subjectID,modDirection,experimentName);
+
+% Create the analysis directory for the subject
+if ~isfolder(analysisDir) && p.Results.savePlots
+    mkdir(analysisDir)
+end
+
+% Where the pupil video prep is taking place
+processingDir = fullfile(...
+    p.Results.dropBoxBaseDir,...
+    'MELA_analysis',...
     'pilotLumFlickerPupil','rawPupilVideos');
 
 % Get the stimulus values
@@ -38,10 +53,10 @@ stimFreqSetHz = p.Results.stimFreqSetHz;
 stimContrastSet = p.Results.stimContrastSet;
 nFreqs = length(stimFreqSetHz);
 nContrasts = length(stimContrastSet);
-
 Fs = 40;
 sampleShift = 0;
 stimDurSecs = 2;
+nBoots = p.Results.nBoots;
 
 % Load the measurementRecord
 filename = fullfile(dataDir,'measurementRecord.mat');
@@ -57,7 +72,7 @@ stimFreqIdxVec = [];
 for tt = 1:nTrials
 
     % Load the pupil file for this trial
-    filelist = dir(fullfile(analysisDir,sprintf('*trial_%02d_pupil.mat',tt)));
+    filelist = dir(fullfile(processingDir,sprintf('*trial_%02d_pupil.mat',tt)));
     filename = fullfile(filelist.folder,filelist.name);
     load(filename,'pupilData');
 
@@ -134,15 +149,22 @@ gammaParam = fmincon(myObj,2);
 fprintf('Model fit R-squared = %2.3f \n',1/fVal);
 
 % Plot the fit
-figure
+f1=figure;
+figuresize(800,200,'pt');
 x = 0:1/Fs:length(pupilVec)*(1/Fs)-(1/Fs);
 plot(x,pupilVec,'.','Color',[0.5 0.5 0.5]);
 hold on
-plot(x,fitY,'-r','LineWidth',2);
+plot(x,fitY,'-r','LineWidth',1);
+xlabel('time [secs]');
+ylabel('pupil size [%% change]');
+
+if p.Results.savePlots
+    filename = [subjectID '_' modDirection '_' 'pupil-rawFit.pdf'];
+    saveas(f1,fullfile(analysisDir,filename));
+end
 
 % For each frequency, boot-strap across the trials and get the mean and SD
 % of the beta values by contrast
-nBoots = 100;
 bootBetas = [];
 for bb=1:nBoots
     bootX = [];
@@ -183,20 +205,22 @@ bMatSEM = reshape(semB,7,7);
 bMat = bMat(2:end-1,:);
 bMatSEM = bMatSEM(2:end-1,:);
 
-figure
+f2=figure;
+x = log10(stimFreqSetHz);
 cmap = flipud(copper(nContrasts-1));
 for ii = nContrasts-1:-1:1
     % Create a patch of the error area
-    p = patch(...
-        [1:nFreqs,nFreqs:-1:1],...
+    patch(...
+        [x,fliplr(x)],...
         [-bMat(ii,:)+bMatSEM(ii,:),fliplr(-bMat(ii,:)-bMatSEM(ii,:))],...
         cmap(ii,:),'EdgeColor','none','FaceColor',cmap(ii,:),'FaceAlpha',0.1);
     hold on
-    plot(1:nFreqs,-bMat(ii,:),'.-','Color',cmap(ii,:),'MarkerSize',15,'LineWidth',1);
+    plot(x,-bMat(ii,:),'.-','Color',cmap(ii,:),'MarkerSize',15,'LineWidth',1);
 end
-xlim([0 nFreqs+1]);
+tmp = diff(x);
+xlim([min(x)-tmp(1), max(x)+tmp(end)]);
 a=gca();
-a.XTick=1:nFreqs;
+a.XTick=x;
 a.XTickLabels = arrayfun(@(x) {num2str(x)},stimFreqSetHz);
 xlabel('stimulus frequency [Hz]')
 ylabel('pupil constriction [%%]')
@@ -205,6 +229,11 @@ cbh.Ticks = 0.1:0.2:0.9;
 cbh.TickLabels = arrayfun(@(x) {num2str(x)},stimContrastSet(2:end));
 cbh.Label.String = 'contrast';
 colormap(cmap);
+
+if p.Results.savePlots
+    filename = [subjectID '_' modDirection '_' 'pupil-TTF.pdf'];
+    saveas(f2,fullfile(analysisDir,filename));
+end
 
 end
 

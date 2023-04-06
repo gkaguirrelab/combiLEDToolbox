@@ -14,6 +14,7 @@ p.addParameter('approachName','environmentalSampling',@ischar);
 p.addParameter('fps',100,@isnumeric);
 p.addParameter('windowDurSecs',100,@isnumeric);
 p.addParameter('windowStepSecs',25,@isnumeric);
+p.addParameter('savePlots',true,@islogical);
 p.parse(varargin{:})
 
 windowStepSecs = p.Results.windowStepSecs;
@@ -68,7 +69,7 @@ activityIdx = {1:7,8:41,42:64,65:72,73:77,78:121,122:127,128:146,147:172,173:191
 activityCode = {1,2,1,2,1,2,1,3,1,3,1,2};
 activityColor = {'b','w','r'};
 
-figure
+f1 = figure;
 figuresize(400,800,'pt');
 
 t = tiledlayout(9,1);
@@ -102,13 +103,7 @@ a.TickDir = 'out';
 a.XTick = [];
 box off
 
-
 nexttile;
-
-% Dots to indicate activity
-%plot(walkingMinuteIdx/60,repmat(10^0.5,size(walkingMinuteIdx)),'.','Color','g');
-%plot(sittingMinuteIdx/60,repmat(10^0.5,size(sittingMinuteIdx)),'.','Color','r');
-%plot(drivingMinuteIdx/60,repmat(10^0.5,size(drivingMinuteIdx)),'.','Color','b');
 
 for pp = 1:length(activityIdx)
     idx1 = min(activityIdx{pp}) / 60;
@@ -123,13 +118,10 @@ end
 plot(xHours,smooth(activityVec,25),'-','Color',[0.25 0.25 0.25],'LineWidth',1.5);
 ylabel({'activity'});
 xlim([0 xHours(xLimIdx)]);
-%ylim([10^0 10^5])
 a = gca;
 a.TickDir = 'out';
 a.XTick = [];
 box off
-
-
 
 % The three spectrograms
 xFreq = frq(OneHzIdx:end);
@@ -152,11 +144,11 @@ for cc = 1:3
     xlabel('time [hours]')
     if cc ~= 1
         a.YTick = [];
-            ylabel('')
+        ylabel('')
     end
     if cc ~= 3
         a.XTick = [];
-            xlabel('')
+        xlabel('')
     end
     title(directions{cc});
 end
@@ -166,6 +158,11 @@ hCB = colorbar('north','AxisLocation','in');
 hCB.Label.String = 'relative power';
 set(gca,'Visible',false)
 colormap(turbo);
+
+if p.Results.savePlots
+    filename = [subjectID '_' sessionDate '_' 'visualDiet.pdf'];
+    saveas(f1,fullfile(analysisDir,filename));
+end
 
 end % Function
 
