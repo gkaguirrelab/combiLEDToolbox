@@ -44,7 +44,7 @@ classdef BiopackControl < handle
             p = inputParser; p.KeepUnmatched = false;
             p.addParameter('filePrefix','',@ischar);
             p.addParameter('trialDurationSecs',4,@isnumeric);
-            p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
+            p.addParameter('dropBoxBaseDir',fullfile(getpref('combiLEDToolbox','dropboxBaseDir'),'MELA_data'),@ischar);
             p.addParameter('projectName','combiLED',@ischar);
             p.addParameter('approachName','ssVEP',@ischar);
             p.addParameter('simulateResponse',false,@islogical);

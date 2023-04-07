@@ -67,7 +67,7 @@ classdef FlickerPhysio < handle
             p.addParameter('halfCosineRampDurSecs',0.1,@isnumeric);
             p.addParameter('interStimIntervalSecs',0.2,@isnumeric);
             p.addParameter('simulateStimuli',false,@islogical);
-            p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
+            p.addParameter('dropBoxBaseDir',fullfile(getpref('combiLEDToolbox','dropboxBaseDir'),'MELA_data'),@ischar);
             p.addParameter('projectName','combiLED',@ischar);
             p.addParameter('approachName','flickerPhysio',@ischar);
             p.addParameter('verbose',true,@islogical);

@@ -4,6 +4,7 @@ function analyzeVEPTCSFExperiment(subjectID,modDirection,varargin)
 %{
     subjectID = 'HERO_gka1';
     modDirection = 'LightFlux';
+    modDirection = 'LminusM_wide';
     analyzeVEPTCSFExperiment(subjectID,modDirection);
 %}
 

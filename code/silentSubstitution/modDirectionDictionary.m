@@ -26,6 +26,7 @@ switch whichDirection
         whichReceptorsToTarget = [1 4];
         whichReceptorsToIgnore = [7];
         desiredContrast = [1 1];
+        matchConstraint = 4;
     case 'L_foveal'
         whichReceptorsToTarget = [1];
         whichReceptorsToIgnore = [4 5 6 7];
@@ -34,7 +35,7 @@ switch whichDirection
         whichReceptorsToTarget = [2 5];
         whichReceptorsToIgnore = [7];
         desiredContrast = [1 1];
-        matchConstraint = 2;
+        matchConstraint = 1;
     case 'M_foveal'
         whichReceptorsToTarget = [2];
         whichReceptorsToIgnore = [4 5 6 7];

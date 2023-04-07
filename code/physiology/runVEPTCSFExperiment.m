@@ -1,5 +1,5 @@
 function runVEPTCSFExperiment(subjectID,modDirection,varargin)
-% 
+%
 %
 %{
     subjectID = 'HERO_gka1';
@@ -14,6 +14,7 @@ p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@isc
 p.addParameter('projectName','combiLED',@ischar);
 p.addParameter('approachName','flickerPhysio',@ischar);
 p.addParameter('nTrialsToCollect',10,@isnumeric);
+p.addParameter('nFullSets',3,@isnumeric);
 p.addParameter('stimContrastSet',[0,0.05,0.1,0.2,0.4,0.8],@isnumeric);
 p.addParameter('stimFreqSetHz',[4,6,10,14,20,28,40],@isnumeric);
 p.addParameter('observerAgeInYears',25,@isnumeric);
@@ -22,12 +23,12 @@ p.addParameter('pupilDiameterMm',4.2,@isnumeric);
 p.addParameter('simulateStimuli',false,@islogical);
 p.addParameter('verboseCombiLED',false,@islogical);
 p.addParameter('verbosePhysioObj',true,@islogical);
-p.addParameter('updateFigures',false,@islogical);
 p.parse(varargin{:})
 
 %  Pull out of the p.Results structure
 simulateStimuli = p.Results.simulateStimuli;
 verboseCombiLED = p.Results.verboseCombiLED;
+nFullSets = p.Results.nFullSets;
 
 % Set our experimentName
 experimentName = 'ssVEPTCSF';
@@ -80,14 +81,12 @@ end
 filename = fullfile(dataDir,'measurementRecord.mat');
 if isfile(filename)
     load(filename,'measurementRecord');
-    trialIdx = measurementRecord.trialIdx;
 
     stimFreqSetHz = measurementRecord.stimulusProperties.stimFreqSetHz;
     stimContrastSet = measurementRecord.stimulusProperties.stimContrastSet;
     freqIdxOrder = measurementRecord.experimentProperties.freqIdxOrder;
     contrastIdxOrderMatrix = measurementRecord.experimentProperties.contrastIdxOrderMatrix;
 else
-
 
     % The trial sequence order
     freqIdxOrder = [4, 1, 6, 5, 3, 7, 2, 2, 5, 1, 7, 4, 6, 3, 3, 1, 5, 2, 4, 7, 6, 6, 1, 4, 2, 7, 3, 5, 5, 4, 3, 2, 6, 7, 1, 1, 2, 3, 6, 4, 5, 7, 7, 5, 6, 2, 1, 3, 4];
@@ -123,7 +122,7 @@ end
 
 % How many trials to collect?
 nTrialsToCollect = p.Results.nTrialsToCollect;
-nTrialsToCollect = min([nTrialsToCollect,1+(3*length(freqIdxOrder))-measurementRecord.trialIdx]);
+nTrialsToCollect = min([nTrialsToCollect,1+(nFullSets*length(freqIdxOrder))-measurementRecord.trialIdx]);
 
 % Create a flickerPhysioObj object
 flickerPhysioObj = FlickerPhysio(CombiLEDObj,subjectID,modDirection,experimentName);
@@ -132,7 +131,7 @@ flickerPhysioObj = FlickerPhysio(CombiLEDObj,subjectID,modDirection,experimentNa
 for ii=1:nTrialsToCollect
 
     % Wait for subject readiness
-        fprintf('Press any key to start trial\n');
+    fprintf('Press any key to start trial\n');
     pause
 
     % Update the stimulus settings for the flickerPhysioObj
