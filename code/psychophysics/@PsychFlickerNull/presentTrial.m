@@ -15,31 +15,28 @@ giveFeedback = obj.giveFeedback;
 
 % Get the next stimulus setting
 qpStimParams = qpQuery(questData);
-diffScore = qpStimParams(1);
+targetDiffScore = qpStimParams(1);
 
-% Determine the contrast on the two modulation directions implied by the
-% diffScore given by qpQuery
-if qpStimParams >= 0
-    contrastA = obj.maxTestContrast;
-    contrastB = (contrastA - contrastA*diffScore)/(diffScore + 1);
+% Determine the weights on the high and low settings of the target
+% modulation
+if obj.lockLowSettings >= 0
+    weightLow = 1;
+    weightHigh = weightLow + targetDiffScore;
 else
-    contrastB = obj.maxTestContrast;
-    contrastA = (contrastB - contrastB*diffScore)/(diffScore + 1);
+    weightHigh = 1;
+    weightLow = weightHigh + targetDiffScore;
 end
 
-% Create the modulation settings
-modResultNew = modResultA;
-modResultNew.settingsHigh = (contrastA.*modResultA.settingsHigh);
-modResultNew.settingsLow = (contrastB.*modResultA.settingsLow);
-
-settingsLow = modResult.settingsLow;
-settingsHigh = modResult.settingsHigh;
-
-
-    % Send the modulation direction to the CombiLED
-    CombiLEDObj.setSettings(modResult);
-    CombiLEDObj.setBackground(modResult.settingsBackground);
-
+% Create the modulation settings by taking the difference between an arm of
+% the modulation settings and background, scaling by the weight, and then
+% adding back the background.
+modResultNew = obj.modResultTarget;
+modResultNew.settingsHigh = weightHigh.* ...
+    (obj.modResultTarget.settingsHigh-obj.modResultTarget.settingsBackground) + ...
+    obj.modResultTarget.settingsBackground;
+modResultNew.settingsLow = weightLow.* ...
+    (obj.modResultTarget.settingsLow-obj.modResultTarget.settingsBackground) + ...
+    obj.modResultTarget.settingsBackground;
 
 % Prepare the sounds
 Fs = 8192; % Sampling Frequency
@@ -68,8 +65,8 @@ else
 end
 
 % Assemble the param sets
-testParams = [testContrastAdjusted,testFreqHz,testPhase];
-refParams = [0,testFreqHz,0];
+testParams = [obj.stimContrast,testPhase];
+refParams = [0,0];
 
 % Randomly pick which interval contains the test
 testInterval = 1+logical(round(rand()));
@@ -88,12 +85,15 @@ end
 
 % Handle verbosity
 if obj.verbose
-    fprintf('Trial %d; Freq [%2.2f Hz], contrast [%2.4f]...', ...
-        currTrialIdx,testFreqHz,testContrast);
+    fprintf('Trial %d; diff %2.2f, weightLow %2.2f, weightHigh %2.2f...', ...
+        currTrialIdx,targetDiffScore,weightLow,weightHigh);
 end
 
 % Present the stimuli
 if ~simulateStimuli
+
+    % Send the modulation direction to the CombiLED
+    obj.CombiLEDObj.setSettings(modResultNew);
 
     % Alert the subject the trial is about to start
     audioObjs.ready.play;
@@ -106,8 +106,7 @@ if ~simulateStimuli
         % Prepare the stimulus
         stopTime = tic() + obj.interStimulusIntervalSecs*1e9;
         obj.CombiLEDObj.setContrast(intervalParams(ii,1));
-        obj.CombiLEDObj.setFrequency(intervalParams(ii,2));
-        obj.CombiLEDObj.setPhaseOffset(intervalParams(ii,3));
+        obj.CombiLEDObj.setPhaseOffset(intervalParams(ii,2));
         obj.waitUntil(stopTime);
 
         % Present the stimulus. If it is the first interval, wait the
@@ -115,9 +114,9 @@ if ~simulateStimuli
         % half of the stimulus and then move on to the response, thus
         % allowing the subject to respond during the second stimulus.
         if ii == 1
-            stopTime = tic() + obj.stimulusDurationSecs*1e9 + obj.interStimulusIntervalSecs*1e9;
+            stopTime = tic() + obj.pulseDurSecs*1e9 + obj.interStimulusIntervalSecs*1e9;
         else
-            stopTime = tic() + 0.5*obj.stimulusDurationSecs*1e9;
+            stopTime = tic() + 0.5*obj.pulseDurSecs*1e9;
         end
         obj.CombiLEDObj.startModulation;
         if ii==1

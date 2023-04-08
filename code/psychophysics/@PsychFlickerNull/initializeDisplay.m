@@ -15,9 +15,10 @@ if ~obj.simulateStimuli
         fprintf('Initializing CombiLEDObj\n')
     end
 
-    obj.CombiLEDObj.setDuration(obj.stimulusDurationSecs);
+    obj.CombiLEDObj.setBackground(obj.modResultTarget.settingsBackground);
+    obj.CombiLEDObj.setDuration(obj.pulseDurSecs);
     obj.CombiLEDObj.setWaveformIndex(1); % sinusoidal flicker
-    obj.CombiLEDObj.setFrequency(obj.testFreqHz);
+    obj.CombiLEDObj.setFrequency(obj.stimFreqHz);
     obj.CombiLEDObj.setAMIndex(2); % half-cosine ramped
     obj.CombiLEDObj.setAMFrequency(1/(2*obj.pulseDurSecs));
     obj.CombiLEDObj.setAMPhase(0);

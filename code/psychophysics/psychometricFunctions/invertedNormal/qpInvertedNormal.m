@@ -15,9 +15,11 @@ function responseProbabilities = qpInvertedNormal(stimParams,psiParams)
 %  The function is an inverted Gaussian
 %
 %  The parameters are:
-%   rNull                   - Scalar. The r value at which the subject is
-%                             at chance in the detection task.
-%   sigma                   - The width of the Gaussian over r
+%   rNull                 - Scalar. The r value at which the subject is
+%                           at chance in the detection task.
+%   sigma                 - The width of the Gaussian over r
+%   minCorrect            - The lowest percentage correct that is observed
+%                           for any difference score
 %
 % Inputs:
 %     stimParams          - nx1 matrix. Each row contains the stimulus
@@ -37,8 +39,8 @@ function responseProbabilities = qpInvertedNormal(stimParams,psiParams)
 
 
 %% Here is the Matlab version
-if (size(psiParams,2) ~= 2)
-    error('Two psi parameters required');
+if (size(psiParams,2) ~= 3)
+    error('Three psi parameters required');
 end
 if (size(psiParams,1) ~= 1)
     error('Should be a vector');
@@ -52,6 +54,7 @@ end
 r = stimParams(:,1);
 rNull = psiParams(:,1);
 sigma = psiParams(:,2);
+minCorrect = psiParams(:,3);
 
 nStim = size(stimParams,1);
 responseProbabilities = zeros(nStim,2);
@@ -59,8 +62,9 @@ responseProbabilities = zeros(nStim,2);
 %% Compute
 fullR = -1:0.01:1;
 maxVal = max(normpdf(fullR,rNull,sigma));
+k = 1./(1-minCorrect) - 2;
 pdf = normpdf(r,rNull,sigma);
-probCorrect = 1-(pdf/(2*maxVal));
+probCorrect = 1-(pdf/((2+k)*maxVal));
 responseProbabilities(:,1) = 1-probCorrect;
 responseProbabilities(:,2) = probCorrect;
 

@@ -30,7 +30,15 @@ function modResult = designModulation(whichDirection,varargin)
 %  'pupilDiameterMm'      - Scalar
 %  'observerAgeInYears'   - Scalar
 %  'nLEDsToKeep'          - Scalar. The number of LEDs in the final device.
-
+%
+% Examples:
+%{
+    observerAgeInYears = 53;
+    pupilDiameterMm = 3;
+    whichDirection = 'LminusM_wide';
+    modResult = designModulation(whichDirection,...
+        'observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+%}
 
 
 %% Parse input

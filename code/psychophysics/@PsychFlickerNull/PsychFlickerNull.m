@@ -1,4 +1,12 @@
-% Object to conducting flicker nulling of a chromatic stimulus
+% Object to support nulling of the luminance component of chromatic
+% modulations. A "target" modResult is passed to the routine, as well as an
+% option "silent" modResult. The object then searchs over weights on the
+% high and low settings of the target modulation. The candidate modulation
+% is flickered at a high (e.g., 30 Hz) frequency and presented within a
+% 2AFC detection trial. The weights are under the control of a quest+
+% search using a psychometric function that attempts to find the null point
+% at which the subject is at chance in detecting the flicker. 
+
 
 classdef PsychFlickerNull < handle
 
@@ -11,8 +19,8 @@ classdef PsychFlickerNull < handle
 
     % Calling function can see, but not modify
     properties (SetAccess=private)
-        modResultA
-        modResultB
+        modResultTarget
+        modResultSilence
         questData
         simulatePsiParams
         simulateResponse
@@ -20,11 +28,12 @@ classdef PsychFlickerNull < handle
         giveFeedback
         psiParamsDomainList
         randomizePhase = true;
-        testFreqHz
-        maxTestContrast
-        testDiffSet
-        pulseDurSecs = 1;
-        halfCosineRampDurSecs = 0.1
+        lockLowSettings
+        stimFreqHz
+        stimContrast
+        stimTestSet
+        pulseDurSecs = 2;
+        halfCosineRampDurSecs = 0.25
         interStimulusIntervalSecs = 0.2;
     end
 
@@ -50,32 +59,35 @@ classdef PsychFlickerNull < handle
     methods
 
         % Constructor
-        function obj = PsychFlickerNull(CombiLEDObj,modResultA,modResultB,varargin)
+        function obj = PsychFlickerNull(CombiLEDObj,modResultTarget,modResultSilence,varargin)
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;           
-            p.addParameter('testFreqHz',30,@isnumeric);
-            p.addParameter('maxTestContrast',0.8,@isnumeric);
-            p.addParameter('randomizePhase',true,@islogical);
+            p.addParameter('stimFreqHz',30,@isnumeric);
+            p.addParameter('stimContrast',0.2,@isnumeric);
+            p.addParameter('randomizePhase',false,@islogical);
             p.addParameter('simulateResponse',false,@islogical);
             p.addParameter('simulateStimuli',false,@islogical);
             p.addParameter('giveFeedback',true,@islogical);
-            p.addParameter('testDiffSet',[fliplr(-logspace(-2,log10(0.5),10)) 0 logspace(-2,log10(0.5),10)],@isnumeric);
-            p.addParameter('simulatePsiParams',[0, 0.25],@isnumeric);
+            p.addParameter('lockLowSettings',true,@islogical);
+            p.addParameter('stimTestSet',linspace(-0.1,0.1,21),@isnumeric);
+            p.addParameter('simulatePsiParams',[0, 0.025, 0.50],@isnumeric);
             p.addParameter('psiParamsDomainList',{...
-                [fliplr(-logspace(-2,log10(0.5),10)) 0 logspace(-2,log10(0.5),10)], ...
-                linspace(0.05,0.5,10),...
+                linspace(-0.1,0.1,21), ...
+                linspace(0.001,0.1,10),...
+                linspace(0.50,0.75,10),...
                 },@isnumeric);
             p.addParameter('verbose',true,@islogical);
             p.parse(varargin{:})
 
             % Place various inputs and options into object properties
             obj.CombiLEDObj = CombiLEDObj;
-            obj.modResultA = modResultA;
-            obj.modResultB = modResultB;
-            obj.testFreqHz = p.Results.testFreqHz;
-            obj.maxTestContrast = p.Results.maxTestContrast;            
-            obj.testDiffSet = p.Results.testDiffSet;
+            obj.modResultTarget = modResultTarget;
+            obj.modResultSilence = modResultSilence;
+            obj.stimFreqHz = p.Results.stimFreqHz;
+            obj.stimContrast = p.Results.stimContrast;            
+            obj.stimTestSet = p.Results.stimTestSet;           
+            obj.lockLowSettings = p.Results.lockLowSettings;
             obj.randomizePhase = p.Results.randomizePhase;
             obj.simulateResponse = p.Results.simulateResponse;
             obj.simulateStimuli = p.Results.simulateStimuli;
@@ -102,7 +114,7 @@ classdef PsychFlickerNull < handle
 
         end
 
-        % Required methds
+        % Required methods
         initializeQP(obj)
         initializeDisplay(obj)
         validResponse = presentTrial(obj)

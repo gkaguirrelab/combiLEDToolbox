@@ -1,7 +1,7 @@
 function initializeQP(obj)
 
 % Pull out some information from the obj
-testLogContrastSet = obj.testLogContrastSet;
+stimTestSet = obj.stimTestSet;
 psiParamsDomainList = obj.psiParamsDomainList;
 simulateResponse = obj.simulateResponse;
 verbose = obj.verbose;
@@ -9,16 +9,16 @@ verbose = obj.verbose;
 % Handle simulation and the outcome function
 if simulateResponse
     simulatePsiParams = obj.simulatePsiParams;
-    qpOutcomeF = @(x) qpSimulatedObserver(x,@qpPFWeibullLog,simulatePsiParams);
+    qpOutcomeF = @(x) qpSimulatedObserver(x,@qpInvertedNormal,simulatePsiParams);
 else
     qpOutcomeF = [];
 end
 
 % Create the Quest+ varargin
 qpKeyVals = { ...
-    'stimParamsDomainList',{testLogContrastSet}, ...
+    'stimParamsDomainList',{stimTestSet}, ...
     'psiParamsDomainList',psiParamsDomainList, ...
-    'qpPF',@qpPFWeibullLog, ...
+    'qpPF',@qpInvertedNormal, ...
     'qpOutcomeF',qpOutcomeF, ...
     'nOutcomes', 2, ...
     'verbose',verbose};

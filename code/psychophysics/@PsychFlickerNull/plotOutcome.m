@@ -8,7 +8,7 @@ end
 
 % Grab some variables
 questData = obj.questData;
-testLogContrastSet = obj.testLogContrastSet;
+stimTestSet = obj.stimTestSet;
 nTrials = length(obj.questData.trialData);
 
 % Get the Max Likelihood psi params, temporarily turning off verbosity
@@ -26,7 +26,7 @@ subplot(1,3,1);
 hold on
 plot(1:nTrials,[obj.questData.trialData.stim],'.r');
 xlabel('trial number');
-ylabel('log stimulus contrast')
+ylabel('diff score')
 title('stimulus by trial');
 
 % Now the proportion correct for each stimulus type, and the psychometric
@@ -57,20 +57,22 @@ for cc = 1:length(stimCounts)
 end
 
 % Add the psychometric function
-for cc = 1:length(testLogContrastSet)
-    outcomes = obj.questData.qpPF(testLogContrastSet(cc),psiParamsFit);
+fitTestSet = min(stimTestSet):0.01:max(stimTestSet);
+for cc = 1:length(fitTestSet)
+    outcomes = obj.questData.qpPF(fitTestSet(cc),psiParamsFit);
     fitCorrect(cc) = outcomes(2);
 end
-plot(testLogContrastSet,fitCorrect,'-k')
+plot(fitTestSet,fitCorrect,'-k')
 
 % Add a marker for the threshold
 outcomes = obj.questData.qpPF(psiParamsFit(1),psiParamsFit);
 plot([psiParamsFit(1), psiParamsFit(1)],[0, outcomes(2)],':k')
-plot([min(testLogContrastSet), psiParamsFit(1)],[outcomes(2), outcomes(2)],':k')
+plot([min(stimTestSet), psiParamsFit(1)],[outcomes(2), outcomes(2)],':k')
 
 % Labels and range
-ylim([-0.1 1.1]);
-xlabel('log stimulus contrast')
+ylim([0.25 1.0]);
+xlim([min(stimTestSet) max(stimTestSet)]);
+xlabel('stimulus setting')
 ylabel('proportion correct');
 title('Psychometric function');
 
@@ -83,8 +85,8 @@ ylabel('entropy');
 title('Entropy by trial number')
 
 % Add a supertitle
-str = sprintf('Freq = %d Hz; params = [%2.3f, %2.3f, %2.3f, %2.3f]',...
-    obj.testFreqHz,psiParamsFit);
+str = sprintf('params = [%2.3f, %2.3f, %2.3f]',...
+    psiParamsFit);
 sgtitle(str);
 
 end
