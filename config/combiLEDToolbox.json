@@ -52,6 +52,19 @@
         "update": "",
         "url": ""
     },
+ 	{
+		"flavor": "",
+		"hook": "",
+		"importance": "",
+		"localHookTemplate": "",
+		"name": "transparentTrack",
+		"pathPlacement": "append",
+		"subfolder": "",
+		"toolboxRoot": "",
+		"type": "include",
+		"update": "",
+		"url": ""
+	},
     {
         "flavor": "",
         "hook": "",
