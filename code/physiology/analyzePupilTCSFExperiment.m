@@ -16,6 +16,7 @@ p.addParameter('approachName','flickerPhysio',@ischar);
 p.addParameter('stimContrastSet',[0,0.05,0.1,0.2,0.4,0.8],@isnumeric);
 p.addParameter('stimFreqSetHz',[4,6,10,14,20,28,40],@isnumeric);
 p.addParameter('nBoots',1000,@isnumeric);
+p.addParameter('rmseThresh',0.5,@isnumeric);
 p.addParameter('savePlots',true,@islogical);
 p.parse(varargin{:})
 
@@ -69,6 +70,7 @@ X = sparse([]);
 XbyTrial = {};
 trialGroups = [];
 stimFreqIdxVec = [];
+
 for tt = 1:nTrials
 
     % Load the pupil file for this trial
@@ -78,7 +80,7 @@ for tt = 1:nTrials
 
     % extract the time-series, convert to % change, mean center
     vec = pupilData.initial.ellipses.values(:,3);
-    vec(pupilData.initial.ellipses.RMSE>1.5)=nan;
+    vec(pupilData.initial.ellipses.RMSE>p.Results.rmseThresh)=nan;
     meanVec = nanmean(vec);
     vec = (vec - meanVec)/meanVec;
 
