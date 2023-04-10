@@ -19,12 +19,12 @@ targetDiffScore = qpStimParams(1);
 
 % Determine the weights on the high and low settings of the target
 % modulation
-if obj.lockLowSettings >= 0
+if targetDiffScore >= 0
     weightLow = 1;
-    weightHigh = weightLow + targetDiffScore;
+    weightHigh = 1 - targetDiffScore;
 else
     weightHigh = 1;
-    weightLow = weightHigh + targetDiffScore;
+    weightLow = 1 + targetDiffScore;
 end
 
 % Create the modulation settings by taking the difference between an arm of

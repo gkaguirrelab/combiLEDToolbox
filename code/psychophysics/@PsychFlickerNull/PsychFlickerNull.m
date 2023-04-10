@@ -32,7 +32,7 @@ classdef PsychFlickerNull < handle
         stimFreqHz
         stimContrast
         stimTestSet
-        pulseDurSecs = 2;
+        pulseDurSecs = 1.5;
         halfCosineRampDurSecs = 0.25
         interStimulusIntervalSecs = 0.2;
     end
@@ -70,11 +70,11 @@ classdef PsychFlickerNull < handle
             p.addParameter('simulateStimuli',false,@islogical);
             p.addParameter('giveFeedback',true,@islogical);
             p.addParameter('lockLowSettings',true,@islogical);
-            p.addParameter('stimTestSet',linspace(-0.1,0.1,21),@isnumeric);
-            p.addParameter('simulatePsiParams',[0, 0.025, 0.50],@isnumeric);
+            p.addParameter('stimTestSet',[-logspace(-0.5,-2,10) 0 logspace(-2,-0.5,10)],@isnumeric);
+            p.addParameter('simulatePsiParams',[0.05, 0.05, 0.50],@isnumeric);
             p.addParameter('psiParamsDomainList',{...
-                linspace(-0.1,0.1,21), ...
-                linspace(0.001,0.1,10),...
+                linspace(-0.25,0.25,21), ...
+                linspace(0.01,0.1,10),...
                 linspace(0.50,0.75,10),...
                 },@isnumeric);
             p.addParameter('verbose',true,@islogical);
