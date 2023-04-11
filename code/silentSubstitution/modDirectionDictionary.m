@@ -1,5 +1,5 @@
-function [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,...
-    x0Background, matchConstraint, searchBackground] = modDirectionDictionary(whichDirection)
+function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast,...
+    x0Background, matchConstraint, searchBackground] = modDirectionDictionary(whichDirection,photoreceptors)
 %
 %
 %
@@ -13,69 +13,70 @@ matchConstraint = 5;
 searchBackground = false;
 
 switch whichDirection
-    case 'LminusM_wide'
-        whichReceptorsToTarget = [1 2 4 5];
-        whichReceptorsToIgnore = [7];
-        desiredContrast = [1 -1 1 -1];
-        matchConstraint = 2;
     case 'LminusM_foveal'
-        whichReceptorsToTarget = [1 2];
-        whichReceptorsToIgnore = [4 5 7];
+        whichReceptorsToTarget = {'L_2deg','M_2deg'};
+        whichReceptorsToSilence = {'S_2deg','S_10deg'};
+        whichReceptorsToIgnore = {'L_10deg','M_10deg','Mel','Rod'};
         desiredContrast = [1 -1];
-    case 'L_wide'
-        whichReceptorsToTarget = [1 4];
-        whichReceptorsToIgnore = [7];
-        desiredContrast = [1 1];
-        matchConstraint = 4;
-    case 'L_foveal'
-        whichReceptorsToTarget = [1];
-        whichReceptorsToIgnore = [4 5 6 7];
-        desiredContrast = [1];
-    case 'M_wide'
-        whichReceptorsToTarget = [2 5];
-        whichReceptorsToIgnore = [7];
-        desiredContrast = [1 1];
-        matchConstraint = 1;
-    case 'M_foveal'
-        whichReceptorsToTarget = [2];
-        whichReceptorsToIgnore = [4 5 6 7];
-        desiredContrast = [1];
+        matchConstraint = 3;
+    case 'LminusM_wide'
+        whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg'};
+        whichReceptorsToSilence = {'S_2deg','S_10deg'};
+        whichReceptorsToIgnore = {'Mel','Rod'};
+        desiredContrast = [1 -1 0.8 -0.8];
+        matchConstraint = 3;
     case 'S_wide'
-        whichReceptorsToTarget = [3 6];
-        whichReceptorsToIgnore = [7];
+        whichReceptorsToTarget = {'S_2deg','S_10deg'};
+        whichReceptorsToSilence = {'L_2deg','M_2deg','L_10deg','M_10deg',};
+        whichReceptorsToIgnore = {'Mel','Rod'};
         desiredContrast = [1 1];
-    case 'S_foveal'
-        whichReceptorsToTarget = [3];
-        whichReceptorsToIgnore = [4 5 6 7];
-        desiredContrast = [1];
     case 'LightFlux'
-        whichReceptorsToTarget = 1:7;
-        whichReceptorsToIgnore = [];
+        whichReceptorsToTarget = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel','Rod'};
+        whichReceptorsToSilence = {};
+        whichReceptorsToIgnore = {'Rod'};
         desiredContrast = ones(1,7);
         matchConstraint = 3;
-    case 'LMSnoMel'
-        % 63% contrast on the peripheral LMS cones with ~1% difference
-        % between the cone classes
-        whichReceptorsToTarget = [4 5 6];
-        whichReceptorsToIgnore = [1 2 3];
-        desiredContrast = [1 1 1];
-        x0Background = [ 0.2996    0.0487    0.0003    0.1741    0.1328    0.4950    0.4996    0.5863 ]';
-        matchConstraint = 5;
-        searchBackground = true;
     case 'Mel'
-        % 90% contrast on Mel
-        whichReceptorsToTarget = 7;
-        whichReceptorsToIgnore = [1 2 3];
+        whichReceptorsToTarget = {'Mel'};
+        whichReceptorsToSilence = {'L_10deg','M_10deg','S_10deg'};
+        whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg','Rod'};
         desiredContrast = 1;
         x0Background = [ 0.0823    0.0000    0.0000    0.0655    0.0007    0.3248    0.5499    0.4275 ]';
         searchBackground = false;
-    case 'SnoMel'
-        % 91% contrast on peripheral S-cones
-        whichReceptorsToTarget = [6];
-        whichReceptorsToIgnore = [1 2 3];
-        desiredContrast = 1;
-        x0Background = [ 0.4897    0.2113         0    0.0974    0.0066    0.5031    0.1569    0.4859 ]';
-        searchBackground = true;
 end
+
+% Check that no receptor is listed more than once in the target, silence,
+% or ignore lists
+if any(cellfun(@(x) any(strcmp(x,whichReceptorsToIgnore)),whichReceptorsToSilence)) || ...
+        any(cellfun(@(x) any(strcmp(x,whichReceptorsToSilence)),whichReceptorsToIgnore)) || ...
+        any(cellfun(@(x) any(strcmp(x,whichReceptorsToIgnore)),whichReceptorsToTarget)) || ...
+        any(cellfun(@(x) any(strcmp(x,whichReceptorsToSilence)),whichReceptorsToTarget))
+    error('receptor types may only appear once in the list of target, silence, or ignore')
+end
+
+% Ensure that every targeted photoreceptor appears in the passed list of
+% photoreceptors
+photoreceptorNames = {photoreceptors(:).name};
+if ~all(cellfun(@(x) any(strcmp(x,photoreceptorNames)),[whichReceptorsToTarget whichReceptorsToSilence whichReceptorsToIgnore]))
+    error('The modulation direction considers a target that is not in the photoreceptors structure')
+end
+
+% Ensure that every photoreceptor in the passed list of photoreceptors
+% appears somewhere as a target, silence, or ignored item.
+if ~all(cellfun(@(x) any(strcmp(x,[whichReceptorsToTarget whichReceptorsToSilence whichReceptorsToIgnore])),photoreceptorNames))
+    error('The modulation direction considers a target that is not in the photoreceptors structure')
+end
+
+% Assemble the vectors for targeting and ignoring
+for ii = 1:length(whichReceptorsToTarget)
+    idx = find(strcmp(whichReceptorsToTarget{ii},photoreceptorNames));
+    whichReceptorsToTargetVec(ii) = idx;
+end
+
+for ii = 1:length(whichReceptorsToIgnore)
+    idx = find(strcmp(whichReceptorsToIgnore{ii},photoreceptorNames));
+    whichReceptorsToIgnoreVec(ii) = idx;
+end
+
 
 end

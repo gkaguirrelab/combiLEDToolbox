@@ -17,7 +17,7 @@ whichReceptorsToIgnore = modResult.meta.whichReceptorsToIgnore;
 settingsLow = modResult.settingsLow;
 settingsHigh = modResult.settingsHigh;
 settingsBackground = modResult.settingsBackground;
-photoreceptorClassNames = modResult.meta.photoreceptorClassNames;
+photoreceptorClassNames = {modResult.meta.photoreceptors.name};
 nPrimaries = length(settingsBackground);
 nPhotoClasses = length(photoreceptorClassNames);
 
