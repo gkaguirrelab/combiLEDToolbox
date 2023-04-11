@@ -18,7 +18,6 @@ p.addParameter('nFullSets',3,@isnumeric);
 p.addParameter('stimContrastSet',[0,0.05,0.1,0.2,0.4,0.8],@isnumeric);
 p.addParameter('stimFreqSetHz',[4,6,10,14,20,28,40],@isnumeric);
 p.addParameter('observerAgeInYears',25,@isnumeric);
-p.addParameter('fieldSizeDegrees',30,@isnumeric);
 p.addParameter('pupilDiameterMm',4.2,@isnumeric);
 p.addParameter('simulateStimuli',false,@islogical);
 p.addParameter('verboseCombiLED',false,@islogical);
@@ -56,12 +55,12 @@ filename = fullfile(modDir,'modResult.mat');
 if isfile(filename)
     load(filename,'modResult');
 else
+    photoreceptors = photoreceptorDictionary(...
+        'observerAgeInYears',p.Results.observerAgeInYears,...
+        'pupilDiameterMm',p.Results.pupilDiameterMm);
     % We get away with using zero headroom, as we will always be using
     % contrast levels that are less that 100%
-    modResult = designModulation(modDirection,...
-        'observerAgeInYears',p.Results.observerAgeInYears,...
-        'fieldSizeDegrees',p.Results.fieldSizeDegrees,...
-        'pupilDiameterMm',p.Results.pupilDiameterMm, ...
+    modResult = designModulation(modDirection,photoreceptors,...
         'primaryHeadroom',0);
     save(filename,'modResult');
 end
