@@ -63,19 +63,19 @@ classdef PsychFlickerNull < handle
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
-            p.addParameter('adjustSettingsVec',ones(1,8),@isnumeric);
+            p.addParameter('adjustSettingsVec',ones(8,1),@isnumeric);
             p.addParameter('stimFreqHz',30,@isnumeric);
-            p.addParameter('stimContrast',0.15,@isnumeric);
+            p.addParameter('stimContrast',0.25,@isnumeric);
             p.addParameter('randomizePhase',false,@islogical);
             p.addParameter('simulateResponse',false,@islogical);
             p.addParameter('simulateStimuli',false,@islogical);
             p.addParameter('giveFeedback',true,@islogical);
             p.addParameter('adjustHighSettings',true,@islogical);
-            p.addParameter('stimTestSet',linspace(-0.2,0.2,31),@isnumeric);
-            p.addParameter('simulatePsiParams',[0.0, 0.02, 0.50],@isnumeric);
+            p.addParameter('stimTestSet',linspace(-0.5,0.5,31),@isnumeric);
+            p.addParameter('simulatePsiParams',[-0.08, 0.04, 0.50],@isnumeric);
             p.addParameter('psiParamsDomainList',{...
-                linspace(-0.2,0.2,31), ...
-                linspace(0.01,0.1,10),...
+                linspace(-0.5,0.5,31), ...
+                linspace(0.01,0.25,10),...
                 linspace(0.50,0.75,10),...
                 },@isnumeric);
             p.addParameter('verbose',true,@islogical);

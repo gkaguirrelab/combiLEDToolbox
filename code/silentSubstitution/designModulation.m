@@ -34,7 +34,7 @@ function modResult = designModulation(whichDirection,photoreceptors,varargin)
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionary('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
-    whichDirection = 'LminusM_wide';
+    whichDirection = 'LplusM_wide';
     modResult = designModulation(whichDirection,photoreceptors);
 %}
 
@@ -149,12 +149,14 @@ modResult.meta.whichDirection = whichDirection;
 modResult.meta.x0Background = x0Background;
 modResult.meta.matchConstraint = matchConstraint;
 modResult.meta.searchBackground = searchBackground;
-modResult.meta.p = p.Results;
-modResult.backgroundSPD = backgroundSPD;
+modResult.meta.B_primary = B_primary;
 modResult.meta.T_receptors = T_receptors;
 modResult.meta.photoreceptors = photoreceptors;
 modResult.meta.whichReceptorsToTarget = whichReceptorsToTarget;
 modResult.meta.whichReceptorsToIgnore = whichReceptorsToIgnore;
+modResult.meta.p = p.Results;
+modResult.ambientSpd = ambientSpd;
+modResult.backgroundSPD = backgroundSPD;
 modResult.contrastReceptorsBipolar = contrastReceptorsBipolar;
 modResult.contrastReceptorsUnipolar = contrastReceptorsUnipolar;
 modResult.positiveModulationSPD = positiveModulationSPD;

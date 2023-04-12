@@ -49,7 +49,12 @@ end
 markerSizeIdx = discretize(nTrials,3);
 markerSizeSet = [25,50,100];
 for cc = 1:length(stimCounts)
-    scatter(stim(cc),pCorrect(cc),markerSizeSet(markerSizeIdx(cc)),'o', ...
+    if obj.adjustHighSettings
+        plotSymbol = 'o';
+    else
+        plotSymbol = 's';
+    end
+    scatter(stim(cc),pCorrect(cc),markerSizeSet(markerSizeIdx(cc)),plotSymbol, ...
         'MarkerFaceColor',[pCorrect(cc) 0 1-pCorrect(cc)], ...
         'MarkerEdgeColor','k', ...
         'MarkerFaceAlpha',nTrials(cc)/max(nTrials));
@@ -71,7 +76,7 @@ plot([min(stimTestSet), psiParamsFit(1)],[outcomes(2), outcomes(2)],':k')
 
 % Labels and range
 ylim([0 1.0]);
-xlim([min(stimTestSet) max(stimTestSet)]);
+xlim([min(obj.psiParamsDomainList{1}) max(obj.psiParamsDomainList{1})]);
 xlabel('stimulus setting')
 ylabel('proportion correct');
 title('Psychometric function');

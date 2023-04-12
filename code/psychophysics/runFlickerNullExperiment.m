@@ -1,4 +1,4 @@
-function runFlickerNullExperiment(subjectID,modDirection,varargin)
+function runFlickerNullExperiment(subjectID,modDirection,toBeNulledDirection,varargin)
 % 
 %
 % Examples:
@@ -16,6 +16,8 @@ p.addParameter('approachName','flickerPsych',@ischar);
 p.addParameter('observerAgeInYears',25,@isnumeric);
 p.addParameter('pupilDiameterMm',4.2,@isnumeric);
 p.addParameter('stimContrast',0.175,@isnumeric);
+p.addParameter('stimTestSet',linspace(-0.5,0.5,31),@isnumeric);
+p.addParameter('nFullSets',3,@isnumeric);
 p.addParameter('simulateStimuli',false,@islogical);
 p.addParameter('simulateResponse',false,@islogical);
 p.addParameter('verboseCombiLED',false,@islogical);
@@ -74,6 +76,22 @@ else
     close(figHandle)   
 end
 
+% Create or load a nulling direction
+filename = fullfile(dataDir,'modResultToBeNulled.mat');
+if isfile(filename)
+    load(filename,'modResultToBeNulled');
+else
+    photoreceptors = photoreceptorDictionary(...
+        'observerAgeInYears',p.Results.observerAgeInYears,...
+        'pupilDiameterMm',p.Results.pupilDiameterMm);
+    modResultToBeNulled = designModulation(toBeNulledDirection,photoreceptors);
+    save(filename,'modResultToBeNulled');
+    figHandle = plotModResult(modResultToBeNulled,'off');
+    filename = fullfile(dataDir,'modResultToBeNulled.pdf');
+    saveas(figHandle,filename,'pdf')
+    close(figHandle)   
+end
+
 % Handle the CombiLED object
 if ~simulateStimuli
     % Set up the CombiLED
@@ -86,7 +104,9 @@ else
 end
 
 % Create or load the measurementRecord
-filename = fullfile(dataDir,'measurementRecord.mat');
+filesuffix = ['_' subjectID '_' modDirection '_' experimentName ...
+    sprintf('_cntrst-%2.2f',p.Results.stimContrast) ];
+filename = fullfile(dataDir,['measurementRecord' filesuffix '.mat']);
 if isfile(filename)
     load(filename,'measurementRecord');
     stimContrast = measurementRecord.experimentProperties.stimContrast;
@@ -98,12 +118,14 @@ else
     nStims = 2;
     nTrialsPerSession = 40;
     nTrialsPerStim = 100; % Total n trials per stimulus
+    stimContrast = p.Results.stimContrast;
 
     % Store the values
     measurementRecord.subjectProperties.subjectID = subjectID;
     measurementRecord.subjectProperties.observerAgeInYears = p.Results.observerAgeInYears;
     measurementRecord.experimentProperties.modDirection = modDirection;
     measurementRecord.experimentProperties.stimContrast = stimContrast;
+    measurementRecord.experimentProperties.stimTestSet = p.Results.stimTestSet;    
     measurementRecord.experimentProperties.experimentName = experimentName;
     measurementRecord.experimentProperties.pupilDiameterMm = p.Results.pupilDiameterMm;
     measurementRecord.experimentProperties.nStims = nStims;
@@ -115,31 +137,8 @@ else
 end
 
 % First check if we are done
-if measurementRecord.trialIdx > nTrialsPerStim*nStims
+if measurementRecord.trialIdx > nTrialsPerStim*nStims*p.Results.nFullSets
     fprintf('Done with this experiment!\n')
-    fprintf('Saving the adjusted modulation result.\n')
-    adjustment = [];
-    adjIdx = [];
-    for ii=1:nStims
-        filename = fullfile(dataDir,[measurementRecord.sessionData(end).fileStem{ii} '.mat']);
-        tmpObj = load(filename,'psychObj');
-        sessionObj{ii} = tmpObj.psychObj;
-        clear tmpObj
-        [~, psiParamsFit] = sessionObj{ii}.reportParams();
-        if sessionObj{ii}.adjustHighSettings
-            adjustment(ii) = psiParamsFit(1);
-            adjIdx = ii;
-        else
-            adjustment(ii) = -psiParamsFit(1);
-        end
-    end
-    modResultNulled = sessionObj{adjIdx}.returnAdjustedModResult(mean(adjustment));
-    filename = fullfile(modDir,'modResultNulled.mat');
-    save(filename,'modResultNulled');
-    figHandle = plotModResult(modResultNulled,'off');
-    filename = fullfile(modDir,'modResultNulled.pdf');
-    saveas(figHandle,filename,'pdf')
-    close(figHandle)   
     return
 end
 
@@ -169,7 +168,9 @@ for ii=1:nStims
         sessionObj{ii} = PsychFlickerNull(CombiLEDObj,...
             modResult,...
             'adjustHighSettings',strcmp(searchDirection,'adjustHighSettings'),...
+            'adjustSettingsVec',modResultToBeNulled.settingsHigh,...
             'stimContrast',stimContrast,...
+            'stimTestSet',p.Results.stimTestSet,...
             'giveFeedback',true,...
             'simulateStimuli',simulateStimuli,...
             'simulateResponse',simulateResponse,...
@@ -188,6 +189,13 @@ for ii=1:nStims
     fprintf([num2str(ii) '...']);
 end
 fprintf('\n');
+
+% Check if we should reset the search for any of our psych objects
+if mod(measurementRecord.trialIdx-1,nTrialsPerStim*nStims)==0
+    for ii=1:nStims
+        sessionObj{ii}.resetSearch;
+    end
+end
 
 % Start the session
 if ~simulateResponse
@@ -259,7 +267,33 @@ end
 measurementRecord.trialIdx = measurementRecord.trialIdx + nTrialsPerSession;
 
 % Save it
-filename = fullfile(dataDir,'measurementRecord.mat');
+filesuffix = ['_' subjectID '_' modDirection '_' experimentName ...
+    sprintf('_cntrst-%2.2f',p.Results.stimContrast) ];
+filename = fullfile(dataDir,['measurementRecord' filesuffix '.mat']);
 save(filename,'measurementRecord');
+
+% Save the adjusted modulation
+if mod(measurementRecord.trialIdx-1,nTrialsPerStim*nStims)==0
+    fprintf('Saving the adjusted modulation result.\n')
+    adjustment = [];
+    adjIdx = [];
+    % Get the average adjustment
+    for ii=1:nStims
+        filename = fullfile(dataDir,[measurementRecord.sessionData(end).fileStem{ii} '.mat']);
+        tmpObj = load(filename,'psychObj');
+        sessionObj{ii} = tmpObj.psychObj;
+        clear tmpObj
+        [~, psiParamsFit] = sessionObj{ii}.reportParams();
+        adjustment(ii) = psiParamsFit(1);
+    end
+    % Create the nulled modResult
+    modResultNulled = sessionObj{1}.returnAdjustedModResult(mean(adjustment));
+    filename = fullfile(dataDir,'modResultNulled.mat');
+    save(filename,'modResultNulled');
+    figHandle = plotModResult(modResultNulled,'off');
+    filename = fullfile(dataDir,'modResultNulled.pdf');
+    saveas(figHandle,filename,'pdf')
+    close(figHandle)
+end
 
 end

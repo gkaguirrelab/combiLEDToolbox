@@ -62,7 +62,7 @@ obj.setBackground(modResult.settingsBackground);
 obj.setWaveformIndex(1);
 obj.setFrequency(16);
 obj.setContrast(1);
-obj.setAMIndex(0);
+obj.setAMIndex(1);
 obj.setAMFrequency(0.2);
 end
 

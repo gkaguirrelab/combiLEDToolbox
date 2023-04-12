@@ -25,6 +25,12 @@ switch whichDirection
         whichReceptorsToIgnore = {'Mel','Rod'};
         desiredContrast = [1 -1 0.8 -0.8];
         matchConstraint = 3;
+    case 'LplusM_wide'
+        whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg'};
+        whichReceptorsToSilence = {'S_2deg','S_10deg'};
+        whichReceptorsToIgnore = {'Mel','Rod'};
+        desiredContrast = [1 1 1 1];
+        matchConstraint = 10;
     case 'S_wide'
         whichReceptorsToTarget = {'S_2deg','S_10deg'};
         whichReceptorsToSilence = {'L_2deg','M_2deg','L_10deg','M_10deg',};
@@ -33,8 +39,8 @@ switch whichDirection
     case 'LightFlux'
         whichReceptorsToTarget = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel','Rod'};
         whichReceptorsToSilence = {};
-        whichReceptorsToIgnore = {'Rod'};
-        desiredContrast = ones(1,7);
+        whichReceptorsToIgnore = {};
+        desiredContrast = ones(1,8);
         matchConstraint = 3;
     case 'Mel'
         whichReceptorsToTarget = {'Mel'};
@@ -68,11 +74,13 @@ if ~all(cellfun(@(x) any(strcmp(x,[whichReceptorsToTarget whichReceptorsToSilenc
 end
 
 % Assemble the vectors for targeting and ignoring
+whichReceptorsToTargetVec = [];
 for ii = 1:length(whichReceptorsToTarget)
     idx = find(strcmp(whichReceptorsToTarget{ii},photoreceptorNames));
     whichReceptorsToTargetVec(ii) = idx;
 end
 
+whichReceptorsToIgnoreVec = [];
 for ii = 1:length(whichReceptorsToIgnore)
     idx = find(strcmp(whichReceptorsToIgnore{ii},photoreceptorNames));
     whichReceptorsToIgnoreVec(ii) = idx;
