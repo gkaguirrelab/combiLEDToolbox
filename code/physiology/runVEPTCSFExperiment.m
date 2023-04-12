@@ -109,12 +109,11 @@ else
     measurementRecord.trialIdx = 1;
 
     % Save the file
-    filename = fullfile(dataDir,'measurementRecord.mat');
     save(filename,'measurementRecord');
 end
 
 % First check if we are done
-if measurementRecord.trialIdx > length(freqIdxOrder)*3
+if measurementRecord.trialIdx > length(freqIdxOrder)*nFullSets
     fprintf('Done with this experiment!\n')
     return
 end

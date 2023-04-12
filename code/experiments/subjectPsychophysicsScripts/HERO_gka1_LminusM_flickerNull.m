@@ -12,12 +12,12 @@
 
 % prepare the params
 subjectID = 'HERO_gka1';
-stimFreqHz = 30;
 observerAgeInYears = 53;
 pupilDiameterMm = wy_getPupilSize(observerAgeInYears, 220, 30, 1, 'Unified');
+stimContrast = 0.15;
 
 % run the experiment
-flickerNull_LminusM_wide(subjectID,...
+runFlickerNullExperiment(subjectID,'LminusM_wide',...
     'observerAgeInYears',observerAgeInYears,...
     'pupilDiameterMm',pupilDiameterMm,...
-    'stimFreqHz',stimFreqHz);
+    'stimContrast',stimContrast);

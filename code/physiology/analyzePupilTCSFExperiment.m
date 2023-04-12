@@ -152,11 +152,12 @@ fprintf('Model fit R-squared = %2.3f \n',1/fVal);
 
 % Plot the fit
 f1=figure;
+f1.Renderer='Painters';
 figuresize(800,200,'pt');
 x = 0:1/Fs:length(pupilVec)*(1/Fs)-(1/Fs);
-plot(x,pupilVec,'.','Color',[0.5 0.5 0.5]);
+plot(x,pupilVec,'.','Color',[0.5 0.5 0.5],'MarkerSize',0.01);
 hold on
-plot(x,fitY,'-r','LineWidth',1);
+plot(x,fitY,'-r','LineWidth',0.25);
 xlabel('time [secs]');
 ylabel('pupil size [%% change]');
 

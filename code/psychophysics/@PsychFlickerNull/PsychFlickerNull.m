@@ -19,8 +19,8 @@ classdef PsychFlickerNull < handle
 
     % Calling function can see, but not modify
     properties (SetAccess=private)
-        modResultTarget
-        modResultSilence
+        modResult
+        adjustSettingsVec
         questData
         simulatePsiParams
         simulateResponse
@@ -28,13 +28,13 @@ classdef PsychFlickerNull < handle
         giveFeedback
         psiParamsDomainList
         randomizePhase = true;
-        lockLowSettings
+        adjustHighSettings
         stimFreqHz
         stimContrast
         stimTestSet
-        pulseDurSecs = 1.5;
-        halfCosineRampDurSecs = 0.25
-        interStimulusIntervalSecs = 0.2;
+        pulseDurSecs = 1;
+        halfCosineRampDurSecs = 0.125
+        interStimulusIntervalSecs = 0.1;
     end
 
     % These may be modified after object creation
@@ -59,21 +59,22 @@ classdef PsychFlickerNull < handle
     methods
 
         % Constructor
-        function obj = PsychFlickerNull(CombiLEDObj,modResultTarget,modResultSilence,varargin)
+        function obj = PsychFlickerNull(CombiLEDObj,modResult,varargin)
 
             % input parser
-            p = inputParser; p.KeepUnmatched = false;           
+            p = inputParser; p.KeepUnmatched = false;
+            p.addParameter('adjustSettingsVec',ones(1,8),@isnumeric);
             p.addParameter('stimFreqHz',30,@isnumeric);
-            p.addParameter('stimContrast',0.2,@isnumeric);
+            p.addParameter('stimContrast',0.15,@isnumeric);
             p.addParameter('randomizePhase',false,@islogical);
             p.addParameter('simulateResponse',false,@islogical);
             p.addParameter('simulateStimuli',false,@islogical);
             p.addParameter('giveFeedback',true,@islogical);
-            p.addParameter('lockLowSettings',true,@islogical);
-            p.addParameter('stimTestSet',[-logspace(-0.5,-2,10) 0 logspace(-2,-0.5,10)],@isnumeric);
-            p.addParameter('simulatePsiParams',[0.05, 0.05, 0.50],@isnumeric);
+            p.addParameter('adjustHighSettings',true,@islogical);
+            p.addParameter('stimTestSet',linspace(-0.2,0.2,31),@isnumeric);
+            p.addParameter('simulatePsiParams',[0.0, 0.02, 0.50],@isnumeric);
             p.addParameter('psiParamsDomainList',{...
-                linspace(-0.25,0.25,21), ...
+                linspace(-0.2,0.2,31), ...
                 linspace(0.01,0.1,10),...
                 linspace(0.50,0.75,10),...
                 },@isnumeric);
@@ -82,12 +83,12 @@ classdef PsychFlickerNull < handle
 
             % Place various inputs and options into object properties
             obj.CombiLEDObj = CombiLEDObj;
-            obj.modResultTarget = modResultTarget;
-            obj.modResultSilence = modResultSilence;
+            obj.modResult = modResult;
+            obj.adjustSettingsVec = p.Results.adjustSettingsVec;
             obj.stimFreqHz = p.Results.stimFreqHz;
             obj.stimContrast = p.Results.stimContrast;            
             obj.stimTestSet = p.Results.stimTestSet;           
-            obj.lockLowSettings = p.Results.lockLowSettings;
+            obj.adjustHighSettings = p.Results.adjustHighSettings;
             obj.randomizePhase = p.Results.randomizePhase;
             obj.simulateResponse = p.Results.simulateResponse;
             obj.simulateStimuli = p.Results.simulateStimuli;
@@ -95,6 +96,8 @@ classdef PsychFlickerNull < handle
             obj.simulatePsiParams = p.Results.simulatePsiParams;
             obj.psiParamsDomainList = p.Results.psiParamsDomainList;
             obj.verbose = p.Results.verbose;
+
+            % Check that there is headroom in the modResult
 
             % Detect incompatible simulate settings
             if obj.simulateStimuli && ~obj.simulateResponse
@@ -117,6 +120,7 @@ classdef PsychFlickerNull < handle
         % Required methods
         initializeQP(obj)
         initializeDisplay(obj)
+        modResult = returnAdjustedModResult(obj,adjustWeight)
         validResponse = presentTrial(obj)
         [intervalChoice, responseTimeSecs] = getResponse(obj)
         [intervalChoice, responseTimeSecs] = getSimulatedResponse(obj,qpStimParams,testInterval)

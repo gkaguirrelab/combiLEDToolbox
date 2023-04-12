@@ -15,28 +15,29 @@ giveFeedback = obj.giveFeedback;
 
 % Get the next stimulus setting
 qpStimParams = qpQuery(questData);
-targetDiffScore = qpStimParams(1);
+adjustWeight = qpStimParams(1);
 
-% Determine the weights on the high and low settings of the target
-% modulation
-if targetDiffScore >= 0
-    weightLow = 1;
-    weightHigh = 1 - targetDiffScore;
-else
-    weightHigh = 1;
-    weightLow = 1 + targetDiffScore;
-end
+% Obtain adjusted modulation settings
+modResultNew = obj.returnAdjustedModResult(adjustWeight);
 
-% Create the modulation settings by taking the difference between an arm of
-% the modulation settings and background, scaling by the weight, and then
-% adding back the background.
-modResultNew = obj.modResultTarget;
-modResultNew.settingsHigh = weightHigh.* ...
-    (obj.modResultTarget.settingsHigh-obj.modResultTarget.settingsBackground) + ...
-    obj.modResultTarget.settingsBackground;
-modResultNew.settingsLow = weightLow.* ...
-    (obj.modResultTarget.settingsLow-obj.modResultTarget.settingsBackground) + ...
-    obj.modResultTarget.settingsBackground;
+
+% modResultNew = obj.modResult;
+% 
+% % Adjust the high or low settings
+% if obj.adjustHighSettings
+%     settingsHigh = obj.modResult.settingsHigh + ...
+%         adjustWeight * obj.adjustSettingsVec;
+%     settingsLow = obj.modResult.settingsLow;
+% else
+%     settingsHigh = obj.modResult.settingsHigh;
+%     settingsLow = obj.modResult.settingsLow + ...
+%         adjustWeight * obj.adjustSettingsVec;
+% end
+% 
+% % Re-center the modulation
+% adj = obj.modResult.settingsBackground - (settingsHigh+settingsLow)/2;
+% modResultNew.settingsHigh = settingsHigh + adj;
+% modResultNew.settingsLow = settingsLow + adj;
 
 % Prepare the sounds
 Fs = 8192; % Sampling Frequency
@@ -85,8 +86,8 @@ end
 
 % Handle verbosity
 if obj.verbose
-    fprintf('Trial %d; diff %2.2f, weightLow %2.2f, weightHigh %2.2f...', ...
-        currTrialIdx,targetDiffScore,weightLow,weightHigh);
+    fprintf('Trial %d; adjust weight %2.2f...', ...
+        currTrialIdx,adjustWeight);
 end
 
 % Present the stimuli
@@ -118,6 +119,8 @@ if ~simulateStimuli
         else
             stopTime = tic() + 0.5*obj.pulseDurSecs*1e9;
         end
+
+        % Start the modulation and play a tone
         obj.CombiLEDObj.startModulation;
         if ii==1
             audioObjs.low.play;

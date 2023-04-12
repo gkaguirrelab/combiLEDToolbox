@@ -70,7 +70,7 @@ plot([psiParamsFit(1), psiParamsFit(1)],[0, outcomes(2)],':k')
 plot([min(stimTestSet), psiParamsFit(1)],[outcomes(2), outcomes(2)],':k')
 
 % Labels and range
-ylim([0.25 1.0]);
+ylim([0 1.0]);
 xlim([min(stimTestSet) max(stimTestSet)]);
 xlabel('stimulus setting')
 ylabel('proportion correct');
