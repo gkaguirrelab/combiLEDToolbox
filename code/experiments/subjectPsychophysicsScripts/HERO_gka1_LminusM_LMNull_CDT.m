@@ -1,8 +1,8 @@
 % In these experiments we will work with this overall frequency set:
 %   freq = [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40];
 %
-% For the L-M and S studies, we will operate in the low range. We will
-% obtain CDTs for:
+% For the L-M studies, we will operate in the low range. We will obtain
+% CDTs for:
 %   testFreqSetHz = [1,3,5,8,12,16,24]
 %
 % and then perform discrimination judgements with:
@@ -11,8 +11,8 @@
 %
 
 % prepare the params
-subjectID = 'HERO_gka';
-modDirection = 'S_wide';
+subjectID = 'HERO_gka1';
+modDirection = 'LminusM_LMNull';
 testFreqSetHz = [1,3,5,8,12,16,24];
 observerAgeInYears = 53;
 pupilDiameterMm = wy_getPupilSize(observerAgeInYears, 220, 30, 1, 'Unified');

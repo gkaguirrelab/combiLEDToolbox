@@ -147,7 +147,7 @@ myObj = @(p) fitPupilVec(p,pupilVec,full(X),trialGroups,Fs);
 gammaParam = fmincon(myObj,2);
 
 % Report the fVal at the solution
-[fVal,~,fitY] = fitPupilVec(gammaParam,pupilVec,full(X),trialGroups,Fs);
+[fVal,~,fitYFull] = fitPupilVec(gammaParam,pupilVec,full(X),trialGroups,Fs);
 fprintf('Model fit R-squared = %2.3f \n',1/fVal);
 
 % Plot the fit
@@ -157,7 +157,7 @@ figuresize(800,200,'pt');
 x = 0:1/Fs:length(pupilVec)*(1/Fs)-(1/Fs);
 plot(x,pupilVec,'.','Color',[0.5 0.5 0.5],'MarkerSize',0.01);
 hold on
-plot(x,fitY,'-r','LineWidth',0.25);
+plot(x,fitYFull,'-r','LineWidth',0.25);
 xlabel('time [secs]');
 ylabel('pupil size [%% change]');
 
@@ -242,7 +242,7 @@ end
 
 
 %% LOCAL FUNCTIONS
-function [fVal,b,fitY] = fitPupilVec(gammaParam,pupilVec,X,trialGroups,Fs)
+function [fVal,b,fitY,fitYFull] = fitPupilVec(gammaParam,pupilVec,X,trialGroups,Fs)
 
 % Create a 15 second time domain for the kernel
 x = 0:1/Fs:15;
@@ -262,6 +262,7 @@ XconvClean = Xconv(:,~nanIdx);
 % Regress
 b=XconvClean/pupilVecClean;
 fitYClean = XconvClean'*b;
+fitYFull = Xconv'*b;
 
 % The fVal is the inverse of the variance explained
 fVal = 1/(corr(fitYClean,pupilVecClean')^2);

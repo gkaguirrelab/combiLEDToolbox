@@ -15,15 +15,17 @@ function runDetectThreshExperiment(subjectID,modDirection,varargin)
 
 % Parse the parameters
 p = inputParser; p.KeepUnmatched = false;
+p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
+p.addParameter('projectName','combiLED',@ischar);
+p.addParameter('approachName','flickerPsych',@ischar);
 p.addParameter('testFreqSetHz',[4,6,10,14,20,28,40],@isnumeric);
-p.addParameter('dataDirRoot','~/Desktop/flickerPsych',@ischar);
 p.addParameter('observerAgeInYears',25,@isnumeric);
 p.addParameter('pupilDiameterMm',4.2,@isnumeric);
 p.addParameter('simulateStimuli',false,@islogical);
 p.addParameter('simulateResponse',false,@islogical);
 p.addParameter('verboseCombiLED',false,@islogical);
 p.addParameter('verbosePsychObj',false,@islogical);
-p.addParameter('updateFigures',false,@islogical);
+p.addParameter('updateFigures',true,@islogical);
 p.parse(varargin{:})
 
 %  Pull out of the p.Results structure
@@ -33,11 +35,46 @@ verboseCombiLED = p.Results.verboseCombiLED;
 verbosePsychObj = p.Results.verbosePsychObj;
 updateFigures = p.Results.updateFigures;
 
-% Set our psychType
-psychType = 'CDT';
+% Set our experimentName
+experimentName = 'CDT';
 
 % Set a random seed
 rng('shuffle');
+
+% Define a location to save data
+modDir = fullfile(...
+    p.Results.dropBoxBaseDir,...
+    'MELA_data',...
+    p.Results.projectName,...
+    p.Results.approachName,...
+    subjectID,modDirection);
+
+dataDir = fullfile(modDir,experimentName);
+
+% Create a directory for the subject
+if ~isfolder(dataDir)
+    mkdir(dataDir)
+end
+
+% Create or load a modulation and save it to the saveModDir
+filename = fullfile(modDir,'modResult.mat');
+if isfile(filename)
+    % The modResult may be a nulled modulation, so handle the possibility
+    % of the variable name being different from "modResult".
+    tmp = load(filename);
+    fieldname = fieldnames(tmp);
+    modResult = tmp.(fieldname{1});
+else
+    photoreceptors = photoreceptorDictionary(...
+        'observerAgeInYears',p.Results.observerAgeInYears,...
+        'pupilDiameterMm',p.Results.pupilDiameterMm);
+    modResult = designModulation(modDirection,photoreceptors);
+    save(filename,'modResult');
+    figHandle = plotModResult(modResult,'off');
+    filename = fullfile(modDir,'modResult.pdf');
+    saveas(figHandle,filename,'pdf')
+    close(figHandle)   
+end
 
 % Initiate the PsychJava code. This silences a warning and prevents a
 % problem with recording the first trial on startup
@@ -45,30 +82,6 @@ warnState = warning();
 warning('off','MATLAB:Java:DuplicateClass');
 PsychJavaTrouble();
 warning(warnState);
-
-% Define a location to save data
-saveModDir = fullfile(p.Results.dataDirRoot,subjectID,modDirection);
-saveDataDir = fullfile(p.Results.dataDirRoot,subjectID,modDirection,psychType);
-
-% Create a directory for the subject
-if ~isfolder(saveDataDir)
-    mkdir(saveDataDir)
-end
-
-% Create or load a modulation and save it to the saveModDir
-filename = fullfile(saveModDir,'modResult.mat');
-if isfile(filename)
-    load(filename,'modResult');
-else
-    photoreceptors = photoreceptorDictionary(...
-        'observerAgeInYears',p.Results.observerAgeInYears,...
-        'pupilDiameterMm',p.Results.pupilDiameterMm);
-    % We get away with using zero headroom, as we will always be using
-    % contrast levels that are less that 100%
-    modResult = designModulation(modDirection,photoreceptors,...
-        'primaryHeadroom',0);
-    save(filename,'modResult');
-end
 
 % Handle the CombiLED object
 if ~simulateStimuli
@@ -82,7 +95,7 @@ else
 end
 
 % Create or load the measurementRecord
-filename = fullfile(saveDataDir,'measurementRecord.mat');
+filename = fullfile(dataDir,'measurementRecord.mat');
 if isfile(filename)
     load(filename,'measurementRecord');
     testFreqSetHz = measurementRecord.stimulusProperties.testFreqSetHz;
@@ -115,7 +128,7 @@ else
     measurementRecord.subjectProperties.subjectID = subjectID;
     measurementRecord.subjectProperties.observerAgeInYears = p.Results.observerAgeInYears;
     measurementRecord.experimentProperties.modDirection = modDirection;
-    measurementRecord.experimentProperties.psychType = psychType;
+    measurementRecord.experimentProperties.experimentName = experimentName;
     measurementRecord.experimentProperties.pupilDiameterMm = p.Results.pupilDiameterMm;
     measurementRecord.stimulusProperties.testFreqSetHz = testFreqSetHz;
     measurementRecord.experimentProperties.nTrialsPerStim = nTrialsPerStim;
@@ -177,11 +190,11 @@ for ii=1:nStimsPerSession
     IdxX = stimIdx(ii);
     sessionData.measureIdx(ii) = IdxX;
     sessionData.testFreqHz(ii) = testFreqSetHz(IdxX);
-    sessionData.fileStem{ii} = [subjectID '_' modDirection '_' psychType ...
+    sessionData.fileStem{ii} = [subjectID '_' modDirection '_' experimentName ...
         '_' strrep(num2str(sessionData.testFreqHz(ii)),'.','x')];
 
     % Create or load the psychometric objects
-    filename = fullfile(saveDataDir,[sessionData.fileStem{ii} '.mat']);
+    filename = fullfile(dataDir,[sessionData.fileStem{ii} '.mat']);
     if isfile(filename)
         tmpObj = load(filename,'psychObj');
         sessionObj{ii} = tmpObj.psychObj;
@@ -263,7 +276,7 @@ end
 for ii=1:nStimsPerSession
     % psychometric object
     fileStem = sessionData.fileStem{ii};
-    filename = fullfile(saveDataDir,[fileStem '.mat']);
+    filename = fullfile(dataDir,[fileStem '.mat']);
     clear psychObj
     psychObj = sessionObj{ii};
     % empty the CombiLEDObj handle
@@ -272,7 +285,7 @@ for ii=1:nStimsPerSession
     % figure
     if updateFigures
         figHandle = psychObj.plotOutcome('off');
-        filename = fullfile(saveDataDir,[fileStem '.pdf']);
+        filename = fullfile(dataDir,[fileStem '.pdf']);
         saveas(figHandle,filename,'pdf')
     end
 end
@@ -292,7 +305,7 @@ measurementRecord.trialCount(sessionData.stimIdx) = ...
     measurementRecord.trialCount(sessionData.stimIdx)+(nTrialsPerSession/nStimsPerSession);
 
 % Save it
-filename = fullfile(saveDataDir,'measurementRecord.mat');
+filename = fullfile(dataDir,'measurementRecord.mat');
 save(filename,'measurementRecord');
 
 end

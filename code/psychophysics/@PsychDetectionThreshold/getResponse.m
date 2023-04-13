@@ -44,7 +44,8 @@ else
         case num2cell(keyPress2)
             intervalChoice = 2;
         otherwise
-            error('Not an allowed response')
+            % Subject did not press a valid key
+            intervalChoice = [];
     end
 end
 
