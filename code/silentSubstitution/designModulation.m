@@ -154,6 +154,7 @@ modResult.meta.T_receptors = T_receptors;
 modResult.meta.photoreceptors = photoreceptors;
 modResult.meta.whichReceptorsToTarget = whichReceptorsToTarget;
 modResult.meta.whichReceptorsToIgnore = whichReceptorsToIgnore;
+modResult.meta.whichReceptorsToIgnore = desiredContrast;
 modResult.meta.p = p.Results;
 modResult.ambientSpd = ambientSpd;
 modResult.backgroundSPD = backgroundSPD;
