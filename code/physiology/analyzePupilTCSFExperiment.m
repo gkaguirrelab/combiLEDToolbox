@@ -41,10 +41,7 @@ if ~isfolder(analysisDir) && p.Results.savePlots
 end
 
 % Where the pupil video prep is taking place
-processingDir = fullfile(...
-    p.Results.dropBoxBaseDir,...
-    'MELA_analysis',...
-    'pilotLumFlickerPupil','rawPupilVideos');
+processingDir = fullfile(analysisDir,'rawPupilVideos');
 
 % Get the stimulus values
 stimFreqSetHz = p.Results.stimFreqSetHz;
