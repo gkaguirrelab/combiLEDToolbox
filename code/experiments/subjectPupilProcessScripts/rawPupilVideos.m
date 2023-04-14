@@ -42,11 +42,9 @@ pathParams.Subject = 'rawPupilVideos';
 % % 40.0 freq vids
 % vids = [6,11,20,26,34,42,43,55,60,69,75,83,91,92,104,109,118,124,132,140,141];
 
-vids = [1];
-
 videoNameStems = {};
 
-for ii = vids
+for ii = 1:147
     
     if ismember(ii,[2,10,16,23,35,36,47,51,59,65,72,84,85,96,100,108,114,121,133,134,145])
         ss = 'freq_4.0';
@@ -73,17 +71,17 @@ for ii = vids
     
 end
 
-% Mask bounds
-glintFrameMask = [319    33   146   630];
-pupilFrameMask = [247   251    99   375];
+% Mask bounds, pupil Frame mask defined in the loop as it is different for
+% different videos.
+glintFrameMask = [319 33 146 630];
 
 % Pupil settings
 pupilCircleThreshSet = 0.004;
 pupilRangeSets = [40 50];
-ellipseEccenLBUB = [0 0.6];
+ellipseEccenLBUB = [0.2 2];
 ellipseAreaLB = 0;
 ellipseAreaUP = 90000;
-pupilGammaCorrection = 0.75;
+pupilGammaCorrection = 0.65;
 
 % Glint settings
 glintPatchRadius = 45;
@@ -94,9 +92,29 @@ glintThreshold = 0.4;
 % left
 candidateThetas = 0;
 minRadiusProportion = 0.8;
-cutErrorThreshold = 2; % 0.25 old val
+cutErrorThreshold = 10; % 0.25 old val
+
+vids = 1:147;
 %% Loop through video name stems get each video and its corresponding masks
-for ii = 1:numel(vids)
+for ii = vids
+    % Fine tune some parameters for some of the videos 
+    if ii>10 && ii<50
+        pupilFrameMask = [187   269   230   360];
+    else
+        pupilFrameMask = [247   251    99   375];
+    end
+    
+    if ismember(ii, [15,19,21,22,24,27,43,67,68]) 
+        pupilGammaCorrection = 0.55;
+    elseif ismember(ii, [133])
+        pupilGammaCorrection = 0.40;
+     elseif ismember(ii, [140,146,147])
+        pupilGammaCorrection = 0.45;
+        pupilCircleThreshSet = 0.002;
+    elseif ii>98
+        pupilGammaCorrection = 0.35;
+    end
+    
     pupilCircleThresh = pupilCircleThreshSet;
     pupilRange = pupilRangeSets;
     videoName = {videoNameStems{ii}};
