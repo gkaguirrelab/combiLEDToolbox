@@ -1,12 +1,13 @@
-function analyzeFlickerNullExperiment(subjectID,modDirection,toBeNulledDirection,varargin)
+function analyzeFlickerNullExperiment(subjectID,modDirection,modDirectionNulledName,varargin)
 % 
 %
 % Examples:
 %{
     subjectID = 'HERO_gka1';
-    modDirection = 'LminusM_wide';
-    foo = 'LminusM_wide';
-    analyzeFlickerNullExperiment(subjectID,modDirection,foo);
+    modDirection = 'S_wide';
+    modDirectionNulledName = 'S_LMNull';
+    stimContrast = 0.15;
+    analyzeFlickerNullExperiment(subjectID,modDirection,modDirectionNulledName,'stimContrast',stimContrast);
 %}
 
 % Parse the parameters
@@ -16,10 +17,11 @@ p.addParameter('projectName','combiLED',@ischar);
 p.addParameter('stimContrast',0.175,@isnumeric);
 p.parse(varargin{:})
 
+% Extract this variable
+stimContrast = p.Results.stimContrast;
+
 % Set our experimentName
 experimentName = 'flickerNull';
-
-stimContrast = p.Results.stimContrast;
 
 % Fix the random seed for reproducibility of boot-strap results
 rng(1);
@@ -30,8 +32,19 @@ modDir = fullfile(...
     'MELA_data',...,
     p.Results.projectName,...
     subjectID,modDirection);
-
 dataDir = fullfile(modDir,experimentName);
+
+% Define the analysis directory for the result plot
+analysisDir = fullfile(...
+    p.Results.dropBoxBaseDir,...
+    'MELA_analysis',...,
+    p.Results.projectName,...
+    subjectID,modDirection,experimentName);
+
+% Create a directory for the subject
+if ~isfolder(analysisDir)
+    mkdir(analysisDir)
+end
 
 % Load the measurement record
 filesuffix = ['_' subjectID '_' modDirection '_' experimentName ...
@@ -41,13 +54,6 @@ load(filename,'measurementRecord');
 
 % Extract some variables
 nStims = measurementRecord.experimentProperties.nStims;
-
-
-% 
-% % Create a directory for the subject
-% if ~isfolder(dataDir)
-%     mkdir(dataDir)
-% end
 
 % Load the psychometric objects
 sessionData = struct();
@@ -72,7 +78,6 @@ end
 
 % Combine all of the trials across objects in a single object,
 % and re-fit
-
 comboObj = sessionObj{1};
 for ii=2:nStims
     comboObj.questData.trialData = ...
@@ -83,33 +88,43 @@ for ii=2:nStims
         [comboObj.questData.entropyAfterTrial; sessionObj{ii}.questData.entropyAfterTrial];
 
 end
-        figHandle = comboObj.plotOutcome();%('off');
-%        filename = fullfile(dataDir,[fileStem '.pdf']);
-%        saveas(figHandle,filename,'pdf')
 
+% Plot
+figHandle = comboObj.plotOutcome('off');
+filestem = [subjectID '_' modDirection '_' experimentName ...
+    sprintf('_cntrst-%2.2f',stimContrast)];
+filename = fullfile(analysisDir,[filestem '.pdf']);
+saveas(figHandle,filename,'pdf')
 
-% Save the adjusted modulation
-if mod(measurementRecord.trialIdx-1,nTrialsPerStim*nStims)==0
-    fprintf('Saving the adjusted modulation result.\n')
-    adjustment = [];
-    adjIdx = [];
-    % Get the average adjustment
-    for ii=1:nStims
-        filename = fullfile(dataDir,[measurementRecord.sessionData(end).fileStem{ii} '.mat']);
-        tmpObj = load(filename,'psychObj');
-        sessionObj{ii} = tmpObj.psychObj;
-        clear tmpObj
-        [~, psiParamsFit] = sessionObj{ii}.reportParams();
-        adjustment(ii) = psiParamsFit(1);
-    end
-    % Create the nulled modResult
-    modResultNulled = sessionObj{1}.returnAdjustedModResult(mean(adjustment));
-    filename = fullfile(dataDir,'modResultNulled.mat');
-    save(filename,'modResultNulled');
-    figHandle = plotModResult(modResultNulled,'off');
-    filename = fullfile(dataDir,'modResultNulled.pdf');
-    saveas(figHandle,filename,'pdf')
-    close(figHandle)
+% Get the average adjustment
+[~, psiParamsFit] = comboObj.reportParams();
+
+% Create the nulled modResult
+modResult = comboObj.returnAdjustedModResult(psiParamsFit(1));
+
+% A new directory in the data directory for the nulled modulation
+nulledModDir = fullfile(...
+    p.Results.dropBoxBaseDir,...
+    'MELA_data',...,
+    p.Results.projectName,...
+    subjectID,modDirectionNulledName);
+
+% Create a directory for the subject
+if ~isfolder(nulledModDir)
+    mkdir(nulledModDir)
 end
+
+% Save the nulled modResult both in the analysis directory, and as a
+% modulation direction to be used in the data directory
+filename = fullfile(nulledModDir,'modResultx.mat');
+save(filename,'modResult');
+filename = fullfile(analysisDir,'modResultNulled.mat');
+save(filename,'modResult');
+figHandle = plotModResult(modResult,'off');
+filename = fullfile(nulledModDir,'modResultx.pdf');
+saveas(figHandle,filename,'pdf')
+filename = fullfile(analysisDir,'modResultNulled.pdf');
+saveas(figHandle,filename,'pdf')
+close(figHandle)
 
 end

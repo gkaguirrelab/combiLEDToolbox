@@ -21,7 +21,6 @@ classdef PsychFlickerNull < handle
     properties (SetAccess=private)
         modResult
         adjustSettingsVec
-        questData
         simulatePsiParams
         simulateResponse
         simulateStimuli
@@ -39,6 +38,12 @@ classdef PsychFlickerNull < handle
 
     % These may be modified after object creation
     properties (SetAccess=public)
+
+
+        % We allow this to be modified so that one may combine measurements
+        % from across psychometric objects, place the combined data into
+        % this variable, and make use of the plotting and reporting methods
+        questData
 
         % The display object. This is modifiable so that we can re-load
         % a PsychDetectionThreshold, update this handle, and then continue

@@ -4,8 +4,9 @@ function analyzeDetectThresholdExperiment(subjectID,modDirection,varargin)
 % Examples:
 %{
     subjectID = 'HERO_gka1';
-    modDirection = 'S_LMNull';
     modDirection = 'LminusM_LMNull';
+    modDirection = 'LightFlux';
+    modDirection = 'S_LMNull';
     analyzeDetectThresholdExperiment(subjectID,modDirection)
 %}
 
@@ -38,7 +39,7 @@ analysisDir = fullfile(...
     p.Results.dropBoxBaseDir,...
     'MELA_analysis',...,
     p.Results.projectName,...
-    subjectID,modDirection);
+    subjectID,modDirection,experimentName);
 
 % Create a directory for the subject
 if ~isfolder(analysisDir)
