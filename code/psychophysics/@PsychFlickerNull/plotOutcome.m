@@ -26,7 +26,7 @@ subplot(1,3,1);
 hold on
 plot(1:nTrials,[obj.questData.trialData.stim],'.r');
 xlabel('trial number');
-ylabel('diff score')
+ylabel('stimulus setting')
 title('stimulus by trial');
 
 % Now the proportion correct for each stimulus type, and the psychometric
