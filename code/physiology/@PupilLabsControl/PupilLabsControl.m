@@ -46,15 +46,12 @@ classdef PupilLabsControl < handle
     methods
 
         % Constructor
-        function obj = PupilLabsControl(subjectID,modDirection,experimentName,varargin)
+        function obj = PupilLabsControl(dataOutDir,varargin)
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
             p.addParameter('filePrefix','',@ischar);
             p.addParameter('trialDurationSecs',4,@isnumeric);
-            p.addParameter('dropBoxBaseDir',fullfile(getpref('combiLEDToolbox','dropboxBaseDir'),'MELA_data'),@ischar);
-            p.addParameter('projectName','combiLED',@ischar);
-            p.addParameter('approachName','pupillometry',@ischar);
             p.addParameter('backgroundRecording',true,@islogical);
             p.addParameter('verbose',false,@islogical);
             p.parse(varargin{:})
@@ -66,11 +63,7 @@ classdef PupilLabsControl < handle
             obj.verbose = p.Results.verbose;
 
             % Define the dir in which to save pupil videos
-            obj.dataOutDir = fullfile(...
-                p.Results.dropBoxBaseDir,...
-                p.Results.projectName,...
-                p.Results.approachName,...
-                subjectID,modDirection,experimentName,'rawPupilVideos');
+            obj.dataOutDir = dataOutDir;
 
             % Create the directory if it isn't there
             if ~isfolder(obj.dataOutDir)

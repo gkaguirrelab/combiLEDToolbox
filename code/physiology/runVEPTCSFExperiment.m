@@ -12,7 +12,6 @@ function runVEPTCSFExperiment(subjectID,modDirection,varargin)
 p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
 p.addParameter('projectName','combiLED',@ischar);
-p.addParameter('approachName','flickerPhysio',@ischar);
 p.addParameter('nTrialsToCollect',10,@isnumeric);
 p.addParameter('nFullSets',3,@isnumeric);
 p.addParameter('stimContrastSet',[0,0.05,0.1,0.2,0.4,0.8],@isnumeric);
@@ -35,12 +34,10 @@ experimentName = 'ssVEPTCSF';
 % Set a random seed
 rng('shuffle');
 
-% Define a location to save data
 modDir = fullfile(...
     p.Results.dropBoxBaseDir,...
-    'MELA_data',...
+    'MELA_data',...,
     p.Results.projectName,...
-    p.Results.approachName,...
     subjectID,modDirection);
 
 dataDir = fullfile(modDir,experimentName);

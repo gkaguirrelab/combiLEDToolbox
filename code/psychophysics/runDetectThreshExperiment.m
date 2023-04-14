@@ -17,7 +17,6 @@ function runDetectThreshExperiment(subjectID,modDirection,varargin)
 p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
 p.addParameter('projectName','combiLED',@ischar);
-p.addParameter('approachName','flickerPsych',@ischar);
 p.addParameter('testFreqSetHz',[4,6,10,14,20,28,40],@isnumeric);
 p.addParameter('observerAgeInYears',25,@isnumeric);
 p.addParameter('pupilDiameterMm',4.2,@isnumeric);
@@ -41,12 +40,10 @@ experimentName = 'CDT';
 % Set a random seed
 rng('shuffle');
 
-% Define a location to save data
 modDir = fullfile(...
     p.Results.dropBoxBaseDir,...
-    'MELA_data',...
+    'MELA_data',...,
     p.Results.projectName,...
-    p.Results.approachName,...
     subjectID,modDirection);
 
 dataDir = fullfile(modDir,experimentName);

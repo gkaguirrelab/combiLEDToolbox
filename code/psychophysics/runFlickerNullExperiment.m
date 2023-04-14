@@ -12,7 +12,6 @@ function runFlickerNullExperiment(subjectID,modDirection,toBeNulledDirection,var
 p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
 p.addParameter('projectName','combiLED',@ischar);
-p.addParameter('approachName','flickerPsych',@ischar);
 p.addParameter('observerAgeInYears',25,@isnumeric);
 p.addParameter('pupilDiameterMm',4.2,@isnumeric);
 p.addParameter('stimContrast',0.175,@isnumeric);
@@ -38,22 +37,14 @@ experimentName = 'flickerNull';
 % Set a random seed
 rng('shuffle');
 
-% Define a location to save data
+% Define where to save the data
 modDir = fullfile(...
     p.Results.dropBoxBaseDir,...
-    'MELA_data',...
+    'MELA_data',...,
     p.Results.projectName,...
-    p.Results.approachName,...
     subjectID,modDirection);
 
 dataDir = fullfile(modDir,experimentName);
-
-% Initiate the PsychJava code. This silences a warning and prevents a
-% problem with recording the first trial on startup
-warnState = warning();
-warning('off','MATLAB:Java:DuplicateClass');
-PsychJavaTrouble();
-warning(warnState);
 
 % Create a directory for the subject
 if ~isfolder(dataDir)
@@ -76,7 +67,9 @@ else
     close(figHandle)   
 end
 
-% Create or load a nulling direction
+% Create or load a nulling direction. This is saved within the flickerNull
+% experiment directory, as opposed to the top level modulation direction
+% directory
 filename = fullfile(dataDir,'modResultToBeNulled.mat');
 if isfile(filename)
     load(filename,'modResultToBeNulled');
@@ -102,6 +95,13 @@ if ~simulateStimuli
 else
     CombiLEDObj = [];
 end
+
+% Initiate the PsychJava code. This silences a warning and prevents a
+% problem with recording the first trial on startup
+warnState = warning();
+warning('off','MATLAB:Java:DuplicateClass');
+PsychJavaTrouble();
+warning(warnState);
 
 % Create or load the measurementRecord
 filesuffix = ['_' subjectID '_' modDirection '_' experimentName ...
@@ -272,28 +272,5 @@ filesuffix = ['_' subjectID '_' modDirection '_' experimentName ...
 filename = fullfile(dataDir,['measurementRecord' filesuffix '.mat']);
 save(filename,'measurementRecord');
 
-% Save the adjusted modulation
-if mod(measurementRecord.trialIdx-1,nTrialsPerStim*nStims)==0
-    fprintf('Saving the adjusted modulation result.\n')
-    adjustment = [];
-    adjIdx = [];
-    % Get the average adjustment
-    for ii=1:nStims
-        filename = fullfile(dataDir,[measurementRecord.sessionData(end).fileStem{ii} '.mat']);
-        tmpObj = load(filename,'psychObj');
-        sessionObj{ii} = tmpObj.psychObj;
-        clear tmpObj
-        [~, psiParamsFit] = sessionObj{ii}.reportParams();
-        adjustment(ii) = psiParamsFit(1);
-    end
-    % Create the nulled modResult
-    modResultNulled = sessionObj{1}.returnAdjustedModResult(mean(adjustment));
-    filename = fullfile(dataDir,'modResultNulled.mat');
-    save(filename,'modResultNulled');
-    figHandle = plotModResult(modResultNulled,'off');
-    filename = fullfile(dataDir,'modResultNulled.pdf');
-    saveas(figHandle,filename,'pdf')
-    close(figHandle)
-end
 
 end

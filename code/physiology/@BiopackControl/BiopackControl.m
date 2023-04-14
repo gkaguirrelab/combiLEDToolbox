@@ -38,15 +38,12 @@ classdef BiopackControl < handle
     methods
 
         % Constructor
-        function obj = BiopackControl(subjectID,modDirection,experimentName,varargin)
+        function obj = BiopackControl(dataOutDir,varargin)
 
             % input parser
             p = inputParser; p.KeepUnmatched = false;
             p.addParameter('filePrefix','',@ischar);
             p.addParameter('trialDurationSecs',4,@isnumeric);
-            p.addParameter('dropBoxBaseDir',fullfile(getpref('combiLEDToolbox','dropboxBaseDir'),'MELA_data'),@ischar);
-            p.addParameter('projectName','combiLED',@ischar);
-            p.addParameter('approachName','ssVEP',@ischar);
             p.addParameter('simulateResponse',false,@islogical);
             p.addParameter('verbose',false,@islogical);
             p.parse(varargin{:})
@@ -58,11 +55,7 @@ classdef BiopackControl < handle
             obj.verbose = p.Results.verbose;
 
             % Define the dir in which to save EEG data
-            obj.dataOutDir = fullfile(...
-                p.Results.dropBoxBaseDir,...
-                p.Results.projectName,...
-                p.Results.approachName,...
-                subjectID,modDirection,experimentName,'rawEEGData');
+            obj.dataOutDir = dataOutDir;
 
             % Create the directory if it isn't there
             if ~isfolder(obj.dataOutDir)
