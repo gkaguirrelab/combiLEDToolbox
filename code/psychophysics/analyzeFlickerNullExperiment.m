@@ -4,8 +4,8 @@ function analyzeFlickerNullExperiment(subjectID,modDirection,modDirectionNulledN
 % Examples:
 %{
     subjectID = 'HERO_gka1';
-    modDirection = 'S_wide';
-    modDirectionNulledName = 'S_LMNull';
+    modDirection = 'LminusM_wide';
+    modDirectionNulledName = 'LminusM_LMSNull';
     stimContrast = 0.15;
     analyzeFlickerNullExperiment(subjectID,modDirection,modDirectionNulledName,'stimContrast',stimContrast);
 %}
