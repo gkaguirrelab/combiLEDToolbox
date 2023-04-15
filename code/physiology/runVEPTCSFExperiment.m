@@ -50,7 +50,12 @@ end
 % Create or load a modulation and save it to the saveModDir
 filename = fullfile(modDir,'modResult.mat');
 if isfile(filename)
-    load(filename,'modResult');
+    % The modResult may be a nulled modulation, so handle the possibility
+    % of the variable name being different from "modResult".
+    tmp = load(filename);
+    fieldname = fieldnames(tmp);
+    modResult = tmp.(fieldname{1});
+
 else
     photoreceptors = photoreceptorDictionary(...
         'observerAgeInYears',p.Results.observerAgeInYears,...

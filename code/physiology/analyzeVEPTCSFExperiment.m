@@ -6,15 +6,18 @@ function analyzeVEPTCSFExperiment(subjectID,modDirection,varargin)
     modDirection = 'LightFlux';
     analyzeVEPTCSFExperiment(subjectID,modDirection);
 %}
+%{
+    subjectID = 'HERO_gka1';
+    modDirection = 'LminusM_LMNull';
+    analyzeVEPTCSFExperiment(subjectID,modDirection);
+%}
 
 
 % Parse the parameters
 p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
 p.addParameter('projectName','combiLED',@ischar);
-p.addParameter('stimContrastSet',[0,0.05,0.1,0.2,0.4,0.8],@isnumeric);
-p.addParameter('stimFreqSetHz',[4,6,10,14,20,28,40],@isnumeric);
-p.addParameter('detailedPlots',false,@islogical);
+p.addParameter('detailedPlots',true,@islogical);
 p.addParameter('savePlots',true,@islogical);
 p.addParameter('nBoots',1000,@isnumeric);
 p.addParameter('nHarmonics',2,@isnumeric);
@@ -41,9 +44,14 @@ if ~isfolder(analysisDir) && p.Results.savePlots
     mkdir(analysisDir)
 end
 
+% Load the measurementRecord
+filename = fullfile(dataDir,'measurementRecord.mat');
+load(filename,'measurementRecord');
+nTrials = length(measurementRecord.trialData);
+
 % Get or set the stimulus values
-stimFreqSetHz = p.Results.stimFreqSetHz;
-stimContrastSet = p.Results.stimContrastSet;
+stimFreqSetHz = measurementRecord.stimulusProperties.stimFreqSetHz;
+stimContrastSet = measurementRecord.stimulusProperties.stimContrastSet;
 nFreqs = length(stimFreqSetHz);
 nConstrasts = length(stimContrastSet);
 nBoots = p.Results.nBoots;
@@ -51,11 +59,6 @@ nHarmonics = p.Results.nHarmonics;
 Fs = 2000;
 stimDurSecs = 2;
 sampleShift = -150; % The offset between the ssVEP and the stimulus
-
-% Load the measurementRecord
-filename = fullfile(dataDir,'measurementRecord.mat');
-load(filename,'measurementRecord');
-nTrials = length(measurementRecord.trialData);
 
 % Load the VEP data, arranging the trials in matrices that reflect both the
 % current and the prior contrast of each stimulus

@@ -11,8 +11,8 @@
 
 % prepare the params
 subjectID = 'HERO_gka1';
-modDirection = 'LminusM_wide';
-stimFreqSetHz = [1,3,5,8,12,16,24];
+modDirection = 'LminusM_LMNull';
+stimFreqSetHz = [1,3,5,8,14,16,24];
 observerAgeInYears = 53;
 pupilDiameterMm = wy_getPupilSize(observerAgeInYears, 220, 30, 1, 'Unified');
 
