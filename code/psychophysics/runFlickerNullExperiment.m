@@ -1,11 +1,13 @@
-function runFlickerNullExperiment(subjectID,modDirection,toBeNulledDirection,varargin)
+function runFlickerNullExperiment(subjectID,modDirection,toBeNulledDirection,modDirectionNulledName,varargin)
 % 
 %
 % Examples:
 %{
     subjectID = 'HERO_gka1';
     modDirection = 'LminusM_wide';
-    runFlickerNullExperiment(subjectID,modDirection);
+    toBeNulledDirection = 'LightFlux';
+    modDirectionNulledName = 'LminusM_LMSNull';
+    runFlickerNullExperiment(subjectID,modDirection,toBeNulledDirection,,modDirectionNulledName);
 %}
 
 % Parse the parameters
@@ -104,7 +106,7 @@ PsychJavaTrouble();
 warning(warnState);
 
 % Create or load the measurementRecord
-filesuffix = ['_' subjectID '_' modDirection '_' experimentName ...
+filesuffix = ['_' subjectID '_' modDirectionNulledName '_' experimentName ...
     sprintf('_cntrst-%2.2f',p.Results.stimContrast) ];
 filename = fullfile(dataDir,['measurementRecord' filesuffix '.mat']);
 if isfile(filename)
@@ -152,7 +154,7 @@ for ii=1:nStims
         searchDirection = 'adjustLowSettings';
     end
 
-    sessionData.fileStem{ii} = [subjectID '_' modDirection '_' experimentName ...
+    sessionData.fileStem{ii} = [subjectID '_' modDirectionNulledName '_' experimentName ...
         sprintf('_cntrst-%2.2f',stimContrast) '_' searchDirection];
 
     % Create or load the psychometric objects
@@ -267,7 +269,7 @@ end
 measurementRecord.trialIdx = measurementRecord.trialIdx + nTrialsPerSession;
 
 % Save it
-filesuffix = ['_' subjectID '_' modDirection '_' experimentName ...
+filesuffix = ['_' subjectID '_' modDirectionNulledName '_' experimentName ...
     sprintf('_cntrst-%2.2f',p.Results.stimContrast) ];
 filename = fullfile(dataDir,['measurementRecord' filesuffix '.mat']);
 save(filename,'measurementRecord');

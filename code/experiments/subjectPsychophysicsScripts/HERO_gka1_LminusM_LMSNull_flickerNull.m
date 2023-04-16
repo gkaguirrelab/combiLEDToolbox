@@ -12,13 +12,18 @@
 
 % prepare the params
 subjectID = 'HERO_gka1';
-modDirection = 'S_LMNull';
-testFreqSetHz = [1,3,5,8,12,16,24];
 observerAgeInYears = 53;
 pupilDiameterMm = wy_getPupilSize(observerAgeInYears, 220, 30, 1, 'Unified');
+stimContrast = 0.125;
+stimTestSet = linspace(-0.3,0.3,31);
+
+modDirection = 'LminusM_wide';
+toBeNulledDirection = 'LightFlux';
+modDirectionNulledName = 'LminusM_LMSNull';
 
 % run the experiment
-runDetectThreshExperiment(subjectID,modDirection,...
+runFlickerNullExperiment(subjectID,modDirection,toBeNulledDirection,modDirectionNulledName,...
     'observerAgeInYears',observerAgeInYears,...
     'pupilDiameterMm',pupilDiameterMm,...
-    'testFreqSetHz',testFreqSetHz);
+    'stimContrast',stimContrast,...
+    'stimTestSet',stimTestSet);

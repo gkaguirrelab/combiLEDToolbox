@@ -15,10 +15,14 @@ subjectID = 'HERO_gka1';
 observerAgeInYears = 53;
 pupilDiameterMm = wy_getPupilSize(observerAgeInYears, 220, 30, 1, 'Unified');
 stimContrast = 0.15;
-stimTestSet = linspace(-0.5,0,31);
+stimTestSet = linspace(-0.25,0.25,31);
+
+modDirection = 'S_wide';
+toBeNulledDirection = 'LightFlux';
+modDirectionNulledName = 'S_LMSNull';
 
 % run the experiment
-runFlickerNullExperiment(subjectID,'LminusM_wide','LightFlux',...
+runFlickerNullExperiment(subjectID,modDirection,toBeNulledDirection,modDirectionNulledName,...
     'observerAgeInYears',observerAgeInYears,...
     'pupilDiameterMm',pupilDiameterMm,...
     'stimContrast',stimContrast,...
