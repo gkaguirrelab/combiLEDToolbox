@@ -4,9 +4,8 @@ function analyzeDetectThresholdExperiment(subjectID,modDirection,varargin)
 % Examples:
 %{
     subjectID = 'HERO_gka1';
-    modDirection = 'LminusM_LMNull';
     modDirection = 'LightFlux';
-    modDirection = 'S_LMNull';
+    modDirection = 'LminusM_LMSNull';
     analyzeDetectThresholdExperiment(subjectID,modDirection)
 %}
 
@@ -120,7 +119,7 @@ a = gca;
 a.XTick = log10([results.freqHz]);
 a.XTickLabel = string([results.freqHz]);
 leftYmax = ceil(a.YLim(2)/100)*100;
-leftYmax = 600;
+leftYmax = 1000;
 ylim([1, leftYmax]);
 ytickVals = a.YTick;
 % Add a right side axis with the absolute device contrast
