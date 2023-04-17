@@ -13,7 +13,7 @@
 %% Session parameters
 
 % Subject and session params.
-pathParams.Subject = 'rawPupilVideos';
+pathParams.Subject = 'LightFlux';
 
 %% Analysis Notes
 

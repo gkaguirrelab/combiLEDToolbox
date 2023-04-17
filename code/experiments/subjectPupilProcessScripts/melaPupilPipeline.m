@@ -40,23 +40,15 @@ universalKeyValues = {...
 
 
 
-%% Add the DropBox information to the pathParams
+%% Input and output path
 % Get the DropBox base directory
 dropboxBaseDir = getpref('combiLEDToolbox','dropboxBaseDir');
 
-% set common path params
-pathParams.dataSourceDirRoot = fullfile(dropboxBaseDir,'MELA_data', 'combiLED', ...
-   'HERO_gka1', 'LightFlux', 'ssVEPTCSF');
-pathParams.dataOutputDirRoot = fullfile(dropboxBaseDir,'MELA_analysis', 'combiLED', ...
-    'HERO_gka1', 'LightFlux', 'ssVEPTCSF');
+inputBaseDir = fullfile(dropboxBaseDir,'MELA_data', 'combiLED', ...
+                        'HERO_gka1', pathParams.Subject, 'ssVEPTCSF', 'rawPupilVideos');
 
-
-%% Create the input and output paths
-inputBaseDir = fullfile(pathParams.dataSourceDirRoot, ...
-    pathParams.Subject);
-
-outputBaseDir = fullfile(pathParams.dataOutputDirRoot, ...
-    pathParams.Subject);
+outputBaseDir = fullfile(dropboxBaseDir,'MELA_analysis', 'combiLED', ...
+                        'HERO_gka1', pathParams.Subject, 'ssVEPTCSF', 'rawPupilVideos');
 
 % If the outputBaseDir does not exist, make it
 if ~exist(outputBaseDir)
