@@ -4,6 +4,7 @@ function analyzePupilTCSFExperiment(subjectID,modDirection,varargin)
 %{
     subjectID = 'HERO_gka1';
     modDirection = 'LightFlux';
+    modDirection = 'LminusM_LMSNull';
     analyzePupilTCSFExperiment(subjectID,modDirection);
 %}
 
@@ -12,8 +13,6 @@ function analyzePupilTCSFExperiment(subjectID,modDirection,varargin)
 p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
 p.addParameter('projectName','combiLED',@ischar);
-p.addParameter('stimContrastSet',[0,0.05,0.1,0.2,0.4,0.8],@isnumeric);
-p.addParameter('stimFreqSetHz',[4,6,10,14,20,28,40],@isnumeric);
 p.addParameter('nBoots',1000,@isnumeric);
 p.addParameter('rmseThresh',0.5,@isnumeric);
 p.addParameter('savePlots',true,@islogical);
@@ -43,20 +42,18 @@ end
 % Where the pupil video prep is taking place
 processingDir = fullfile(analysisDir,'rawPupilVideos');
 
-% Get the stimulus values
-stimFreqSetHz = p.Results.stimFreqSetHz;
-stimContrastSet = p.Results.stimContrastSet;
-nFreqs = length(stimFreqSetHz);
-nContrasts = length(stimContrastSet);
-Fs = 40;
-sampleShift = 0;
-stimDurSecs = 2;
-nBoots = p.Results.nBoots;
-
 % Load the measurementRecord
 filename = fullfile(dataDir,'measurementRecord.mat');
 load(filename,'measurementRecord');
+
+% Get or set the stimulus values
 nTrials = length(measurementRecord.trialData);
+stimFreqSetHz = measurementRecord.stimulusProperties.stimFreqSetHz;
+stimContrastSet = measurementRecord.stimulusProperties.stimContrastSet;
+nFreqs = length(stimFreqSetHz);
+nContrasts = length(stimContrastSet);
+Fs = 40;
+nBoots = p.Results.nBoots;
 
 % Loop over the trials, concatenate the pupil response, and build the model
 pupilVec = [];
@@ -105,7 +102,7 @@ for tt = 1:nTrials
     for ss = 1:length(stimContrastOrder)
         cycleStopTimeSecs = measurementRecord.trialData(tt).cycleStopTimes(ss)/1e9;
         relativesStartTimeSecs = videoPreTimeSecs + cycleStopTimeSecs - 2;
-        startTimeIdx = round(relativesStartTimeSecs*Fs) + sampleShift;
+        startTimeIdx = round(relativesStartTimeSecs*Fs);
         rowIdx = stimContrastOrder(ss);
         if ss == 1
             rowIdx = size(subX,1);

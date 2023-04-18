@@ -8,7 +8,7 @@ function analyzeVEPTCSFExperiment(subjectID,modDirection,varargin)
 %}
 %{
     subjectID = 'HERO_gka1';
-    modDirection = 'LminusM_LMNull';
+    modDirection = 'LminusM_LMSNull';
     analyzeVEPTCSFExperiment(subjectID,modDirection);
 %}
 
@@ -21,6 +21,7 @@ p.addParameter('detailedPlots',true,@islogical);
 p.addParameter('savePlots',true,@islogical);
 p.addParameter('nBoots',1000,@isnumeric);
 p.addParameter('nHarmonics',2,@isnumeric);
+p.addParameter('includeSubharmonic',true,@islogical);
 p.parse(varargin{:})
 
 % Set our experimentName
@@ -128,9 +129,19 @@ for ff = 1:length(stimFreqSetHz)
 
     % Create the X regression matrix for this frequency
     X = [];
+
+    % First create the subharmonics
+    subShift = 0;
+    if p.Results.includeSubharmonic
+        X(:,1) = ramp.*sin(0.5*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+        X(:,2) = ramp.*cos(0.5*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+        subShift = 2;
+    end    
+
+    % Now the harmonics
     for hh = 1:nHarmonics
-        X(:,(hh-1)*nHarmonics+1) = ramp.*sin(hh*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
-        X(:,(hh-1)*nHarmonics+2) = ramp.*cos(hh*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+        X(:,(hh-1)*nHarmonics+1+subShift) = ramp.*sin(hh*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+        X(:,(hh-1)*nHarmonics+2+subShift) = ramp.*cos(hh*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
     end
 
     % Get this data matrix.
@@ -163,7 +174,7 @@ for ff = 1:length(stimFreqSetHz)
             % matrix
             for cc=1:length(stimContrastSet)
                 signalMat = bootData{rr,cc};
-                meanData = mean(signalMat)';
+                meanData = mean(signalMat,1)';
                 b=X\meanData;
                 ampMatrix(rr,cc) = norm(b);
             end
@@ -214,9 +225,19 @@ if p.Results.detailedPlots
 
         % Create the X regression matrix for this frequency
         X = [];
+
+        % First create the subharmonics
+        subShift = 0;
+        if p.Results.includeSubharmonic
+            X(:,1) = ramp.*sin(0.5*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+            X(:,2) = ramp.*cos(0.5*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+            subShift = 2;
+        end
+
+        % Now the harmonics
         for hh = 1:nHarmonics
-            X(:,(hh-1)*nHarmonics+1) = ramp.*sin(hh*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
-            X(:,(hh-1)*nHarmonics+2) = ramp.*cos(hh*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+            X(:,(hh-1)*nHarmonics+1+subShift) = ramp.*sin(hh*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
+            X(:,(hh-1)*nHarmonics+2+subShift) = ramp.*cos(hh*stimDurSecs*2*pi*(xTime./max(xTime))*stimFreqSetHz(ff));
         end
 
         for cc = 1:length(stimContrastSet)
@@ -268,11 +289,16 @@ if p.Results.detailedPlots
             % Put up a patch to indicate the stimulus freq
             for hh = 1:nHarmonics
                 [~,xIdx] = min(abs(xFreq-hh*stimFreqSetHz(ff)));
-                pWidth = 1;
                 patch( ...
                     [xFreq(xIdx)*0.9,xFreq(xIdx)*0.9,xFreq(xIdx)*1.1,xFreq(xIdx)*1.1], ...
                     [0 3 3 0],'r','EdgeColor','none','FaceColor','r','FaceAlpha',0.1);
                 hold on
+            end
+            if p.Results.includeSubharmonic
+                [~,xIdx] = min(abs(xFreq-0.5*stimFreqSetHz(ff)));
+                patch( ...
+                    [xFreq(xIdx)*0.9,xFreq(xIdx)*0.9,xFreq(xIdx)*1.1,xFreq(xIdx)*1.1], ...
+                    [0 3 3 0],'r','EdgeColor','none','FaceColor','r','FaceAlpha',0.1);
             end
             plot(xFreq,meanSPD,'-','Color',[0.25 0.25 0.25],'LineWidth',1.25);
             ylim([0 3]);

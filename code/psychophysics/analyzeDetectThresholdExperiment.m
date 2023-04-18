@@ -6,6 +6,7 @@ function analyzeDetectThresholdExperiment(subjectID,modDirection,varargin)
     subjectID = 'HERO_gka1';
     modDirection = 'LightFlux';
     modDirection = 'LminusM_LMSNull';
+    modDirection = 'S_LMSNull';
     analyzeDetectThresholdExperiment(subjectID,modDirection)
 %}
 
@@ -13,6 +14,8 @@ function analyzeDetectThresholdExperiment(subjectID,modDirection,varargin)
 p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
 p.addParameter('projectName','combiLED',@ischar);
+p.addParameter('leftYmax',1000,@isnumeric);
+p.addParameter('confInterval',0.68,@isnumeric);
 p.addParameter('updateFigures',false,@islogical);
 
 p.parse(varargin{:})
@@ -77,7 +80,7 @@ for ii=1:length(fileStems)
         close(figHandle)
     end
     % Obtain boot-strapped params
-    nBoots = 200; confInterval = 0.68;
+    nBoots = 200; confInterval = p.Results.confInterval;
     [~,fitParams,fitParamsCI] = psychObj.reportParams(...
         'nBoots',nBoots,'confInterval',confInterval);
     results(ii).freqHz = psychObj.testFreqHz;
@@ -106,22 +109,51 @@ end
 % Make a plot of the temporal contrast sensitivity function
 figHandle = figure();
 figuresize(400, 200,'pt');
+
+% Set some properties of the plot based upon the modulation direction, with
+% the expectation that the chromatic directions will be low-pass, and the
+% light flux direction will be more band-pass
+y=1./(modContrast*10.^[results.logContrastThresh]);
+switch modDirection
+    case 'LightFlux'
+        p0 = [max(y),2,2,1];
+        plotColor = 'k';
+    case 'LminusM_LMSNull'
+        p0 = [max(y),4,2,1];
+        plotColor = 'r';
+    case 'S_LMSNull'
+        p0 = [max(y),4,2,1];
+        plotColor = 'b';
+    otherwise
+        p0 = [max(y),2,2,1];
+        plotColor = 'g';
+end
+
+% Setup to plot vs. post-receptoral direction contrast
 hold on
 yyaxis left
-for ii=1:length(results)
-    x = log10([results(ii).freqHz]);
-    plot(x,1./(modContrast*10^[results(ii).logContrastThresh]),'or');
-    plot([x x],[1./(modContrast*10.^[results(ii).logContrastThreshLow]), 1./(modContrast*10.^[results(ii).logContrastThreshHigh]) ],'-k')
-end
+x=[results.freqHz];
+
+% Error bounds
+patch(...
+    [log10(x),fliplr(log10(x))],...
+    [ 1./(modContrast*10.^[results.logContrastThreshLow]), fliplr(1./(modContrast*10.^[results.logContrastThreshHigh])) ],...
+    plotColor,'EdgeColor','none','FaceColor',plotColor,'FaceAlpha',0.1);
+hold on
+
+% Data points
+plot(log10(x),1./(modContrast*10.^[results.logContrastThresh]),'.','Color',plotColor,'MarkerSize',15,'LineWidth',1);
+
+% Labels left
 xlabel('frequency [Hz]')
-ylabel({'Sensitivity',['[1/contrast on ' modDirection ' ]']});
+ylabel({'Sensitivity',['[1/contrast on ' modDirection ' ]']}, 'Interpreter', 'none');
 a = gca;
 a.XTick = log10([results.freqHz]);
 a.XTickLabel = string([results.freqHz]);
-leftYmax = ceil(a.YLim(2)/100)*100;
-leftYmax = 1000;
+leftYmax = p.Results.leftYmax;
 ylim([1, leftYmax]);
 ytickVals = a.YTick;
+
 % Add a right side axis with the absolute device contrast
 yyaxis right
 a = gca;
@@ -129,27 +161,32 @@ a.YTick = ytickVals;
 ylim([1, leftYmax]);
 a.YTickLabel = string(round(1./(ytickVals*modContrast),4));
 ylabel('Device contrast [0 - 1]');
+
 % Set the x range
 xlim([-0.15 1.75]);
-% Create a weighted DoG fit as a function of freq to the
-% sensitivity values
+
+% Add a fit using the Watson temporal senisitivity function, weighted by
+% the bootstrapped error
 yyaxis left
-x=[results.freqHz];
 y=1./(modContrast*10.^[results.logContrastThresh]);
 w=1./(1./(modContrast*10.^[results.logContrastThreshLow])- 1./(modContrast*10.^[results.logContrastThreshHigh]));
-myDoG = @(p,x) p(1).*normpdf(log10(x),log10(p(2)),log10(p(3)));
-myObj = @(p) sqrt(sum(w.*((myDoG(p,x)-y).^2)));
-p=fmincon(myObj,[150,14,2]);
+myWatson = @(p,x) p(1).*watsonTemporalModel(x, p(2:4));
+myObj = @(p) sqrt(sum(w.*((myWatson(p,x)-y).^2)));
+p=fmincon(myObj,p0,[],[],[],[],[1,0,0,0]);
+
 % Add the fit
 xFit = logspace(0,2,50);
-yFit = myDoG(p,xFit);
-plot(log10(xFit),yFit,'-r')
+yFit = myWatson(p,xFit);
+plot(log10(xFit),yFit,'-','Color',plotColor,'LineWidth',1.5)
+
 % Create an anonymous function that expresses the fit result as
 % absolute device contrast as a function of frequency in Hz
-deviceContrastByFreqHz = @(x) 1./(modContrast*myDoG(p,x));
+deviceContrastByFreqHz = @(x) 1./(modContrast*myWatson(p,x));
+
 % save the figure
 filename = fullfile(analysisDir,'ContrastThresholdByFreq.pdf');
 saveas(figHandle,filename);
+
 % save the key results
 filename = fullfile(analysisDir,'ContrastThresholdByFreq.mat');
 save(filename,'results','deviceContrastByFreqHz');
