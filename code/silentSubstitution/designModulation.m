@@ -61,6 +61,7 @@ S = cal.rawData.S;
 B_primary = cal.processedData.P_device;
 ambientSpd = cal.processedData.P_ambient;
 nPrimaries = size(B_primary,2);
+wavelengthsNm = SToWls(S);
 
 % Create the spectral sensitivities in the photoreceptor structure for our
 % given set of wavelengths (S). Also assemble the T_receptors matrix.
@@ -74,7 +75,7 @@ end
 
 % Get the design parameters from the modulation dictionary
 [whichReceptorsToTarget,whichReceptorsToIgnore,...
-    desiredContrast,x0Background,matchConstraint,searchBackground] = ...
+    desiredContrast,x0Background,matchConstraint,searchBackground,xyBound] = ...
     modDirectionDictionary(whichDirection,photoreceptors);
 
 % Define the isolation operation as a function of the background.
@@ -97,7 +98,11 @@ pub = ones(1,nPrimaries)-primaryHeadRoom;
 ub = ones(1,nPrimaries)-primaryHeadRoom;
 
 % Set BADS verbosity
+if p.Results.verbose
+optionsBADS.Display = 'iter';
+else
 optionsBADS.Display = 'off';
+end
 
 % The optimization toolbox is currently not available for Matlab
 % running under Apple silicon. Detect this case and tell BADS so that
@@ -117,7 +122,8 @@ if searchBackground
     % on the targeted photoreceptors, accounting for the sign of the
     % desired contrast
     myObj = @(x) -mean(contrastOnTargeted(contrastReceptorsFunc(modulationPrimaryFunc(x'),x')).*(desiredContrast'));
-    backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,[],optionsBADS)';
+    myNonlcon = @(x) nonlcon(x',repmat(0.5,nPrimaries,1),B_primary,wavelengthsNm,xyBound);
+    backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,myNonlcon,optionsBADS)';
 else
     if verbose
         fprintf(['Searching for ' whichDirection ' modulation\n'])
@@ -137,7 +143,6 @@ contrastReceptorsUnipolar = calcUnipolarContrastReceptors(modulationPrimary,back
 backgroundSPD = B_primary*backgroundPrimary;
 positiveModulationSPD = B_primary*modulationPrimary;
 negativeModulationSPD = B_primary*(backgroundPrimary-(modulationPrimary - backgroundPrimary));
-wavelengthsNm = SToWls(S);
 
 % Create vectors of the primaries with informative names
 settingsLow = backgroundPrimary+(-(modulationPrimary-backgroundPrimary));
@@ -149,6 +154,7 @@ modResult.meta.whichDirection = whichDirection;
 modResult.meta.x0Background = x0Background;
 modResult.meta.matchConstraint = matchConstraint;
 modResult.meta.searchBackground = searchBackground;
+modResult.meta.xyBound = xyBound;
 modResult.meta.B_primary = B_primary;
 modResult.meta.T_receptors = T_receptors;
 modResult.meta.photoreceptors = photoreceptors;
@@ -170,5 +176,16 @@ modResult.settingsHigh = settingsHigh;
 end
 
 
+%% LOCAL FUNCTIONS
+
+function c = nonlcon(x,x0,B_primary,wavelengthsNm,xyBound)
+
+% Expand x0 to have the same number of columns as x
 
 
+xy_distance = chromaDistance(B_primary*x,B_primary*x0,wavelengthsNm);
+
+c = double(xy_distance>xyBound)';
+c(isnan(xy_distance)) = 1;
+
+end

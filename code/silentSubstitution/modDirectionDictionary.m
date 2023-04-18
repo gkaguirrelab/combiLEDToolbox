@@ -1,5 +1,5 @@
 function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast,...
-    x0Background, matchConstraint, searchBackground] = modDirectionDictionary(whichDirection,photoreceptors)
+    x0Background, matchConstraint, searchBackground, xyBound] = modDirectionDictionary(whichDirection,photoreceptors)
 %
 %
 %
@@ -11,6 +11,7 @@ function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast,..
 x0Background = repmat(0.5,8,1);
 matchConstraint = 5;
 searchBackground = false;
+xyBound = 0.1;
 
 switch whichDirection
     case 'LminusM_foveal'
@@ -42,13 +43,28 @@ switch whichDirection
         whichReceptorsToIgnore = {};
         desiredContrast = ones(1,8);
         matchConstraint = 3;
-    case 'Mel'
+    case 'LMS_shiftBackground'
+        whichReceptorsToTarget = {'L_10deg','M_10deg','S_10deg'};
+        whichReceptorsToSilence = {'Mel'};
+        whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg','Rod'};
+        desiredContrast = [1 1 1];
+        x0Background = [ 0.5000    0.4338    0.1108    0.2574    0.2381    0.5000    0.3777    0.5000 ]';
+        searchBackground = true;
+    case 'Mel_shiftBackground'
         whichReceptorsToTarget = {'Mel'};
         whichReceptorsToSilence = {'L_10deg','M_10deg','S_10deg'};
         whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg','Rod'};
         desiredContrast = 1;
-        x0Background = [ 0.0823    0.0000    0.0000    0.0655    0.0007    0.3248    0.5499    0.4275 ]';
-        searchBackground = false;
+        x0Background = [ 0.4980    0.4709    0.4722    0.4985    0.1846    0.4980    0.2057    0.5000 ]';
+        searchBackground = true;
+    case 'Rod_shiftBackground'
+        whichReceptorsToTarget = {'Rod'};
+        whichReceptorsToSilence = {'Mel','L_10deg','M_10deg','S_10deg'};
+        whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg'};
+        desiredContrast = 1;
+        x0Background = [ 0.1056         0    0.0130         0    0.0199    0.4851    0.1445    0.4959 ]';
+        searchBackground = true;
+        xyBound = 1.0;
 end
 
 % Check that no receptor is listed more than once in the target, silence,
@@ -71,6 +87,12 @@ end
 % appears somewhere as a target, silence, or ignored item.
 if ~all(cellfun(@(x) any(strcmp(x,[whichReceptorsToTarget whichReceptorsToSilence whichReceptorsToIgnore])),photoreceptorNames))
     error('The modulation direction considers a target that is not in the photoreceptors structure')
+end
+
+% Ensure that the desiredContrast and whichReceptorsToTarget vectors are
+% the same length.
+if length(desiredContrast) ~= length(whichReceptorsToTarget)
+    error('The desiredContrast and whichReceptorsToTarget vectors are not the same length')
 end
 
 % Assemble the vectors for targeting and ignoring

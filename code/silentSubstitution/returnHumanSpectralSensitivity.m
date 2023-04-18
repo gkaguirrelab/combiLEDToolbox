@@ -1,27 +1,54 @@
 function [T_energyNormalized,T_energy,adjIndDiffParams] = returnHumanSpectralSensitivity(photoreceptorStruct,S)
-% returnHumanSpectralSensitivity
+% Provides the spectral sensitivity function for a specified photoreceptor
 %
-% Get spectral sensitivities, expressed as energy (isomerizations-per-
-% second as a function of radiance expressed in Watts), but then normalized
-% to a max of 1.
+% Syntax:
+%  [T_energyNormalized,T_energy,adjIndDiffParams] = returnHumanSpectralSensitivity(photoreceptorStruct,S)
+%
+% Description:
+%   Provides the spectral sensitivity of a specified human photoreceptor at
+%   the wavelengths specified by S. The sensitivity is expressed as energy 
+%   (isomerizations-per-second as a function of radiance expressed in
+%   Watts), normalized to a max of 1. The spectral sensitivity is expressed
+%   relative to light arriving at the cornea.
+%
+%   This routine is a simplified version of code written by David Brainard
+%   and Manuel Spitchan in the SilentSubstitutionToolbox.
+%
+%   The properties of the photoreceptor are specified in the passed
+%   photoreceptorStruct. The required fields are:
+%       whichReceptor     - Char vector with one of these values:
+%                               {'L','M','S','Rod','Mel'}
+%       fieldSizeDegrees  - Scalar. The eccentricity of the photoreceptor
+%                           (Essentially; the field size specification is a
+%                           bit complicated for historical reasons)
+%       observerAgeInYears - Scalar. The observer age adjusts the spectral
+%                           transmittance of the lens.
+%       pupilDiameterMm   - Scalar. Has a small effect on lens
+%                           transmittance.
+%       returnPenumbralFlag - Logical. If set to true, the spectral
+%                           sensitivity is adjusted to account for the
+%                           filtering effects of hemoglobin in retinal
+%                           blood vessels.
+%       dphotopigment, dlens, dmac - Scalar in percentage units. These are
+%                           parameters of the Asano individual difference
+%                           model of variation in photoreceptor sensitivity
+%       lambdaMaxShift - Scalar in nm units. Another element of the Asano
+%                           model.
+%       shiftType         - Char vector of either 'linear', or 'log'.
+%                           Controls the manner in which the lambda max of
+%                           the spectral sensitivity function is shifted.
+%
+% Inputs:
+%   photoreceptorStruct   - Structure. Contents described above.
+%   S                     - 1x3 vector, specifiying the wavelengths at
+%                           which to return the spectal sensitivity.
+%
+% Outputs:
+%   T_energyNormalized
+%   T_energy
+%   adjIndDiffParams
+%
 
-% Optional key/value pairs:
-%     'whichParameter' - Determines which parameter which should be varied.
-%                        Possible options are (default, 'dlens'):
-%                           'dlens' - lens density
-%                           'dmac' - macular pigment density
-%                           'dphotopigmentL' - L cone photopigment density
-%                           'dphotopigmentM' - M cone photopigment density
-%                           'dphotopigmentS' - S cone photopigment density
-%                           'lambdaMaxShiftL' - L lambda-max shift
-%                           'lambdaMaxShiftM' - M lambda-max shift
-%                           'lambdaMaxShiftS' - S lambda-max shift
-%                           'obsPupilDiameterMm' - observer's pupil diameter
-%
-%     'NTitrations' - The step sizes for each parameter variation, i.e. how
-%                     many individual parameter values are calculated.
-%                     (Default: 50)
-%
 
 % Extract fields from the photoreceptorStruct into variables
 fieldSizeDegrees = photoreceptorStruct.fieldSizeDegrees;
@@ -87,7 +114,8 @@ adjIndDiffParams.dphotopigment = adjIndDiffParams.dphotopigment(idx);
 % Calculate penumbral variant
 if returnPenumbralFlag
 
-    % We assume standard parameters here.
+    % We assume standard parameters here to calculate the transmittance of
+    % hemoglobin in retinal veins
     source = 'Prahl';
     vesselOxyFraction = 0.85;
     vesselOverallThicknessUm = 5;

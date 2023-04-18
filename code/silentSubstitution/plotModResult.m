@@ -76,7 +76,7 @@ title('Contrast');
 ylabel('Contrast');
 axis square
 
-%% Chromaticity
+% Chromaticity
 subplot(1,4,4)
 
 % Start with the Matlab chromaticity diagram
