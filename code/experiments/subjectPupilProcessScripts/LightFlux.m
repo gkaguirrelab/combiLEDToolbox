@@ -13,7 +13,7 @@
 %% Session parameters
 
 % Subject and session params.
-pathParams.Subject = 'rawPupilVideos';
+pathParams.Subject = 'LightFlux';
 
 %% Analysis Notes
 
@@ -81,7 +81,6 @@ pupilRangeSets = [40 50];
 ellipseEccenLBUB = [0.2 2];
 ellipseAreaLB = 0;
 ellipseAreaUP = 90000;
-pupilGammaCorrection = 0.65;
 
 % Glint settings
 glintPatchRadius = 45;
@@ -108,11 +107,18 @@ for ii = vids
         pupilGammaCorrection = 0.55;
     elseif ismember(ii, [133])
         pupilGammaCorrection = 0.40;
-     elseif ismember(ii, [140,146,147])
-        pupilGammaCorrection = 0.45;
-        pupilCircleThreshSet = 0.002;
+    elseif ismember(ii, [140,146,147])
+        pupilGammaCorrection = 0.45;    
     elseif ii>98
         pupilGammaCorrection = 0.35;
+    else
+        pupilGammaCorrection = 0.65;
+    end
+    
+    if ismember(ii, [140,146,147])
+        pupilCircleThreshSet = 0.002;
+    else
+        pupilCircleThreshSet = 0.004;
     end
     
     pupilCircleThresh = pupilCircleThreshSet;
