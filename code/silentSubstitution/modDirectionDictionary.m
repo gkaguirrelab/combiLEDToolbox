@@ -21,10 +21,17 @@ switch whichDirection
         desiredContrast = [1 -1];
         matchConstraint = 3;
     case 'LminusM_wide'
-        whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg'};
+        % Attempt to achieve equivalent differential contrast on the L and
+        % M cones in the center and the periphery. Need to alos try and
+        % equate the differential contrast on the penumbral variants of
+        % these, otherwise we get Purkinje tree entopic effects in the
+        % rapid flicker. After some fussing around, setting the desired
+        % contrast of the peripheral field to be slightly lower than the
+        % fovea result in a better search outcome.
+        whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg','L_penum10','M_penum10'};
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
         whichReceptorsToIgnore = {'Mel','Rod'};
-        desiredContrast = [1 -1 0.8 -0.8];
+        desiredContrast = [1 -1 0.9 -0.9 1 -1];
         matchConstraint = 3;
     case 'LplusM_wide'
         whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg'};
@@ -33,10 +40,19 @@ switch whichDirection
         desiredContrast = [1 1 1 1];
         matchConstraint = 10;
     case 'S_wide'
-        whichReceptorsToTarget = {'S_2deg','S_10deg'};
-        whichReceptorsToSilence = {'L_2deg','M_2deg','L_10deg','M_10deg',};
+        % Attempt to achieve equivalent contrast on the S cones in the
+        % center and the periphery. Need to also silence the penumbral L
+        % and Mo cones, otherwise we get Purkinje tree entopic effects in
+        % the rapid flicker. If we list the penumbral cones as targets to
+        % be silenced, the linear constraint on the search is too strict,
+        % and we are unable to find a good solution. Instead, we list the
+        % penumbral cones as modulation targets, but set their desired
+        % contrast to zero.
+        whichReceptorsToTarget = {'S_2deg','S_10deg','L_penum','M_penum'};
+        whichReceptorsToSilence = {'L_2deg','M_2deg','L_10deg','M_10deg'};
         whichReceptorsToIgnore = {'Mel','Rod'};
-        desiredContrast = [1 1];
+        desiredContrast = [1 1 0 0];
+        matchConstraint = 3;
     case 'LightFlux'
         whichReceptorsToTarget = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel','Rod'};
         whichReceptorsToSilence = {};
@@ -83,10 +99,11 @@ if ~all(cellfun(@(x) any(strcmp(x,photoreceptorNames)),[whichReceptorsToTarget w
     error('The modulation direction considers a target that is not in the photoreceptors structure')
 end
 
-% Ensure that every photoreceptor in the passed list of photoreceptors
-% appears somewhere as a target, silence, or ignored item.
+% If an entry in the photoreceptors structure is not listed in Target,
+% Silence, or Ignore, then add it to Ignore.
 if ~all(cellfun(@(x) any(strcmp(x,[whichReceptorsToTarget whichReceptorsToSilence whichReceptorsToIgnore])),photoreceptorNames))
-    error('The modulation direction considers a target that is not in the photoreceptors structure')
+    idxToAdd = ~cellfun(@(x) any(strcmp(x,[whichReceptorsToTarget whichReceptorsToSilence whichReceptorsToIgnore])),photoreceptorNames);
+    whichReceptorsToIgnore = [whichReceptorsToIgnore photoreceptorNames(idxToAdd)];
 end
 
 % Ensure that the desiredContrast and whichReceptorsToTarget vectors are

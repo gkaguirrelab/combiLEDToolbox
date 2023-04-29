@@ -6,7 +6,7 @@ p.addParameter('pupilDiameterMm',2,@isscalar)
 p.parse(varargin{:});
 
 % The set of photoreceptor classes
-photoreceptorClassNames = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel','Rod'};
+photoreceptorClassNames = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel','Rod','L_penum10','M_penum10'};
 
 for ii = 1:length(photoreceptorClassNames)
 
@@ -55,6 +55,16 @@ for ii = 1:length(photoreceptorClassNames)
             photoreceptors(ii).whichReceptor = 'Rod';
             photoreceptors(ii).fieldSizeDegrees = 10;
             photoreceptors(ii).plotColor = SSTDefaultReceptorColors('Rod');
+        case 'L_penum10'
+            photoreceptors(ii).whichReceptor = 'L';
+            photoreceptors(ii).fieldSizeDegrees = 10;
+            photoreceptors(ii).returnPenumbralFlag = true;
+            photoreceptors(ii).plotColor = SSTDefaultReceptorColors('LConePenumbral');
+        case 'M_penum10'
+            photoreceptors(ii).whichReceptor = 'M';
+            photoreceptors(ii).fieldSizeDegrees = 10;
+            photoreceptors(ii).returnPenumbralFlag = true;
+            photoreceptors(ii).plotColor = SSTDefaultReceptorColors('MConePenumbral');
     end
 
 end
