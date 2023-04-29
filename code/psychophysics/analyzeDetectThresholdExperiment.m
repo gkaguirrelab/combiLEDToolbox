@@ -5,8 +5,7 @@ function analyzeDetectThresholdExperiment(subjectID,modDirection,varargin)
 %{
     subjectID = 'HERO_gka1';
     modDirection = 'LightFlux';
-    modDirection = 'LminusM_LMSNull';
-    modDirection = 'S_LMSNull';
+    modDirection = 'LminusM_wide';
     analyzeDetectThresholdExperiment(subjectID,modDirection)
 %}
 
@@ -14,7 +13,7 @@ function analyzeDetectThresholdExperiment(subjectID,modDirection,varargin)
 p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
 p.addParameter('projectName','combiLED',@ischar);
-p.addParameter('leftYmax',1000,@isnumeric);
+p.addParameter('leftYmax',750,@isnumeric);
 p.addParameter('confInterval',0.68,@isnumeric);
 p.addParameter('updateFigures',false,@islogical);
 
@@ -118,8 +117,8 @@ switch modDirection
     case 'LightFlux'
         p0 = [max(y),2,2,1];
         plotColor = 'k';
-    case 'LminusM_LMSNull'
-        p0 = [max(y),4,2,1];
+    case 'LminusM_wide'
+        p0 = [max(y),9,1,2];
         plotColor = 'r';
     case 'S_LMSNull'
         p0 = [max(y),4,2,1];

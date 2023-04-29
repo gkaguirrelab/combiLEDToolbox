@@ -8,7 +8,7 @@ function analyzeVEPTCSFExperiment(subjectID,modDirection,varargin)
 %}
 %{
     subjectID = 'HERO_gka1';
-    modDirection = 'LminusM_LMSNull';
+    modDirection = 'LminusM';
     analyzeVEPTCSFExperiment(subjectID,modDirection);
 %}
 
