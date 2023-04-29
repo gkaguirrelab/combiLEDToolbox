@@ -8,22 +8,16 @@
 % and then perform discrimination judgements with:
 %   testFreqSetHz = [3,5,8,12,16]
 %   refFreqSetHz = [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 24];
-%
 
 % prepare the params
 subjectID = 'HERO_gka1';
+modDirection = 'LminusM_wide';
+stimFreqSetHz = [1,3,5,8,12,16,24];
 observerAgeInYears = 53;
 pupilDiameterMm = wy_getPupilSize(observerAgeInYears, 220, 30, 1, 'Unified');
-stimContrast = 0.125;
-stimTestSet = linspace(-0.3,0.3,31);
-
-modDirection = 'LminusM_wide';
-toBeNulledDirection = 'LightFlux';
-modDirectionNulledName = 'LminusM_LMSNull';
 
 % run the experiment
-runFlickerNullExperiment(subjectID,modDirection,toBeNulledDirection,modDirectionNulledName,...
+runVEPTCSFExperiment(subjectID,modDirection,...
     'observerAgeInYears',observerAgeInYears,...
     'pupilDiameterMm',pupilDiameterMm,...
-    'stimContrast',stimContrast,...
-    'stimTestSet',stimTestSet);
+    'stimFreqSetHz',stimFreqSetHz);
