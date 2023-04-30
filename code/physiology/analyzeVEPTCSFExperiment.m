@@ -284,7 +284,7 @@ if p.Results.detailedPlots
             figure(f2);
             nexttile
             a=gca();
-            a.YScale='log';
+            a.XScale='log';
 
             % Put up a patch to indicate the stimulus freq
             for hh = 1:nHarmonics
@@ -301,8 +301,8 @@ if p.Results.detailedPlots
                     [0 3 3 0],'r','EdgeColor','none','FaceColor','r','FaceAlpha',0.1);
             end
             plot(xFreq(2:end),meanSPD(2:end),'-','Color',[0.25 0.25 0.25],'LineWidth',1.25);
-%            ylim([0 3]);
-%            xlim([0.5 200]);
+            ylim([0 3]);
+            xlim([0.5 200]);
             xlim([0 100]);
             if cc==1
                 title(sprintf('freq %2.2f',stimFreqSetHz(ff)))
