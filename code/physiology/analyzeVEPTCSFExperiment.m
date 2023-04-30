@@ -280,11 +280,11 @@ if p.Results.detailedPlots
                 end
             end
 
-            % Plot the mean psd
+            % Plot the mean spd
             figure(f2);
             nexttile
             a=gca();
-            a.XScale='log';
+            a.YScale='log';
 
             % Put up a patch to indicate the stimulus freq
             for hh = 1:nHarmonics
@@ -300,14 +300,15 @@ if p.Results.detailedPlots
                     [xFreq(xIdx)*0.9,xFreq(xIdx)*0.9,xFreq(xIdx)*1.1,xFreq(xIdx)*1.1], ...
                     [0 3 3 0],'r','EdgeColor','none','FaceColor','r','FaceAlpha',0.1);
             end
-            plot(xFreq,meanSPD,'-','Color',[0.25 0.25 0.25],'LineWidth',1.25);
-            ylim([0 3]);
-            xlim([0.5 200]);
+            plot(xFreq(2:end),meanSPD(2:end),'-','Color',[0.25 0.25 0.25],'LineWidth',1.25);
+%            ylim([0 3]);
+%            xlim([0.5 200]);
+            xlim([0 100]);
             if cc==1
                 title(sprintf('freq %2.2f',stimFreqSetHz(ff)))
                 if ff==1
-                    xlabel('freq [log Hz]')
-                    ylabel('microvolts')
+                    xlabel('freq Hz]')
+                    ylabel('log microvolts')
                 end
             end
         end
