@@ -3,8 +3,10 @@ function [spdStim,spdRest,freqSupportHz,temporalResponseStim,temporalResponseRes
 %
 %
 %{
-    params = [32,3,50,7,-2,50];
+    params = [32,3,50,7,-2,37.8125,50];
+    params = [32,3,50,7,-2,32,50];
     stimFreqHz = [4,6,10,14,20,28,40];
+    stimFreqHz = [1,3,5,8,12,16,24];
     stimAmplitude = 100;
     figure
     for ii = 1:length(stimFreqHz)
@@ -17,6 +19,7 @@ function [spdStim,spdRest,freqSupportHz,temporalResponseStim,temporalResponseRes
 % Parse the parameters
 p = inputParser; p.KeepUnmatched = false;
 p.addParameter('mdl','alpha_mod_stimulation',@ischar);
+p.addParameter('ampaTransferFuncParams',{880,[1 660, 33275]},@iscell);
 p.addParameter('modelDurSecs',3,@isscalar);
 p.addParameter('censorIdx',500,@isscalar);
 p.addParameter('nSims',10,@isscalar);
@@ -37,7 +40,8 @@ c2Gain = params(2);
 sigMax = params(3);
 sigHalfPoint = params(4);
 sigSlope = params(5);
-inputNoiseAmplitude = params(6);
+ampaTimeConstant = params(6);
+inputNoiseAmplitude = params(7);
 
 % Set the period of time to be modeled, in seconds
 set_param(mdl,'StopTime',num2str(p.Results.modelDurSecs));
@@ -53,6 +57,14 @@ set_param(fullfile(mdl,"C2"),"Gain",num2str(c2Gain));
 sigExpression = sprintf("%d*(1 + exp((u(1) - %d)/(%d)))^(-1)",sigMax,sigHalfPoint,sigSlope);
 set_param(fullfile(mdl,"Fcn1"),"Expression",sigExpression);
 set_param(fullfile(mdl,"Fcn2"),"Expression",sigExpression);
+
+% Set the form of the excitatory temporal filter
+ampaTransferFuncParams = p.Results.ampaTransferFuncParams;
+ampaTransferFuncParams{2}(3) = ampaTransferFuncParams{1}*ampaTimeConstant;
+ampaNumeratorExpression = sprintf("%d",ampaTransferFuncParams{1});
+ampaDenominatorExpression = sprintf("[%d %d %d]",ampaTransferFuncParams{2});
+set_param([mdl,'/AMPA//NMDA'],"Numerator",ampaNumeratorExpression);
+set_param([mdl,'/AMPA//NMDA'],"Denominator",ampaDenominatorExpression);
 
 % Set the input noise
 set_param(fullfile(mdl,"Input noise","Gain5"),"Gain",num2str(inputNoiseAmplitude));
