@@ -61,8 +61,8 @@ classdef FlickerPhysio < handle
             p.addParameter('pupilVidStartDelaySec',2.5,@isnumeric);
             p.addParameter('preTrialJitterRangeSecs',[0 1],@isnumeric);
             p.addParameter('stimFreqHz',20,@isnumeric);
-            p.addParameter('stimContrastSet',[0,0.05,0.1,0.2,0.4,0.8],@isnumeric);
-            p.addParameter('stimContrastOrder',[1,1,2,3,4,5,6,6,4,3,2,1,5,5,3,1,6,2,4,4,1,3,6,5,2,2,5,1,4,6,3,3,5,4,2,6,1],@isnumeric);
+            p.addParameter('stimContrastSet',[0,0.2,0.4,0.8],@isnumeric);
+            p.addParameter('stimContrastOrder',[3,3,3,4,3,1,4,2,2,1,1,3,2,4,4,1,2],@isnumeric);
             p.addParameter('pulseDurSecs',2,@isnumeric);
             p.addParameter('halfCosineRampDurSecs',0.1,@isnumeric);
             p.addParameter('interStimIntervalSecs',0.2,@isnumeric);

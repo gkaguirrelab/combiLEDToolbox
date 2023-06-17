@@ -1,16 +1,27 @@
-function [spdStim,spdRest,freqSupportHz,temporalResponseStim,temporalResponseRest,temporalSupportSecs] = modelSsvepEvokedResponse(params,stimFreqHz,stimAmplitude,varargin)
+function [temporalSupportSecs,temporalResponseStim,temporalResponseRest,freqSupportHz,spdStim,spdRest] = modelSsvepEvokedResponse(params,stimFreqHz,stimAmplitude,varargin)
 %
 %
 %
 %{
     params = [32,3,50,7,-2,37.8125,50];
-    params = [32,3,50,7,-2,32,50];
+    stimFreqHz = 20;
+    stimAmplitude = 100;
+    [temporalSupportSecs,temporalResponseStim] = ...
+        modelSsvepEvokedResponse(params,stimFreqHz,stimAmplitude,...
+        'nSims',10);
+    figure
+    temporalResponseStim = temporalResponseStim-mean(temporalResponseStim);
+    plot(temporalSupportSecs,temporalResponseStim,'-k')
+    xlim([0 2]);
+%}
+%{
+    params = [32,3,50,7,-2,37.8125,50];
     stimFreqHz = [4,6,10,14,20,28,40];
     stimFreqHz = [1,3,5,8,12,16,24];
     stimAmplitude = 100;
     figure
     for ii = 1:length(stimFreqHz)
-        [spdStim,spdRest,freqSupportHz] = modelSsvepEvokedResponse(params,stimFreqHz(ii),stimAmplitude);
+        [~,~,~,spdStim,spdRest,freqSupportHz] = modelSsvepEvokedResponse(params,stimFreqHz(ii),stimAmplitude);
         plot(log10(freqSupportHz),spdStim-spdRest,'-');
         hold on
     end
@@ -22,7 +33,7 @@ p.addParameter('mdl','alpha_mod_stimulation',@ischar);
 p.addParameter('ampaTransferFuncParams',{880,[1 660, 33275]},@iscell);
 p.addParameter('modelDurSecs',3,@isscalar);
 p.addParameter('censorIdx',500,@isscalar);
-p.addParameter('nSims',10,@isscalar);
+p.addParameter('nSims',5,@isscalar);
 p.parse(varargin{:})
 
 censorIdx = p.Results.censorIdx;
@@ -101,6 +112,9 @@ end
 % Obtain the average temporal response
 temporalResponseStim = mean(outputTimeDomainStim);
 temporalResponseRest = mean(outputTimeDomainRest);
+
+% Adjust the temporal support to remove the censored portion
+temporalSupportSecs = temporalSupportSecs - (censorIdx-1)*deltaTSecs;
 
 % Obtain the average power spectrum
 spdStim = (mean(outputAmpStim).^2)./size(outputAmpStim,2);

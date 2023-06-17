@@ -8,7 +8,7 @@ function analyzeVEPTCSFExperiment(subjectID,modDirection,varargin)
 %}
 %{
     subjectID = 'HERO_gka1';
-    modDirection = 'LminusM';
+    modDirection = 'LminusM_wide';
     analyzeVEPTCSFExperiment(subjectID,modDirection);
 %}
 
@@ -19,7 +19,7 @@ p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@isc
 p.addParameter('projectName','combiLED',@ischar);
 p.addParameter('detailedPlots',true,@islogical);
 p.addParameter('savePlots',true,@islogical);
-p.addParameter('nBoots',1000,@isnumeric);
+p.addParameter('nBoots',10,@isnumeric);
 p.addParameter('nHarmonics',2,@isnumeric);
 p.addParameter('includeSubharmonic',true,@islogical);
 p.parse(varargin{:})
@@ -147,21 +147,19 @@ for ff = 1:length(stimFreqSetHz)
     % Get this data matrix.
     dataMatrix = contrastCarryOverRaw{ff};
 
-    % An index of the available trials for this stimulus frequency
-    trialIdx = 1:size(dataMatrix{1},1);
-
     % Loop over bootstrap resamplings
     ampMatrixBoot = zeros(nBoots,nConstrasts,nConstrasts);
     ampDirectBoot = zeros(nBoots,nConstrasts);
     for bb = 1:nBoots
 
-        % Resample across the trials
-        bootIdx = datasample(trialIdx,length(trialIdx));
-
         % Create the resample dataMatrix
         bootData = {};
         for rr=1:nConstrasts
             for cc=1:nConstrasts
+                % An index of the available trials for this stimulus frequency
+                trialIdx = 1:size(dataMatrix{rr,cc},1);
+                % Resample across the trials
+                bootIdx = datasample(trialIdx,length(trialIdx));
                 bootData{rr,cc} = dataMatrix{rr,cc}(bootIdx,:);
             end
         end
