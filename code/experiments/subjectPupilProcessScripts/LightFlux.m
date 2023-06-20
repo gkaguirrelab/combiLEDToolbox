@@ -44,22 +44,22 @@ pathParams.Subject = 'LightFlux';
 
 videoNameStems = {};
 
-for ii = 1:147
+for ii = 1:50
     
-    if ismember(ii,[2,10,16,23,35,36,47,51,59,65,72,84,85,96,100,108,114,121,133,134,145])
-        ss = 'freq_4.0';
-    elseif ismember(ii,[7,8,18,25,32,37,46,56,57,67,74,81,86,95,105,106,116,123,130,135,144])
-        ss = 'freq_6.0';
-    elseif ismember(ii,[5,14,15,27,31,38,48,54,63,64,76,80,87,97,103,112,113,125,129,136,146])
-        ss = 'freq_10.0';
-    elseif ismember(ii,[1,12,19,24,30,40,49,50,61,68,73,79,89,98,99,110,117,122,128,138,147])
-        ss = 'freq_14.0';
-    elseif ismember(ii,[4,9,17,28,29,41,44,53,58,66,77,78,90,93,102,107,115,126,127,139,142])
-        ss = 'freq_20.0';
-    elseif ismember(ii,[3,13,21,22,33,39,45,52,62,70,71,82,88,94,101,111,119,120,131,137,143])
-        ss = 'freq_28.0';
-    else
-        ss = 'freq_40.0';
+    if ismember(ii,[2,10,16,23,35,36,47])
+        ss = 'freq_3.0';
+    elseif ismember(ii,[7,8,18,25,32,37,46])
+        ss = 'freq_4.7';
+    elseif ismember(ii,[5,14,15,27,31,38,48])
+        ss = 'freq_7.5';
+    elseif ismember(ii,[1,12,19,24,30,40,49,50])
+        ss = 'freq_11.7';
+    elseif ismember(ii,[4,9,17,28,29,41,44])
+        ss = 'freq_18.5';
+    elseif ismember(ii,[3,13,21,22,33,39,45])
+        ss = 'freq_29.2';
+    elseif ismember(ii, [6,11,20,26,34,42,43])
+        ss = 'freq_46.0';
     end
     
     if ii < 10
@@ -73,7 +73,8 @@ end
 
 % Mask bounds, pupil Frame mask defined in the loop as it is different for
 % different videos.
-glintFrameMask = [319 33 146 630];
+glintFrameMask = [318 37 120 617];
+pupilFrameMask = [323 215 68 404];
 
 % Pupil settings
 pupilCircleThreshSet = 0.004;
@@ -91,36 +92,12 @@ glintThreshold = 0.4;
 % left
 candidateThetas = 0;
 minRadiusProportion = 0.8;
-cutErrorThreshold = 10; % 0.25 old val
+cutErrorThreshold = 10;
+pupilGammaCorrection = 0.45;
 
-vids = 1:147;
+vids = 1:50;
 %% Loop through video name stems get each video and its corresponding masks
 for ii = vids
-    % Fine tune some parameters for some of the videos 
-    if ii>10 && ii<50
-        pupilFrameMask = [187   269   230   360];
-    else
-        pupilFrameMask = [247   251    99   375];
-    end
-    
-    if ismember(ii, [15,19,21,22,24,27,43,67,68]) 
-        pupilGammaCorrection = 0.55;
-    elseif ismember(ii, [133])
-        pupilGammaCorrection = 0.40;
-    elseif ismember(ii, [140,146,147])
-        pupilGammaCorrection = 0.45;    
-    elseif ii>98
-        pupilGammaCorrection = 0.35;
-    else
-        pupilGammaCorrection = 0.65;
-    end
-    
-    if ismember(ii, [140,146,147])
-        pupilCircleThreshSet = 0.002;
-    else
-        pupilCircleThreshSet = 0.004;
-    end
-    
     pupilCircleThresh = pupilCircleThreshSet;
     pupilRange = pupilRangeSets;
     videoName = {videoNameStems{ii}};
