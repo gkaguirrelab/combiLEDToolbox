@@ -107,7 +107,9 @@ for tt = 1:nTrials
         if ss == 1
             rowIdx = size(subX,1);
         end
-        subX(rowIdx,startTimeIdx:startTimeIdx+round(2*Fs)-1) = 1;
+        if startTimeIdx > 0
+            subX(rowIdx,startTimeIdx:startTimeIdx+round(2*Fs)-1) = 1;
+        end
     end
 
     % trim subX to the length of vec
