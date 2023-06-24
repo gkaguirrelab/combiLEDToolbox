@@ -21,22 +21,22 @@ pathParams.Subject = 'LminusM_wide';
 
 videoNameStems = {};
 
-for ii = 1:40
+for ii = 1:80
     
-    if ismember(ii,[2,10,16,23,35,36])
-        ss = 'freq_1.0';
-    elseif ismember(ii,[7,8,18,25,32,37])
+    if ismember(ii,[2,10,16,23,35,36,47,51,59,65,72])
         ss = 'freq_3.0';
-    elseif ismember(ii,[5,14,15,27,31,38])
-        ss = 'freq_5.0';
-    elseif ismember(ii,[1,12,19,24,30,40])
-        ss = 'freq_8.0';
-    elseif ismember(ii,[4,9,17,28,29])
-        ss = 'freq_12.0';
-    elseif ismember(ii,[3,13,21,22,33,39])
-        ss = 'freq_16.0';
-    elseif ismember(ii,[6,11,20,26,34])
-        ss = 'freq_24.0';
+    elseif ismember(ii,[7,8,18,25,32,37,46,56,57,67,74])
+        ss = 'freq_4.7';
+    elseif ismember(ii,[5,14,15,27,31,38,48,54,63,64,76,80])
+        ss = 'freq_7.5';
+    elseif ismember(ii,[1,12,19,24,30,40,49,50,61,68,73,79])
+        ss = 'freq_11.7';
+    elseif ismember(ii,[4,9,17,28,29,41,44,53,58,66,77,78])
+        ss = 'freq_18.5';
+    elseif ismember(ii,[3,13,21,22,33,39,45,52,62,70,71])
+        ss = 'freq_29.2';
+    elseif ismember(ii,[6,11,20,26,34,42,43,55,60,69,75])
+        ss = 'freq_46.0';
     end
     
     if ii < 10
@@ -50,12 +50,12 @@ end
 
 % Mask bounds, pupil Frame mask defined in the loop as it is different for
 % different videos.
-glintFrameMask = [289   108   205   599];
-pupilFrameMask = [302   233    94   371];
+glintFrameMask = [344    44   133   636];
+pupilFrameMask = [344   211    85   440];
 
 % Pupil settings
 pupilCircleThreshSet = 0.004;
-pupilRangeSets = [40 50];
+pupilRangeSets = [30 40];
 ellipseEccenLBUB = [0.2 2];
 ellipseAreaLB = 0;
 ellipseAreaUP = 90000;
@@ -68,14 +68,18 @@ glintThreshold = 0.4;
 % Control stage values (after the 3th before the 6th stage)
 % Cut settings: 0 for buttom cut, pi/2 for right, pi for top, 3*pi/4 for
 % left
-candidateThetas = 0;
+candidateThetas = pi;
 minRadiusProportion = 0.8;
-cutErrorThreshold = 10; % 0.25 old val
+cutErrorThreshold = 5; % 0.25 old val
 
-vids = 1:40;
+vids = 1:80;
 %% Loop through video name stems get each video and its corresponding masks
 for ii = vids
     
+    if ii > 50
+        pupilRangeSets = [40 55];
+    end
+        
     pupilCircleThresh = pupilCircleThreshSet;
     pupilRange = pupilRangeSets;
     videoName = {videoNameStems{ii}};
