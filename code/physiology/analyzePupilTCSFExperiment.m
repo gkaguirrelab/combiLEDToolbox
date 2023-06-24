@@ -13,7 +13,7 @@ function analyzePupilTCSFExperiment(subjectID,modDirection,varargin)
 p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
 p.addParameter('projectName','combiLED',@ischar);
-p.addParameter('nBoots',1000,@isnumeric);
+p.addParameter('nBoots',10,@isnumeric);
 p.addParameter('rmseThresh',0.5,@isnumeric);
 p.addParameter('savePlots',true,@islogical);
 p.parse(varargin{:})
@@ -98,7 +98,7 @@ for tt = 1:nTrials
     videoPreTimeSecs = 2.5 - measurementRecord.trialData(tt).vidDelaySecs;
 
     % Loop through the stimuli and construct the subX matrix
-    subX = zeros(nContrasts+1,length(vec));
+    subX = zeros(nContrasts,length(vec));
     for ss = 1:length(stimContrastOrder)
         cycleStopTimeSecs = measurementRecord.trialData(tt).cycleStopTimes(ss)/1e9;
         relativesStartTimeSecs = videoPreTimeSecs + cycleStopTimeSecs - 2;
@@ -122,9 +122,9 @@ for tt = 1:nTrials
     XbyTrial{tt} = subX;
 
     % Add subX to the overall X
-    rowIdx = (stimFreqIndex-1)*(nContrasts+1)+1;
+    rowIdx = (stimFreqIndex-1)*nContrasts+1;
     newX = X;
-    newX(rowIdx:rowIdx+nContrasts,size(X,2)+1:size(X,2)+size(subX,2)) = subX;
+    newX(rowIdx:rowIdx+nContrasts-1,size(X,2)+1:size(X,2)+size(subX,2)) = subX;
     X = newX;
 
     % Construct the trial groups
@@ -172,9 +172,9 @@ for bb=1:nBoots
         bootIdx = datasample(freqIdx,length(freqIdx));
         subX = cat(2,XbyTrial{bootIdx});
 
-        rowIdx = (ff-1)*(nContrasts+1)+1;
+        rowIdx = (ff-1)*nContrasts+1;
         newBootX = bootX;
-        newBootX(rowIdx:rowIdx+nContrasts,size(bootX,2)+1:size(bootX,2)+size(subX,2)) = subX;
+        newBootX(rowIdx:rowIdx+nContrasts-1,size(bootX,2)+1:size(bootX,2)+size(subX,2)) = subX;
         bootX = newBootX;
 
         vecCells=arrayfun(@(x) pupilVec(trialGroups==x),bootIdx,'UniformOutput',false);
@@ -186,7 +186,7 @@ for bb=1:nBoots
     end
     [~,betas] = fitPupilVec(gammaParam,bootVec,bootX,bootTrialGroups,Fs);
     % Subtract the zero contrast condition
-    bMat = reshape(betas,7,7);
+    bMat = reshape(betas,nContrasts,nFreqs);
     bMat = bMat-bMat(1,:);
     bVec = bMat(:);
     bootBetas(bb,:) = bVec;
@@ -194,12 +194,11 @@ end
 b = mean(bootBetas);
 semB = std(bootBetas);
 
-bMat = reshape(b,7,7);
-bMatSEM = reshape(semB,7,7);
-% Get rid of the beta values for first stimulus of each trial, and for the
-% zero contrast condition
-bMat = bMat(2:end-1,:);
-bMatSEM = bMatSEM(2:end-1,:);
+bMat = reshape(b,nContrasts,nFreqs);
+bMatSEM = reshape(semB,nContrasts,nFreqs);
+% Get rid of the beta values for the zero contrast condition
+bMat = bMat(2:end,:);
+bMatSEM = bMatSEM(2:end,:);
 
 f2=figure;
 x = log10(stimFreqSetHz);

@@ -27,7 +27,7 @@ classdef PupilLabsControl < handle
     % These may be modified after object creation
     properties (SetAccess=public)
 
-                trialIdx = 1;
+        trialIdx = 1;
 
         % A prefix to be added to the video files
         filePrefix
@@ -40,7 +40,7 @@ classdef PupilLabsControl < handle
 
         % Verbosity
         verbose
-        
+
     end
 
     methods
@@ -56,9 +56,9 @@ classdef PupilLabsControl < handle
             p.addParameter('verbose',false,@islogical);
             p.parse(varargin{:})
 
-            % Place various inputs and options into object properties            
+            % Place various inputs and options into object properties
             obj.filePrefix = p.Results.filePrefix;
-            obj.trialDurationSecs = p.Results.trialDurationSecs;            
+            obj.trialDurationSecs = p.Results.trialDurationSecs;
             obj.backgroundRecording = p.Results.backgroundRecording;
             obj.verbose = p.Results.verbose;
 
