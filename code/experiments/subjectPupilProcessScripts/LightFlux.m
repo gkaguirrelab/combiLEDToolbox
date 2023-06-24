@@ -95,7 +95,7 @@ minRadiusProportion = 0.8;
 cutErrorThreshold = 5;
 pupilGammaCorrection = 0.40;
 
-vids = 51:70;
+vids = 70:70;
 %% Loop through video name stems get each video and its corresponding masks
 for ii = vids
 
