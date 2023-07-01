@@ -27,7 +27,6 @@ experimentName = 'CDT';
 rng(1);
 
 % Define a location to load data and save analyses
-
 modDir = fullfile(...
     p.Results.dropBoxBaseDir,...
     'MELA_data',...,
@@ -42,7 +41,7 @@ analysisDir = fullfile(...
     p.Results.projectName,...
     subjectID,modDirection,experimentName);
 
-% Create a directory for the subject
+% Create a directory for analysis output
 if ~isfolder(analysisDir)
     mkdir(analysisDir)
 end
@@ -62,8 +61,8 @@ load(filename,'measurementRecord');
 % Identify all of the unique psych objects in the sessionRecord
 fileStems = unique([measurementRecord.sessionData.fileStem]);
 
-% Loop through the psychometric objects and plot the outcomes. Also, save
-% parameters depending upon the psychType
+% Loop through the psychometric objects, plot the outcomes, and obtain
+% boot-strapped estimates of the params
 results = [];
 for ii=1:length(fileStems)
     % Load the object
