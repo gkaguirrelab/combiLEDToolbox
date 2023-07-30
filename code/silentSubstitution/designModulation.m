@@ -36,6 +36,7 @@ function modResult = designModulation(whichDirection,photoreceptors,varargin)
     photoreceptors = photoreceptorDictionary('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
     whichDirection = 'LminusM_wide';
     modResult = designModulation(whichDirection,photoreceptors);
+    plotModResult(modResult);
 %}
 
 
@@ -43,7 +44,7 @@ function modResult = designModulation(whichDirection,photoreceptors,varargin)
 p = inputParser;
 p.addRequired('whichDirection',@ischar);
 p.addRequired('photoreceptors',@isstruct);
-p.addParameter('calLocalData',fullfile(tbLocateProject('combiLEDToolbox'),'cal','CombiLED_shortLLG_classicEyePiece_ND2x5.mat'),@ischar);
+p.addParameter('calLocalData',fullfile(tbLocateProjectSilent('combiLEDToolbox'),'cal','CombiLED_shortLLG_classicEyePiece_ND2x5.mat'),@ischar);
 p.addParameter('primaryHeadRoom',0.00,@isscalar)
 p.addParameter('verbose',false,@islogical)
 p.parse(whichDirection,photoreceptors,varargin{:});
