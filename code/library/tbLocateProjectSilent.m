@@ -1,5 +1,5 @@
 function path = tbLocateProjectSilent(projectName)
-% Shadows tbLocalteProject to return the path silently
+% Return the path silently
 
 prefs = tbParsePrefs([]);
 prefs.verbose = false;
