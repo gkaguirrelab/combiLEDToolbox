@@ -11,13 +11,13 @@ p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
 p.addParameter('projectName','combiLED',@ischar);
 p.addParameter('approachName','environmentalSampling',@ischar);
-p.addParameter('fps',100,@isnumeric);
-p.addParameter('windowDurSecs',100,@isnumeric);
-p.addParameter('windowStepSecs',25,@isnumeric);
+p.addParameter('fps',112.5,@isnumeric);
+p.addParameter('windowDurFrames',1200,@isnumeric);
+p.addParameter('windowStepFrames',600,@isnumeric);
 p.addParameter('savePlots',true,@islogical);
 p.parse(varargin{:})
 
-windowStepSecs = p.Results.windowStepSecs;
+windowStepSecs = p.Results.windowStepFrames/p.Results.fps;
 
 % Path to the data
 dataDir = fullfile(p.Results.dropBoxBaseDir,...
@@ -36,16 +36,16 @@ analysisDir = fullfile(p.Results.dropBoxBaseDir,...
 videoDir = fullfile(dataDir,'videos');
 videoList =dir(fullfile(videoDir,'*','*.avi'));
 
-% Set up a cell array to hold all of the spectrograms
-allSpectrograms = cell(1,length(videoList));
 
-% Load the spectrograms
+% Initialize a cell variable. This is kinda ugly code
 for cc = 1:3; spectSet{cc} = []; end
+
+% Load and clean the spectrograms
 for vv = 1:length(videoList)
     resultFilename = fullfile(analysisDir,[videoList(vv).name '_spectrogram.mat']);
 
     load(resultFilename,'spectrogram','frq');
-    [~,OneHzIdx] = min(abs(frq-1));
+    LowestFreqIdx = 2;
 
     % log-transform and smooth the spectrogram
     %    figure
@@ -58,24 +58,26 @@ for vv = 1:length(videoList)
         %        loglog(frq(OneHzIdx:end),mean(squeeze(spectrogram(cc,:,OneHzIdx:end)),1),['-' plotColors{cc}]); hold on;
     end
 
-end % Loop over the videos
+end
 
 % Get the irradiance and activity
 [xHours,totalIrradianceVec,activityVec]=processActLumusRecording(subjectID,sessionDate);
 
-% Code the activity; 1 = walking, 2 = sitting, 3 = driving
+% Code the activity; 1 = walking, 2 = sitting, 3 = driving. These are
+% values taken from my notes / diary during data collection
 indoorMinuteIdx = {1:55,74:123,148:156,160:162,167:172,195:241};
 activityIdx = {1:7,8:41,42:64,65:72,73:77,78:121,122:127,128:146,147:172,173:191,192:200,201:241};
 activityCode = {1,2,1,2,1,2,1,3,1,3,1,2};
 activityColor = {'b','w','r'};
 
-f1 = figure;
-figuresize(400,800,'pt');
+% Set up the figure
+f1 = figure('Renderer','painters');
+figuresize(400,600,'pt');
+t = tiledlayout(6,1);
+t.TileSpacing = 'tight';
+t.Padding = 'none';
 
-t = tiledlayout(9,1);
-t.TileSpacing = 'compact';
-t.Padding = 'compact';
-
+% Define the time domain of the data
 [~,xLimIdx] = min(abs(xHours*60-(3200*4)));
 
 % Irradiance and indoor/outdoor status
@@ -103,6 +105,7 @@ a.TickDir = 'out';
 a.XTick = [];
 box off
 
+% Activity
 nexttile;
 
 for pp = 1:length(activityIdx)
@@ -124,18 +127,25 @@ a.XTick = [];
 box off
 
 % The three spectrograms
-xFreq = frq(OneHzIdx:end);
+yAxisVals = [0.1,1,10,50];
+xFreq = frq(LowestFreqIdx:end);
 directions = {'LMS','L–M','S'};
 for cc = 1:3
-    nexttile([2 1]);
+    nexttile([1 1]);
     k = spectSet{cc};
-    k = k(OneHzIdx:end,:);
-    imagesc(k);
+    k = k(LowestFreqIdx:end,:);
+    k(k< -2)=-2; k(k>2)=2;
+    contourf(k,25,'LineStyle','none')
     a = gca;
+    a.YScale='log';
     a.TickDir = 'out';
-    a.YDir = 'normal';
-    a.YTick = [1,901,1901:1000:length(xFreq)];
-    a.YTickLabel = arrayfun(@(x) {num2str(x)},round(xFreq(a.YTick)));
+    colormap(turbo)
+    clim([-2 2]);
+    for ff = 1:length(yAxisVals)
+        [~,yTickVals(ff)] = min(abs(yAxisVals(ff)-xFreq));
+    end
+    a.YTick = yTickVals;
+    a.YTickLabel = arrayfun(@(x) {num2str(x)},yAxisVals);
     ylim([1 length(xFreq)+1])
     thirtyMins = (30*60)/windowStepSecs;
     a.XTick = 1:thirtyMins:thirtyMins*ceil((size(k,2)/thirtyMins));
@@ -155,7 +165,9 @@ end
 
 nexttile;
 hCB = colorbar('north','AxisLocation','in');
-hCB.Label.String = 'relative power';
+hCB.Label.String = 'log contrast';
+hCB.Ticks = [0 0.25 0.5 0.75 1];
+hCB.TickLabels = {'-2','-1','0','1','2'};
 set(gca,'Visible',false)
 colormap(turbo);
 

@@ -14,14 +14,14 @@ p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@isc
 p.addParameter('projectName','combiLED',@ischar);
 p.addParameter('approachName','environmentalSampling',@ischar);
 p.addParameter('fps',112.5,@isnumeric);
-p.addParameter('windowDurSecs',100,@isnumeric);
-p.addParameter('windowStepSecs',25,@isnumeric);
+p.addParameter('windowDurFrames',1200,@isnumeric);
+p.addParameter('windowStepFrames',600,@isnumeric);
 p.parse(varargin{:})
 
 % Extract some variables
 fps = p.Results.fps;
-windowDurSecs = p.Results.windowDurSecs;
-windowStepSecs = p.Results.windowStepSecs;
+windowLengthFrames = p.Results.windowDurFrames;
+windowStepFrames = p.Results.windowStepFrames;
 
 % Path to the data
 dataDir = fullfile(p.Results.dropBoxBaseDir,...
@@ -45,8 +45,6 @@ end
 videoDir = fullfile(dataDir,'videos');
 videoList =dir(fullfile(videoDir,'*','*.avi'));
 
-% Set up a cell array to hold all of the spectrograms
-allSpectrograms = cell(1,length(videoList));
 
 % Loop through the videos
 for vv = 1:length(videoList)
@@ -55,11 +53,6 @@ for vv = 1:length(videoList)
     vidFilename = fullfile(videoList(vv).folder,videoList(vv).name);
     resultFilename = fullfile(analysisDir,[videoList(vv).name '_spectrogram.mat']);
     vObj = VideoReader(vidFilename);
-
-    % Set the read length to be the closest even multiple of 4
-    windowLengthFrames = round(fps*windowDurSecs);
-    windowLengthFrames = windowLengthFrames + mod(windowLengthFrames,4);
-    windowStepFrames = windowLengthFrames/4;
 
     % Define the properties of the Fourier transform
     framePoints = 1:windowStepFrames:vObj.NumFrames-windowLengthFrames;
@@ -107,7 +100,7 @@ for vv = 1:length(videoList)
         % and time) RGB values of this vector. This is the background for
         % the contrast calculations
         backgroundReceptors = cameraToCones(mean(meanSpaceVec));
-        
+
         % Get the contrast at each point in time on the LMS photoreceptors,
         % relative to the background
         contrastReceptors = modulationReceptors ./ backgroundReceptors;
@@ -132,7 +125,7 @@ for vv = 1:length(videoList)
             end
             % Get the FFT
             [frq,amp] = simpleFFT(signal,fps);
-            spectrogram(ff,ii,:) = amp;
+            spectrogram(pp,ii,:) = amp;
         end
 
     end % Loop over the time samples
