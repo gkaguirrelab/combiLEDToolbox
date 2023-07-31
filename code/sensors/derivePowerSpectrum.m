@@ -1,11 +1,11 @@
-function deriveVideoSpectrograms(subjectID,sessionDate,varargin)
+function derivePowerSpectrum(subjectID,sessionDate,varargin)
 % The actual duration of each video is 53 minutes and ~20 seconds (or 3200
 % seconds), as opposed to the nominal 60 minutes. Consequently, the frame
 % rate is 112.5 fps, as opposed to the nominal 100 fps.
 %{
 subjectID = 'HERO_gka1';
 sessionDate = '29-03-2023';
-deriveVideoSpectrograms(subjectID,sessionDate);
+derivePowerSpectrum(subjectID,sessionDate);
 %}
 
 % Parse the parameters
@@ -14,14 +14,12 @@ p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@isc
 p.addParameter('projectName','combiLED',@ischar);
 p.addParameter('approachName','environmentalSampling',@ischar);
 p.addParameter('fps',112.5,@isnumeric);
-p.addParameter('windowDurSecs',100,@isnumeric);
-p.addParameter('windowStepSecs',25,@isnumeric);
+p.addParameter('windowDurFrames',1200,@isnumeric);
+p.addParameter('windowStepFrames',600,@isnumeric);
 p.parse(varargin{:})
 
 % Extract some variables
 fps = p.Results.fps;
-windowDurSecs = p.Results.windowDurSecs;
-windowStepSecs = p.Results.windowStepSecs;
 
 % Path to the data
 dataDir = fullfile(p.Results.dropBoxBaseDir,...
@@ -45,21 +43,18 @@ end
 videoDir = fullfile(dataDir,'videos');
 videoList =dir(fullfile(videoDir,'*','*.avi'));
 
-% Set up a cell array to hold all of the spectrograms
-allSpectrograms = cell(1,length(videoList));
 
 % Loop through the videos
 for vv = 1:length(videoList)
 
     % Open the video object
     vidFilename = fullfile(videoList(vv).folder,videoList(vv).name);
-    resultFilename = fullfile(analysisDir,[videoList(vv).name '_spectrogram.mat']);
+    resultFilename = fullfile(analysisDir,[videoList(vv).name '_powerSpectra.mat']);
     vObj = VideoReader(vidFilename);
 
     % Set the read length to be the closest even multiple of 4
-    windowLengthFrames = round(fps*windowDurSecs);
-    windowLengthFrames = windowLengthFrames + mod(windowLengthFrames,4);
-    windowStepFrames = windowLengthFrames/4;
+    windowLengthFrames = p.Results.windowDurFrames;
+    windowStepFrames = p.Results.windowStepFrames;
 
     % Define the properties of the Fourier transform
     framePoints = 1:windowStepFrames:vObj.NumFrames-windowLengthFrames;
@@ -67,8 +62,7 @@ for vv = 1:length(videoList)
     vecLength = windowLengthFrames/2+1;
 
     % Set up some variables
-    spectrogram=zeros(3,nSamples,vecLength);
-    luminanceVec = [];
+    powerSpectra=zeros(3,nSamples,vecLength);
 
     % Loop over the time samples.
     for ii=1:nSamples
@@ -77,7 +71,6 @@ for vv = 1:length(videoList)
         if ii<4
             video = read(vObj,[startFrame,startFrame+windowLengthFrames-1]);
             % Trim the top 10 frames that have the time code
-            % and get the average
             video = video(11:end,:,:,:);
         else
             lastStart = framePoints(ii-1);
@@ -123,7 +116,6 @@ for vv = 1:length(videoList)
             switch pp
                 case 1
                     signal = (Lcone+Mcone)/2;
-                    luminanceVec = [luminanceVec,signal];
                 case 2
                     signal = Lcone - Mcone;
                 case 3
@@ -132,13 +124,13 @@ for vv = 1:length(videoList)
             end
             % Get the FFT
             [frq,amp] = simpleFFT(signal,fps);
-            spectrogram(ff,ii,:) = amp;
+            powerSpectra(pp,ii,:) = amp;
         end
 
     end % Loop over the time samples
 
     % Save this spectrogram
-    save(resultFilename,'spectrogram','luminanceVec','frq');
+    save(resultFilename,'powerSpectra','frq');
 
 end % Loop over the videos
 
