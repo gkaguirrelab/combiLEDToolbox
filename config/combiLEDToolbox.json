@@ -116,5 +116,18 @@
         "type": "git",
         "update": "",
         "url": "https:\/\/github.com\/acerbilab\/bads.git"
+    },
+    {
+        "flavor": "",
+        "hook": "",
+        "importance": "",
+        "localHookTemplate": "",
+        "name": "export_fig",
+        "pathPlacement": "append",
+        "subfolder": "",
+        "toolboxRoot": "",
+        "type": "git",
+        "update": "",
+        "url": "https:\/\/github.com\/altmany\/export_fig.git"
     }
 ]

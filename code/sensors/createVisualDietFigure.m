@@ -48,7 +48,6 @@ for vv = 1:length(videoList)
     LowestFreqIdx = 2;
 
     % log-transform and smooth the spectrogram
-    %    figure
     plotColors = {'k','r','b'};
     for cc=1:3
         k = log10(squeeze(spectrogram(cc,:,:)));
@@ -71,7 +70,7 @@ activityCode = {1,2,1,2,1,2,1,3,1,3,1,2};
 activityColor = {'b','w','r'};
 
 % Set up the figure
-f1 = figure('Renderer','painters');
+f1 = figure();
 figuresize(400,600,'pt');
 t = tiledlayout(6,1);
 t.TileSpacing = 'tight';
@@ -124,18 +123,20 @@ xlim([0 xHours(xLimIdx)]);
 a = gca;
 a.TickDir = 'out';
 a.XTick = [];
+a.YTick = [];
 box off
 
 % The three spectrograms
 yAxisVals = [0.1,1,10,50];
 xFreq = frq(LowestFreqIdx:end);
 directions = {'LMS','L–M','S'};
+imageHandles = gobjects(0);
 for cc = 1:3
     nexttile([1 1]);
     k = spectSet{cc};
     k = k(LowestFreqIdx:end,:);
     k(k< -2)=-2; k(k>2)=2;
-    contourf(k,25,'LineStyle','none')
+    [~,imageHandles(end+1)]=contourf(k,25,'LineStyle','none');
     a = gca;
     a.YScale='log';
     a.TickDir = 'out';
@@ -152,6 +153,7 @@ for cc = 1:3
     a.XTickLabel = arrayfun(@(x) {num2str(x)},0:0.5:(1+length(a.XTick))*0.5);
     ylabel('Freq [Hz]');
     xlabel('time [hours]')
+    box off
     if cc ~= 1
         a.YTick = [];
         ylabel('')
@@ -160,7 +162,6 @@ for cc = 1:3
         a.XTick = [];
         xlabel('')
     end
-    title(directions{cc});
 end
 
 nexttile;
@@ -170,10 +171,28 @@ hCB.Ticks = [0 0.25 0.5 0.75 1];
 hCB.TickLabels = {'-2','-1','0','1','2'};
 set(gca,'Visible',false)
 colormap(turbo);
+axis off
 
 if p.Results.savePlots
+    filename = [subjectID '_' sessionDate '_' 'visualDiet.png'];
+    export_fig(f1,fullfile(analysisDir,filename),'-r600','-opengl');
+
+    hidem(imageHandles);
+    nexttile(5)
+    a = gca;
+    plot([min(a.XTick) max(a.XTick)],[1 1],'-r');
+    a.XTick = 1:thirtyMins:thirtyMins*ceil((size(k,2)/thirtyMins));
+    a.XTickLabel = arrayfun(@(x) {num2str(x)},0:0.5:(1+length(a.XTick))*0.5);
+    ylabel('Freq [Hz]');
+    xlabel('time [hours]')
+    box off
+    a.YTick = [];
+    ylabel('')
+    for cc = 1:3; nexttile(cc+2); title(directions{cc}); end
+
     filename = [subjectID '_' sessionDate '_' 'visualDiet.pdf'];
-    saveas(f1,fullfile(analysisDir,filename));
+    export_fig(f1,fullfile(analysisDir,filename),'-Painters');
+
 end
 
 end % Function
