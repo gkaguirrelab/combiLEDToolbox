@@ -1,9 +1,9 @@
-function createVisualDietFigure(subjectID,sessionDate,varargin)
+function createVisualDietFigurePDF(subjectID,sessionDate,varargin)
 
 %{
 subjectID = 'HERO_gka1';
 sessionDate = '29-03-2023';
-createVisualDietFigure(subjectID,sessionDate);
+createVisualDietFigurePDF(subjectID,sessionDate);
 %}
 
 % Parse the parameters
@@ -72,6 +72,7 @@ activityColor = {'b','w','r'};
 % Set up the figure
 f1 = figure();
 figuresize(400,600,'pt');
+set(gcf,'color','w');
 t = tiledlayout(6,1);
 t.TileSpacing = 'tight';
 t.Padding = 'none';
@@ -130,13 +131,11 @@ box off
 yAxisVals = [0.1,1,10,50];
 xFreq = frq(LowestFreqIdx:end);
 directions = {'LMS','L–M','S'};
-imageHandles = gobjects(0);
 for cc = 1:3
     nexttile([1 1]);
     k = spectSet{cc};
     k = k(LowestFreqIdx:end,:);
-    k(k< -2)=-2; k(k>2)=2;
-    [~,imageHandles(end+1)]=contourf(k,25,'LineStyle','none');
+    plot([1,size(k,2)],[1,size(k,1)],'-r');
     a = gca;
     a.YScale='log';
     a.TickDir = 'out';
@@ -174,25 +173,8 @@ colormap(turbo);
 axis off
 
 if p.Results.savePlots
-    filename = [subjectID '_' sessionDate '_' 'visualDiet.png'];
-    export_fig(f1,fullfile(analysisDir,filename),'-r600','-opengl');
-
-    hidem(imageHandles);
-    nexttile(5)
-    a = gca;
-    plot([min(a.XTick) max(a.XTick)],[1 1],'-r');
-    a.XTick = 1:thirtyMins:thirtyMins*ceil((size(k,2)/thirtyMins));
-    a.XTickLabel = arrayfun(@(x) {num2str(x)},0:0.5:(1+length(a.XTick))*0.5);
-    ylabel('Freq [Hz]');
-    xlabel('time [hours]')
-    box off
-    a.YTick = [];
-    ylabel('')
-    for cc = 1:3; nexttile(cc+2); title(directions{cc}); end
-
     filename = [subjectID '_' sessionDate '_' 'visualDiet.pdf'];
-    export_fig(f1,fullfile(analysisDir,filename),'-Painters');
-
+    export_fig(f1,fullfile(analysisDir,filename),'-Painters','-transparent');
 end
 
 end % Function
