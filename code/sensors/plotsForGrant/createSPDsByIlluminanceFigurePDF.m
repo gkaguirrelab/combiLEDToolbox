@@ -1,9 +1,9 @@
-function createSPDsFigurePDF(subjectID,sessionDate,varargin)
+function createSPDsByIlluminanceFigurePDF(subjectID,sessionDate,varargin)
 
 %{
 subjectID = 'HERO_gka1';
 sessionDate = '29-03-2023';
-createSPDsFigurePDF(subjectID,sessionDate);
+createSPDsByIlluminanceFigurePDF(subjectID,sessionDate);
 %}
 
 % Parse the parameters
@@ -57,43 +57,95 @@ for vv = 1:length(videoList)
 
 end
 
+% Get the illuminance vec
+[xHours,totalIrradianceVec,activityVec]=processActLumusRecording(subjectID,sessionDate);
+totalIrradianceVec = smooth(totalIrradianceVec,25);
+activityVec = smooth(activityVec,25);
+
+
+downSampIrr = interp1(linspace(0,1,6401),totalIrradianceVec,linspace(0,1,2412));
+downSampAct = interp1(linspace(0,1,6401),activityVec,linspace(0,1,2412));
+
+lowIrr = downSampIrr < median(downSampIrr);
+HiIrr = downSampIrr > median(downSampIrr);
+
+lowAct = downSampAct < median(downSampAct);
+HiAct = downSampAct > median(downSampAct);
+
 % Set up the figure
 f1 = figure();
 figuresize(200,200,'pt');
 set(gcf,'color','w');
-
 
 % The three spectrograms
 xAxisVals = [0.1,1,10,50];
 xFreq = frq(LowestFreqIdx:end);
 directions = {'LMS','L–M','S'};
 plotColors = {'k','r','b'};
-for cc = 1:3
-    k=mean(spectSet{cc},2,'omitmissing');
+for cc = 1:2
+    thisSpect = spectSet{cc};
+    k=mean(thisSpect(:,HiAct),2,'omitmissing');
     semilogx(xFreq(1:end-1),k(2:end-1),'-','Color',plotColors{cc},'LineWidth',2);
     hold on
+    k=mean(thisSpect(:,lowAct),2,'omitmissing');
+    plot(xFreq(1:end-1),k(2:end-1),'-','Color',plotColors{cc},'LineWidth',1);
 end
 
-
-legend({'L+M','L–M','S'})
 a = gca;
 a.TickDir = 'out';
 a.XTick = xAxisVals;
 a.XTickLabel = arrayfun(@(x) {num2str(x)},xAxisVals);
 a.YTick = [-2 -1 0 1];
-xlim([0.1 50])
+xlim([0.1 50]);
 xlabel('Frequency [Hz]');
 ylabel('log contrast')
 box off
 axis square
 title({'Temporal power spectra of','natural environment at','lowest spatial frequency'})
 
-
-
 if p.Results.savePlots
-    filename = [subjectID '_' sessionDate '_' 'environmentSPD.pdf'];
+    filename = [subjectID '_' sessionDate '_' 'environmentSPDbyActivity.pdf'];
     export_fig(f1,fullfile(analysisDir,filename),'-Painters','-transparent');
 end
+
+
+% Set up the figure
+f1 = figure();
+figuresize(200,200,'pt');
+set(gcf,'color','w');
+
+% The three spectrograms
+xAxisVals = [0.1,1,10,50];
+xFreq = frq(LowestFreqIdx:end);
+directions = {'LMS','L–M','S'};
+plotColors = {'k','r','b'};
+for cc = 1:2
+    thisSpect = spectSet{cc};
+    k=mean(thisSpect(:,HiIrr),2,'omitmissing');
+    semilogx(xFreq(1:end-1),k(2:end-1),'-','Color',plotColors{cc},'LineWidth',2);
+    hold on
+    k=mean(thisSpect(:,lowIrr),2,'omitmissing');
+    plot(xFreq(1:end-1),k(2:end-1),'-','Color',plotColors{cc},'LineWidth',1);
+end
+
+a = gca;
+a.TickDir = 'out';
+a.XTick = xAxisVals;
+a.XTickLabel = arrayfun(@(x) {num2str(x)},xAxisVals);
+a.YTick = [-2 -1 0 1];
+xlim([0.1 50]);
+xlabel('Frequency [Hz]');
+ylabel('log contrast')
+box off
+axis square
+title({'Temporal power spectra of','natural environment at','lowest spatial frequency'})
+
+if p.Results.savePlots
+    filename = [subjectID '_' sessionDate '_' 'environmentSPDbyIlluminance.pdf'];
+    export_fig(f1,fullfile(analysisDir,filename),'-Painters','-transparent');
+end
+
+
 
 end % Function
 
