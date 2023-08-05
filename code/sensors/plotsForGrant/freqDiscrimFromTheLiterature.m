@@ -1,4 +1,4 @@
-function freqDiscrimFromTheLiterature(subjectID,sessionDate,varargin)
+function freqDiscrimFromTheLiterature()
 
 % Place to save figures
 savePath = '~/Desktop/FlickerGrant/';
