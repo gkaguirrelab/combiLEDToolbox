@@ -45,13 +45,26 @@ for vv = 1:length(videoList)
     resultFilename = fullfile(analysisDir,[videoList(vv).name '_spectrogram.mat']);
 
     load(resultFilename,'spectrogram','frq');
-    LowestFreqIdx = 2;
+
+    % Throw away the zero and nyquist frequencies
+    spectrogram = spectrogram(:,:,2:end-1);
+    x = frq(2:end-1);
 
     % log-transform and smooth the spectrogram
     for cc=1:3
-        k = log10(squeeze(spectrogram(cc,:,:)));
+        % Get this post-receptoral direction
+        k = squeeze(spectrogram(cc,:,:));
+
+        % Covert from amplitude to spectral power density
+        k=(k.^2)./x;
+
+        % Smooth the spectrum (in log space)
+        k = log10(k);
         s = size(k);
         k = reshape(smooth(k(:),10),s(1),s(2))';
+        k = 10.^k;
+
+        % Save the spectSet
         spectSet{cc} = [spectSet{cc},k,nan(size(k,1),4)];
     end
 
@@ -62,31 +75,34 @@ f1 = figure();
 figuresize(200,200,'pt');
 set(gcf,'color','w');
 
-
 % The three spectrograms
 xAxisVals = [0.1,1,10,50];
-xFreq = frq(LowestFreqIdx:end);
 directions = {'LMS','L–M','S'};
 plotColors = {'k','r','b'};
 for cc = 1:3
     k=mean(spectSet{cc},2,'omitmissing');
-    semilogx(xFreq(1:end-1),k(2:end-1),'-','Color',plotColors{cc},'LineWidth',2);
+    semilogx(x,log10(k),'-','Color',plotColors{cc},'LineWidth',2);
     hold on
 end
 
+vec = log10(1./(x.^2));
+vec = vec-vec(1);
+semilogx(x,vec,':k');
+semilogx(x,vec+6,':k');
 
 legend({'L+M','L–M','S'})
 a = gca;
 a.TickDir = 'out';
 a.XTick = xAxisVals;
 a.XTickLabel = arrayfun(@(x) {num2str(x)},xAxisVals);
-a.YTick = [-2 -1 0 1];
+ylim([-6 6])
+a.YTick = [-6,-3,0,3,6];
 xlim([0.1 50])
 xlabel('Frequency [Hz]');
-ylabel('log contrast')
+ylabel({'log Power'})
 box off
 axis square
-title({'Temporal power spectra of','natural environment at','lowest spatial frequency'})
+title({'Temporal SPDs of','natural environment at','lowest spatial frequency'})
 
 
 

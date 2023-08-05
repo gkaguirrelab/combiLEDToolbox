@@ -45,18 +45,28 @@ for vv = 1:length(videoList)
     resultFilename = fullfile(analysisDir,[videoList(vv).name '_spectrogram.mat']);
 
     load(resultFilename,'spectrogram','frq');
-    LowestFreqIdx = 2;
+
+    % Throw away the zero and nyquist frequencies
+    spectrogram = spectrogram(:,:,2:end-1);
+    x = frq(2:end-1);
 
     % log-transform and smooth the spectrogram
-    plotColors = {'k','r','b'};
     for cc=1:3
-        k = log10(squeeze(spectrogram(cc,:,:)));
+        % Get this post-receptoral direction
+        k = squeeze(spectrogram(cc,:,:));
+
+        % Covert from amplitude to spectral power density
+        k=(k.^2)./x;
+
+        % Smooth the spectrum (in log space)
+        k = log10(k);
         s = size(k);
         k = reshape(smooth(k(:),10),s(1),s(2))';
-        spectSet{cc} = [spectSet{cc},k,nan(size(k,1),4)];
-        %        loglog(frq(OneHzIdx:end),mean(squeeze(spectrogram(cc,:,OneHzIdx:end)),1),['-' plotColors{cc}]); hold on;
-    end
+        k = 10.^k;
 
+        % Save the spectSet
+        spectSet{cc} = [spectSet{cc},k,nan(size(k,1),4)];
+    end
 end
 
 % Get the irradiance and activity
@@ -129,12 +139,10 @@ box off
 
 % The three spectrograms
 yAxisVals = [0.1,1,10,50];
-xFreq = frq(LowestFreqIdx:end);
 directions = {'LMS','L–M','S'};
 for cc = 1:3
     nexttile([1 1]);
-    k = spectSet{cc};
-    k = k(LowestFreqIdx:end,:);
+    k = log10(spectSet{cc});
     plot([1,size(k,2)],[1,size(k,1)],'-r');
     a = gca;
     a.YScale='log';
@@ -142,12 +150,14 @@ for cc = 1:3
     colormap(turbo)
     clim([-2 2]);
     for ff = 1:length(yAxisVals)
-        [~,yTickVals(ff)] = min(abs(yAxisVals(ff)-xFreq));
+        [~,yTickVals(ff)] = min(abs(yAxisVals(ff)-x));
     end
     a.YTick = yTickVals;
     a.YTickLabel = arrayfun(@(x) {num2str(x)},yAxisVals);
-    ylim([1 length(xFreq)+1])
+    ylim([1 length(x)+1])
     thirtyMins = (30*60)/windowStepSecs;
+        xlim([1,size(k,2)]);
+
     a.XTick = 1:thirtyMins:thirtyMins*ceil((size(k,2)/thirtyMins));
     a.XTickLabel = arrayfun(@(x) {num2str(x)},0:0.5:(1+length(a.XTick))*0.5);
     ylabel('Freq [Hz]');
@@ -167,7 +177,7 @@ nexttile;
 hCB = colorbar('north','AxisLocation','in');
 hCB.Label.String = 'log contrast';
 hCB.Ticks = [0 0.25 0.5 0.75 1];
-hCB.TickLabels = {'-2','-1','0','1','2'};
+hCB.TickLabels = {'-4','-2','0','2','4'};
 set(gca,'Visible',false)
 colormap(turbo);
 axis off

@@ -77,7 +77,7 @@ for ii=1:length(fileStems)
         close(figHandle)
     end
     % Obtain boot-strapped params
-    nBoots = 200; confInterval = p.Results.confInterval;
+    nBoots = 20; confInterval = p.Results.confInterval;
     [~,fitParams,fitParamsCI] = psychObj.reportParams(...
         'nBoots',nBoots,'confInterval',confInterval);
     results(ii).refContrastDb = str2double(psychObj.testContrastLabel);
@@ -143,7 +143,9 @@ title('test noise sigma by contrast')
 subplot(1,4,3);
 hold on
 levelSet = unique([results.testFreqHz]);
-% Create a weighted average of bias values at each test freq
+% Create a weighted average of bias values at each test freq. The bias is
+% given in log units, so we have to reference this to the test frequency to
+% know how much bias (in absolute Hz) is present
 for ii=1:length(levelSet)
     idx = find(levelSet(ii) == [results.testFreqHz]);
     vals = reshape([results(idx).fitParams],3,length(idx));
@@ -152,11 +154,11 @@ for ii=1:length(levelSet)
     weights = weights(3,:);
     weights(isinf(weights)) = max(weights(~isinf(weights)));
     val = sum(vals.*weights)./sum(weights);
-    plot(log10(levelSet(ii)),val,'or')
+    plot(log10(levelSet(ii)),10.^val,'or')
 end
 xlim([0.5 1.5]);
 xlabel('test freq [log Hz]')
-ylabel('bias')
+ylabel('bias [Hz]')
 title('test bias by freq')
 
 % Plot sigma vs. test frequency
@@ -172,11 +174,11 @@ for ii=1:length(levelSet)
     weights = weights(3,:);
     weights(isinf(weights)) = max(weights(~isinf(weights)));
     val = sum(vals.*weights)./sum(weights);
-    plot(log10(levelSet(ii)),val,'or')
+    plot(log10(levelSet(ii)),log10(1./(10.^val)),'or')
 end
 xlim([0.5 1.5]);
 xlabel('test freq [log Hz]')
-ylabel('modulation contrast [0-1]')
+ylabel('sensitivity (1/noise width [Hz])')
 title('test noise sigma by freq')
 
 % save the figure
