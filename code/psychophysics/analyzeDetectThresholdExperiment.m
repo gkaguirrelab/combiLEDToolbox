@@ -13,7 +13,10 @@ function analyzeDetectThresholdExperiment(subjectID,modDirection,varargin)
 p = inputParser; p.KeepUnmatched = false;
 p.addParameter('dropBoxBaseDir',getpref('combiLEDToolbox','dropboxBaseDir'),@ischar);
 p.addParameter('projectName','combiLED',@ischar);
-p.addParameter('leftYmax',750,@isnumeric);
+p.addParameter('leftYmax',1000,@isnumeric);
+p.addParameter('showLogContrast',false,@islogical);
+p.addParameter('showDeviceContrast',false,@islogical);
+p.addParameter('showFit',true,@islogical);
 p.addParameter('confInterval',0.68,@isnumeric);
 p.addParameter('updateFigures',false,@islogical);
 
@@ -106,7 +109,7 @@ end
 
 % Make a plot of the temporal contrast sensitivity function
 figHandle = figure();
-figuresize(400, 200,'pt');
+figuresize(200, 200,'pt');
 
 % Set some properties of the plot based upon the modulation direction, with
 % the expectation that the chromatic directions will be low-pass, and the
@@ -129,7 +132,10 @@ end
 
 % Setup to plot vs. post-receptoral direction contrast
 hold on
-yyaxis left
+if p.Results.showDeviceContrast
+    yyaxis left
+end
+
 x=[results.freqHz];
 
 % Error bounds
@@ -144,38 +150,54 @@ plot(log10(x),1./(modContrast*10.^[results.logContrastThresh]),'.','Color',plotC
 
 % Labels left
 xlabel('frequency [Hz]')
-ylabel({'Sensitivity',['[1/contrast on ' modDirection ' ]']}, 'Interpreter', 'none');
+if p.Results.showLogContrast
+    ylabel({'Sensitivity',['log [1/contrast on ' modDirection ' ]']}, 'Interpreter', 'none');
+else
+    ylabel({'Sensitivity',['[1/contrast on ' modDirection ' ]']}, 'Interpreter', 'none');
+end
 a = gca;
 a.XTick = log10([results.freqHz]);
 a.XTickLabel = string([results.freqHz]);
 leftYmax = p.Results.leftYmax;
+
 ylim([1, leftYmax]);
 ytickVals = a.YTick;
 
 % Add a right side axis with the absolute device contrast
-yyaxis right
-a = gca;
-a.YTick = ytickVals;
-ylim([1, leftYmax]);
-a.YTickLabel = string(round(1./(ytickVals*modContrast),4));
-ylabel('Device contrast [0 - 1]');
+if p.Results.showDeviceContrast
+    yyaxis right
+    a = gca;
+    a.YTick = ytickVals;
+    ylim([1, leftYmax]);
+    a.YTickLabel = string(round(1./(ytickVals*modContrast),4));
+    ylabel('Device contrast [0 - 1]');
 
-% Set the x range
-xlim([-0.15 1.75]);
+    % Set the x range
+    xlim([-0.15 1.75]);
+
+    % Return to the left axis
+    yyaxis left
+end
 
 % Add a fit using the Watson temporal senisitivity function, weighted by
 % the bootstrapped error
-yyaxis left
+if p.Results.showFit
 y=1./(modContrast*10.^[results.logContrastThresh]);
 w=1./(1./(modContrast*10.^[results.logContrastThreshLow])- 1./(modContrast*10.^[results.logContrastThreshHigh]));
 myWatson = @(p,x) p(1).*watsonTemporalModel(x, p(2:4));
 myObj = @(p) sqrt(sum(w.*((myWatson(p,x)-y).^2)));
-p=fmincon(myObj,p0,[],[],[],[],[1,0,0,0]);
+pFit=fmincon(myObj,p0,[],[],[],[],[1,0,0,0]);
 
 % Add the fit
 xFit = logspace(0,2,50);
-yFit = myWatson(p,xFit);
-plot(log10(xFit),yFit,'-','Color',plotColor,'LineWidth',1.5)
+yFit = myWatson(pFit,xFit);
+plot(log10(xFit),(yFit),'-','Color',plotColor,'LineWidth',1.5)
+end
+
+if p.Results.showLogContrast
+    a = gca();
+    a.YScale = 'log';
+end
 
 % Create an anonymous function that expresses the fit result as
 % absolute device contrast as a function of frequency in Hz
