@@ -11,7 +11,7 @@ function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast,..
 x0Background = repmat(0.5,nPrimaries,1);
 matchConstraint = 5;
 searchBackground = false;
-xyBound = 0.1;
+xyBound = Inf;
 
 switch whichDirection
     case 'LminusM_foveal'
@@ -71,7 +71,7 @@ switch whichDirection
         whichReceptorsToSilence = {'L_10deg','M_10deg','S_10deg'};
         whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg','Rod'};
         desiredContrast = 1;
-        x0Background = [ 0.4980    0.4709    0.4722    0.4985    0.1846    0.4980    0.2057    0.5000 ]';
+        x0Background = [ 0.4545         0    0.0365    0.3306    0.0650    0.4999    0.0036    0.5093 ]';
         searchBackground = true;
     case 'Mel_RodSilent_shiftBackground'
         whichReceptorsToTarget = {'Mel'};
@@ -79,8 +79,7 @@ switch whichDirection
         whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg'};
         desiredContrast = 1;
         x0Background = [ 0.1289    0.0000    0.0196    0.0184    0.0239    0.4409    0.1856    0.4993 ]';
-searchBackground = true;
-        xyBound = Inf;
+        searchBackground = true;
     case 'Rod_shiftBackground'
         whichReceptorsToTarget = {'Rod'};
         whichReceptorsToSilence = {'Mel','L_10deg','M_10deg','S_10deg'};
@@ -88,7 +87,6 @@ searchBackground = true;
         desiredContrast = 1;
         x0Background = [ 0.1056         0    0.0130         0    0.0199    0.4851    0.1445    0.4959 ]';
         searchBackground = true;
-        xyBound = Inf;
 end
 
 % Check that no receptor is listed more than once in the target, silence,

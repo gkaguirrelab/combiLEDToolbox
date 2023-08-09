@@ -34,7 +34,7 @@ function modResult = designModulation(whichDirection,photoreceptors,varargin)
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionary('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
-    whichDirection = 'LminusM_wide';
+    whichDirection = 'Mel_shiftBackground';
     modResult = designModulation(whichDirection,photoreceptors);
     plotModResult(modResult);
 %}
