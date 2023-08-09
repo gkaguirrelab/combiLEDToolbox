@@ -123,7 +123,14 @@ if searchBackground
     % on the targeted photoreceptors, accounting for the sign of the
     % desired contrast
     myObj = @(x) -mean(contrastOnTargeted(contrastReceptorsFunc(modulationPrimaryFunc(x'),x')).*(desiredContrast'));
-    myNonlcon = @(x) nonlcon(x',repmat(0.5,nPrimaries,1),B_primary,wavelengthsNm,xyBound);
+    % A non-linear constraint that keeps the background within a certain
+    % chromaticity distance of the initial background. We only use this if
+    % there is in fact a specified value for the xyBound
+    if xyBound <= 1
+        myNonlcon = @(x) nonlcon(x',repmat(0.5,nPrimaries,1),B_primary,wavelengthsNm,xyBound);
+    else
+        myNonlcon = [];
+    end
     backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,myNonlcon,optionsBADS)';
 else
     if verbose
@@ -182,8 +189,6 @@ end
 function c = nonlcon(x,x0,B_primary,wavelengthsNm,xyBound)
 
 % Expand x0 to have the same number of columns as x
-
-
 xy_distance = chromaDistance(B_primary*x,B_primary*x0,wavelengthsNm);
 
 c = double(xy_distance>xyBound)';
