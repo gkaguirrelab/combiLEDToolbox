@@ -38,6 +38,16 @@ function modResult = designModulation(whichDirection,photoreceptors,varargin)
     modResult = designModulation(whichDirection,photoreceptors);
     plotModResult(modResult);
 %}
+%{
+    % modulations for a theoretically perfect device
+    calLocalData=fullfile(tbLocateProjectSilent('combiLEDToolbox'),'cal','perfectDevice.mat'),
+    observerAgeInYears = 53;
+    pupilDiameterMm = 3;
+    photoreceptors = photoreceptorDictionary('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+    whichDirection = 'Mel_RodSilent_shiftBackground';
+    modResult = designModulation(whichDirection,photoreceptors,'calLocalData',calLocalData);
+    plotModResult(modResult);
+%}
 
 
 %% Parse input
@@ -77,7 +87,7 @@ end
 % Get the design parameters from the modulation dictionary
 [whichReceptorsToTarget,whichReceptorsToIgnore,...
     desiredContrast,x0Background,matchConstraint,searchBackground,xyBound] = ...
-    modDirectionDictionary(whichDirection,photoreceptors);
+    modDirectionDictionary(whichDirection,photoreceptors,nPrimaries);
 
 % Define the isolation operation as a function of the background.
 modulationPrimaryFunc = @(backgroundPrimary) isolateReceptors(...

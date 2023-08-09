@@ -1,5 +1,5 @@
 function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast,...
-    x0Background, matchConstraint, searchBackground, xyBound] = modDirectionDictionary(whichDirection,photoreceptors)
+    x0Background, matchConstraint, searchBackground, xyBound] = modDirectionDictionary(whichDirection,photoreceptors,nPrimaries)
 %
 %
 %
@@ -8,7 +8,7 @@ function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast,..
 %                                   photoreceptors is multiplied by the log
 %                                   of this value
 
-x0Background = repmat(0.5,8,1);
+x0Background = repmat(0.5,nPrimaries,1);
 matchConstraint = 5;
 searchBackground = false;
 xyBound = 0.1;
@@ -79,7 +79,7 @@ switch whichDirection
         whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg'};
         desiredContrast = 1;
         x0Background = [ 0.1289    0.0000    0.0196    0.0184    0.0239    0.4409    0.1856    0.4993 ]';
-        searchBackground = true;
+searchBackground = true;
         xyBound = Inf;
     case 'Rod_shiftBackground'
         whichReceptorsToTarget = {'Rod'};
