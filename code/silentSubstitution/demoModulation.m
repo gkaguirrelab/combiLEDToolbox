@@ -23,29 +23,44 @@ for pp=1:length(modDemos)
     fprintf(optionName);
 end
 
+% Get the photoreceptors for this observer
+photoreceptors = photoreceptorDictionary('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+
 choice = input('\nYour choice (return for done): ','s');
 if ~isempty(choice)
     choice = int32(choice);
     idx = find(charSet == choice);
-    modResult = feval(modDemos{idx},obj,observerAgeInYears,pupilDiameterMm);
+    modResult = feval(modDemos{idx},obj,photoreceptors);
 end
 
 plotModResult(modResult);
+
+% Pause and do a couple of cycles of presenting the modulation
+obj.goDark;
+pause
 obj.startModulation;
-
-foo=1;
-
-%{
+pause
 obj.stopModulation;
+obj.goDark;
+pause
+obj.startModulation;
+pause
+obj.stopModulation;
+obj.goDark;
+pause
+obj.startModulation;
+pause
+
+% Clean up
 obj.serialClose;
 close all
 clear
-%}
 
 
 
-function modResult = melPulses(obj,observerAgeInYears,pupilDiameterMm)
-modResult = designModulation('Mel','observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+
+function modResult = melPulses(obj,photoreceptors)
+modResult = designModulation('Mel',photoreceptors);
 obj.setSettings(modResult);
 obj.setBackground(modResult.settingsLow);
 obj.setWaveformIndex(2); % square-wave
@@ -55,8 +70,8 @@ obj.setAMFrequency(0.1);
 obj.setAMValues([0.5,0]); % 0.5 second half-cosine on; second value unused
 end
 
-function modResult = lightFluxFlicker(obj,observerAgeInYears,pupilDiameterMm)
-modResult = designModulation('LightFlux','observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+function modResult = lightFluxFlicker(obj,photoreceptors)
+modResult = designModulation('LightFlux',photoreceptors);
 obj.setSettings(modResult);
 obj.setBackground(modResult.settingsBackground);
 obj.setWaveformIndex(1);
@@ -66,8 +81,8 @@ obj.setAMIndex(1);
 obj.setAMFrequency(0.2);
 end
 
-function modResult = SConeDistortion(obj,observerAgeInYears,pupilDiameterMm)
-modResult = designModulation('S_foveal','observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+function modResult = SConeDistortion(obj,photoreceptors)
+modResult = designModulation('S_foveal',photoreceptors);
 obj.setSettings(modResult);
 obj.setBackground(modResult.settingsBackground);
 obj.setWaveformIndex(1);
@@ -76,10 +91,10 @@ obj.setAMIndex(1);
 obj.setAMFrequency(1);
 end
 
-function modResult = riderStockmanDistortion(obj,observerAgeInYears,pupilDiameterMm)
+function modResult = riderStockmanDistortion(obj,photoreceptors)
 % A compound L-cone modulation described in
 % Rider & Stockman 2018 PNAS
-modResult = designModulation('L_foveal','observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+modResult = designModulation('L_foveal',photoreceptors);
 obj.setSettings(modResult);
 obj.setBackground(modResult.settingsBackground);
 obj.setWaveformIndex(5);
@@ -95,9 +110,9 @@ compoundPhases=deg2rad([0,333,226,0,0]); % Should look red
 obj.setCompoundModulation(compoundHarmonics,compoundAmplitudes,compoundPhases);
 end
 
-function modResult = slowLminusM(obj,observerAgeInYears,pupilDiameterMm)
+function modResult = slowLminusM(obj,photoreceptors)
 modResult = designModulation('LminusM_wide','primaryHeadroom',0.05,...
-    'observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+    photoreceptors);
 obj.setSettings(modResult);
 obj.setBackground(modResult.settingsBackground);
 obj.setWaveformIndex(1);
