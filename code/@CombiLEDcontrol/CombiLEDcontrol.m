@@ -64,6 +64,7 @@ classdef CombiLEDcontrol < handle
         setPrimaries(obj,settings)
         startModulation(obj)
         stopModulation(ob)
+        setRunFrequency(obj,frequency)
         goDark(ob)
         setFrequency(obj,frequency)
         setContrast(obj,contrast)
