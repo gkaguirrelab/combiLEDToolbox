@@ -78,7 +78,7 @@ obj.setWaveformIndex(1);
 obj.setFrequency(16);
 obj.setContrast(1);
 obj.setAMIndex(1);
-obj.setAMFrequency(0.2);
+obj.setAMFrequency(0.1);
 end
 
 function modResult = SConeDistortion(obj,photoreceptors)
