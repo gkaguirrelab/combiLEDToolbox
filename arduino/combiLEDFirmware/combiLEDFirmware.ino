@@ -233,7 +233,7 @@ unsigned long fmCycleDur = round(1e6 / 3);     // Initialize at 3 Hz
 unsigned long amCycleDur = round(1e6 / 0.1);   // Initialize at 0.1 Hz
 unsigned long modulationStartTime = micros();  // Initialize these with the clock
 unsigned long lastLEDUpdateTime = micros();    // Initialize these with the clock
-int blinkDurationMSecs = 100;                  // Blink even duration
+int blinkDurationMSecs = 100;                  // Blink event duration
 uint8_t ledCycleIdx = 0;                       // Counter across LED updates
 float fmPhaseOffset = 0;                       // 0-1; shifts the waveform phase
 float amPhaseOffset = 0;                       // 0-1; shifts the waveform phase
@@ -620,6 +620,11 @@ void getRun() {
       setToOff();
       delay(blinkDurationMSecs);
       setToBackground();
+    }
+    if (strncmp(inputString, "FQ", 2) == 0) {
+      // Carrier modulation frequency (float Hz)
+      fmCycleDur = 1e6 / atof(inputString + 2);
+      Serial.println(atof(inputString + 2));
     }
     if (strncmp(inputString, "BG", 2) == 0) {
       setToBackground();
