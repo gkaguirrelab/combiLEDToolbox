@@ -6,6 +6,9 @@ obj = CombiLEDcontrol();
 observerAgeInYears = str2double(GetWithDefault('Age in years','30'));
 pupilDiameterMm = str2double(GetWithDefault('Pupil diameter in mm','3'));
 
+% Get the photoreceptors for this observer
+photoreceptors = photoreceptorDictionary('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+
 % Modulation demos
 modDemos = {...
     'melPulses', ...
@@ -22,10 +25,6 @@ for pp=1:length(modDemos)
     optionName=['\t' char(charSet(pp)) '. ' modDemos{pp} '\n'];
     fprintf(optionName);
 end
-
-% Get the photoreceptors for this observer
-photoreceptors = photoreceptorDictionary('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
-
 choice = input('\nYour choice (return for done): ','s');
 if ~isempty(choice)
     choice = int32(choice);
@@ -33,6 +32,7 @@ if ~isempty(choice)
     modResult = feval(modDemos{idx},obj,photoreceptors);
 end
 
+% Plot the modulation
 plotModResult(modResult);
 
 % Pause and do a couple of cycles of presenting the modulation
@@ -92,8 +92,7 @@ obj.setAMFrequency(1);
 end
 
 function modResult = riderStockmanDistortion(obj,photoreceptors)
-% A compound L-cone modulation described in
-% Rider & Stockman 2018 PNAS
+% A compound L-cone modulation described in Rider & Stockman 2018 PNAS
 modResult = designModulation('L_foveal',photoreceptors);
 obj.setSettings(modResult);
 obj.setBackground(modResult.settingsBackground);
@@ -111,8 +110,7 @@ obj.setCompoundModulation(compoundHarmonics,compoundAmplitudes,compoundPhases);
 end
 
 function modResult = slowLminusM(obj,photoreceptors)
-modResult = designModulation('LminusM_wide','primaryHeadroom',0.05,...
-    photoreceptors);
+modResult = designModulation('LminusM_wide',photoreceptors);
 obj.setSettings(modResult);
 obj.setBackground(modResult.settingsBackground);
 obj.setWaveformIndex(1);

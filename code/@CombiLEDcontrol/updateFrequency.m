@@ -1,4 +1,4 @@
-function setRunFrequency(obj,frequency)
+function updateFrequency(obj,frequency)
 
 % Check that we have an open connection
 if isempty(obj.serialObj)
