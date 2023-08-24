@@ -22,7 +22,7 @@
 function calibrateCombiLED
 
 % Set the save location for calibration files
-calLocalData = fullfile(tbLocateProject('prizmatixDesign'),'cal');
+calLocalData = fullfile(tbLocateProjectSilent('combiLEDToolbox'),'cal');
 setpref('BrainardLabToolbox','CalDataFolder',calLocalData);
 
 % Ask the user about the measurement conditions
