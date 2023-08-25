@@ -3,12 +3,18 @@ function serialOpen(obj)
 % Get the list of available serial connections
 portList = serialportlist("available");
 
-% Look for the two possible string patterns
-arduinoPortIdx = find((contains(serialportlist("available"),'tty.usbserial')));
-arduinoPort = portList(arduinoPortIdx);
-if isempty(arduinoPort)
-    arduinoPortIdx = find((contains(serialportlist("available"),'tty.usbmodem')));
+% Look for the possible string patterns. This will vary by platform
+if ispc
+    arduinoPortIdx = find((contains(serialportlist("available"),'COM3')));
     arduinoPort = portList(arduinoPortIdx);
+end
+if ismac
+    arduinoPortIdx = find((contains(serialportlist("available"),'tty.usbserial')));
+    arduinoPort = portList(arduinoPortIdx);
+    if isempty(arduinoPort)
+        arduinoPortIdx = find((contains(serialportlist("available"),'tty.usbmodem')));
+        arduinoPort = portList(arduinoPortIdx);
+    end
 end
 
 % We can't find a port
