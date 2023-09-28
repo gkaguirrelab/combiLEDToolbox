@@ -21,12 +21,17 @@
 
 function calibrateCombiLED
 
+% Offer a recommendation regarding connecting devices
+fprintf('Connect and start the PR670; do not yet connect the CombiLED.\n')
+fprintf('Press any key when ready.\n\n')
+pause
+
 % Set the save location for calibration files
 calLocalData = fullfile(tbLocateProjectSilent('combiLEDToolbox'),'cal');
 setpref('BrainardLabToolbox','CalDataFolder',calLocalData);
 
 % Ask the user about the measurement conditions
-fprintf('Information regarding the device configuration:')
+fprintf('Information regarding the device configuration:\n')
 cableType = GetWithDefault('Fiber optic cable type','shortLLG');
 eyePieceType = GetWithDefault('Eye piece type','classic');
 ndfValue = GetWithDefault('NDF','0');
@@ -48,6 +53,10 @@ OpenSpectroradiometer('measurementOption',false);
 
 % Create the radiometer object
 radiometerOBJ = openSpectroRadiometerObj('PR-670');
+
+% Offer a recommendation regarding connecting devices
+fprintf('Now connect and start the CombiLED. Press any key when ready.\n')
+pause
 
 % Generate the calibrator object
 calibratorOBJ = generateCalibratorObject(displaySettings, radiometerOBJ, mfilename);

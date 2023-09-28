@@ -50,6 +50,20 @@ obj.goDark;
 pause
 obj.startModulation;
 pause
+obj.goDark;
+pause
+obj.startModulation;
+pause
+obj.stopModulation;
+obj.goDark;
+pause
+obj.startModulation;
+pause
+obj.stopModulation;
+obj.goDark;
+pause
+obj.startModulation;
+pause
 
 % Clean up
 obj.serialClose;

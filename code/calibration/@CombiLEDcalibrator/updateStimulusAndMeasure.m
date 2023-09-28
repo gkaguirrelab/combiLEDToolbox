@@ -15,7 +15,11 @@ displayObj.setPrimaries(targetSettings);
 % Measure
 obj.radiometerObj.measure();
 measurement = obj.radiometerObj.measurement.energy;
-S = WlsToS((obj.radiometerObj.measurement.spectralAxis)');
-
+spectralAxis = obj.radiometerObj.measurement.spectralAxis;
+if size(spectralAxis,1) > 1
+    S = WlsToS((obj.radiometerObj.measurement.spectralAxis));
+else
+    S = WlsToS((obj.radiometerObj.measurement.spectralAxis)');
+end
 
 end
