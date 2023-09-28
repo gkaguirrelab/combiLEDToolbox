@@ -31,8 +31,9 @@ end
 calFileName = calFileNames{idx};
 load(fullfile(calDir,calFileName),'cals')
 
-% Use the last calibration
-cal = cals{end};
+% Ask which calibration to use
+whichCal = input(['Which cal to use? [1:' num2str(length(cals)) ']: ']);
+cal = cals{whichCal};
 
 % Open a calibration analysis object
 calAnalysisObj = CalibratorAnalyzer(cal, calFileName, calDir);
