@@ -7,7 +7,7 @@ observerAgeInYears = str2double(GetWithDefault('Age in years','30'));
 pupilDiameterMm = str2double(GetWithDefault('Pupil diameter in mm','3'));
 
 % Get the photoreceptors for this observer
-photoreceptors = photoreceptorDictionary('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
 
 % Modulation demos
 modDemos = {...

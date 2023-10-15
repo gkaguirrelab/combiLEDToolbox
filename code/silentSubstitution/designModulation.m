@@ -31,21 +31,42 @@ function modResult = designModulation(whichDirection,photoreceptors,varargin)
 %
 % Examples:
 %{
+    % L-M modulation around a half-on background
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
-    photoreceptors = photoreceptorDictionary('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+    photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+    whichDirection = 'LminusM_wide';
+    modResult = designModulation(whichDirection,photoreceptors);
+    plotModResult(modResult);
+%}
+%{
+    % Shifted background human melanopsin modulation
+    observerAgeInYears = 53;
+    pupilDiameterMm = 3;
+    photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
     whichDirection = 'Mel_shiftBackground';
     modResult = designModulation(whichDirection,photoreceptors);
     plotModResult(modResult);
 %}
 %{
+    % A rodent melanopsin modulation around the half-on background. We load
+    % the calibration of the mouse light panel, and then modify it to
+    % synthesize power spectrum of the UV light
+    cal = loadCal('fullPanel.mat');
+    cal = addSynthesizedUVSPDForMouseLight(cal);
+    photoreceptors = photoreceptorDictionaryRodent();
+    whichDirection = 'mel';
+    modResult = designModulation(whichDirection,photoreceptors,'cal',cal);
+    plotModResult(modResult);
+%}
+%{
     % modulations for a theoretically perfect device
-    calLocalData=fullfile(tbLocateProjectSilent('combiLEDToolbox'),'cal','perfectDevice.mat'),
+    cal = loadCal('perfectDevice.mat');
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
-    photoreceptors = photoreceptorDictionary('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+    photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
     whichDirection = 'Mel_RodSilent_shiftBackground';
-    modResult = designModulation(whichDirection,photoreceptors,'calLocalData',calLocalData);
+    modResult = designModulation(whichDirection,photoreceptors,'cal',cal);
     plotModResult(modResult);
 %}
 
@@ -54,18 +75,22 @@ function modResult = designModulation(whichDirection,photoreceptors,varargin)
 p = inputParser;
 p.addRequired('whichDirection',@ischar);
 p.addRequired('photoreceptors',@isstruct);
-p.addParameter('calLocalData',fullfile(tbLocateProjectSilent('combiLEDToolbox'),'cal','CombiLED_shortLLG_classicEyePiece_ND2x5.mat'),@ischar);
+p.addParameter('cal',[],@isstruct);
 p.addParameter('primaryHeadRoom',0.00,@isscalar)
 p.addParameter('verbose',false,@islogical)
 p.parse(whichDirection,photoreceptors,varargin{:});
 
+% If cal is empty, default to using the most recent combiLED calibration
+cal = p.Results.cal;
+if isempty(cal)
+    calName = 'CombiLED_shortLLG_classicEyePiece_ND2x5';
+    fprintf(['Using this default calibration: ' calName '\n']);
+    cal = loadCal(calName);
+end
+
 % Pull some variables out of the Results for code clarity
 primaryHeadRoom = p.Results.primaryHeadRoom;
 verbose = p.Results.verbose;
-
-% Load the calibration
-load(p.Results.calLocalData,'cals');
-cal = cals{end};
 
 % Pull out some information from the calibration
 S = cal.rawData.S;
@@ -74,20 +99,47 @@ ambientSpd = cal.processedData.P_ambient;
 nPrimaries = size(B_primary,2);
 wavelengthsNm = SToWls(S);
 
+% Detect if there are multiple species intermixed in the photoreceptor set.
+% The code currently does not support that circumstance
+if length(unique({photoreceptors.species}))~=1
+    error('The set of photoreceptors must all be from the same species')
+end
+
 % Create the spectral sensitivities in the photoreceptor structure for our
 % given set of wavelengths (S). Also assemble the T_receptors matrix.
 for ii = 1:length(photoreceptors)
-    [photoreceptors(ii).T_energyNormalized,...
-        photoreceptors(ii).T_energy,...
-        photoreceptors(ii).adjIndDiffParams] = ...
-        returnHumanSpectralSensitivity(photoreceptors(ii),S);
+    switch photoreceptors(ii).species
+        case 'human'
+            [photoreceptors(ii).T_energyNormalized,...
+                photoreceptors(ii).T_energy,...
+                photoreceptors(ii).adjIndDiffParams] = ...
+                returnHumanSpectralSensitivity(photoreceptors(ii),S);
+        case 'rodent'
+            photoreceptors(ii).T_energyNormalized = ...
+                returnRodentSpectralSensitivity(photoreceptors(ii),S);
+        case 'dog'
+            error('Geoff needs to implement this')
+        otherwise
+            error('The photoreceptor set contains a non-recognized species')
+    end
     T_receptors(ii,:) = photoreceptors(ii).T_energyNormalized;
 end
 
-% Get the design parameters from the modulation dictionary
-[whichReceptorsToTarget,whichReceptorsToIgnore,...
-    desiredContrast,x0Background,matchConstraint,searchBackground,xyBound] = ...
-    modDirectionDictionary(whichDirection,photoreceptors,nPrimaries);
+% Get the design parameters from the modulation dictionary. This varies by
+% species. Just use the species of the first photoreceptor, as we require
+% above that all receptors are from the same species.
+switch photoreceptors(1).species
+    case 'human'
+        [whichReceptorsToTarget,whichReceptorsToIgnore,...
+            desiredContrast,x0Background,matchConstraint,searchBackground,xyBound] = ...
+            modDirectionDictionaryHuman(whichDirection,photoreceptors,nPrimaries);
+    case 'rodent'
+        [whichReceptorsToTarget,whichReceptorsToIgnore,...
+            desiredContrast,x0Background,matchConstraint,searchBackground,xyBound] = ...
+            modDirectionDictionaryRodent(whichDirection,photoreceptors,nPrimaries);
+    case 'dog'
+        error('Geoff needs to implement this')
+end
 
 % Define the isolation operation as a function of the background.
 modulationPrimaryFunc = @(backgroundPrimary) isolateReceptors(...
@@ -110,9 +162,9 @@ ub = ones(1,nPrimaries)-primaryHeadRoom;
 
 % Set BADS verbosity
 if p.Results.verbose
-optionsBADS.Display = 'iter';
+    optionsBADS.Display = 'iter';
 else
-optionsBADS.Display = 'off';
+    optionsBADS.Display = 'off';
 end
 
 % The optimization toolbox is currently not available for Matlab

@@ -1,4 +1,4 @@
-function photoreceptors = photoreceptorDictionary(varargin)
+function photoreceptors = photoreceptorDictionaryHuman(varargin)
 
 p = inputParser;
 p.addParameter('observerAgeInYears',25,@isscalar)
@@ -21,6 +21,7 @@ for ii = 1:length(photoreceptorClassNames)
     photoreceptors(ii).lambdaMaxShiftNm = 0;
     photoreceptors(ii).shiftType = 'log';
     photoreceptors(ii).returnPenumbralFlag = false;
+    photoreceptors(ii).species = 'human';
 
     switch photoreceptors(ii).name
         case 'L_2deg'
