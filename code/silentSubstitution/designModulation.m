@@ -49,6 +49,13 @@ function modResult = designModulation(whichDirection,photoreceptors,varargin)
     plotModResult(modResult);
 %}
 %{
+    % A canine ML+S modulation around the half-on background.
+    photoreceptors = photoreceptorDictionaryCanine();
+    whichDirection = 'MLminusS';
+    modResult = designModulation(whichDirection,photoreceptors);
+    plotModResult(modResult);
+%}
+%{
     % A rodent melanopsin modulation around the half-on background. We load
     % the calibration of the mouse light panel, and then modify it to
     % synthesize power spectrum of the UV light
@@ -117,8 +124,9 @@ for ii = 1:length(photoreceptors)
         case 'rodent'
             photoreceptors(ii).T_energyNormalized = ...
                 returnRodentSpectralSensitivity(photoreceptors(ii),S);
-        case 'dog'
-            error('Geoff needs to implement this')
+        case 'canine'
+            photoreceptors(ii).T_energyNormalized = ...
+                returnCanineSpectralSensitivity(photoreceptors(ii),S);
         otherwise
             error('The photoreceptor set contains a non-recognized species')
     end
@@ -137,8 +145,10 @@ switch photoreceptors(1).species
         [whichReceptorsToTarget,whichReceptorsToIgnore,...
             desiredContrast,x0Background,matchConstraint,searchBackground,xyBound] = ...
             modDirectionDictionaryRodent(whichDirection,photoreceptors,nPrimaries);
-    case 'dog'
-        error('Geoff needs to implement this')
+    case 'canine'
+        [whichReceptorsToTarget,whichReceptorsToIgnore,...
+            desiredContrast,x0Background,matchConstraint,searchBackground,xyBound] = ...
+            modDirectionDictionaryCanine(whichDirection,photoreceptors,nPrimaries);
 end
 
 % Define the isolation operation as a function of the background.

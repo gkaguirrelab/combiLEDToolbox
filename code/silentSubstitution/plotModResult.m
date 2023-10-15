@@ -24,10 +24,24 @@ nPhotoClasses = length(photoreceptorClassNames);
 % Create a figure with an appropriate title
 figName = sprintf([whichDirection ': contrast = %2.2f'],contrastReceptorsBipolar(whichReceptorsToTarget(1)));
 figHandle = figure('Visible',visible,'Name',figName);
-figuresize(800, 200,'pt');
+figuresize(900, 400,'pt');
+
+% Receptor spectra
+subplot(2,4,5:6)
+nReceptors = length(modResult.meta.photoreceptors);
+for ii = 1:nReceptors
+    vec = modResult.meta.T_receptors(ii,:);
+    plotColor = modResult.meta.photoreceptors(ii).plotColor;
+    plot(wavelengthsNm,vec,'-','Color',plotColor,'LineWidth',2);
+hold on
+end
+title('Receptor spectra');
+xlim([300 800]);
+xlabel('Wavelength');
+ylabel('Relative sensitivity');
 
 % Modulation spectra
-subplot(1,4,1)
+subplot(2,4,1:2)
 hold on
 plot(wavelengthsNm,positiveModulationSPD,'k','LineWidth',2);
 plot(wavelengthsNm,negativeModulationSPD,'r','LineWidth',2);
@@ -36,10 +50,9 @@ title('Modulation spectra');
 xlim([300 800]);
 xlabel('Wavelength');
 ylabel('Power');
-axis square
 
 % Primaries
-subplot(1,4,2)
+subplot(2,4,3)
 c = 0:nPrimaries-1;
 hold on
 plot(c,settingsHigh,'*k');
@@ -47,13 +60,17 @@ plot(c,settingsLow,'*r');
 plot(c,settingsBackground,'-*','Color',[0.5 0.5 0.5]);
 set(gca,'TickLabelInterpreter','none');
 title('Primaries');
+if isfield(modResult.meta,'primaryLabels')
+    a = gca;
+    a.XTickLabel = modResult.meta.primaryLabels;
+end
 ylim([0 1]);
 xlabel('Primary');
 ylabel('Setting');
 axis square
 
 % Contrasts
-subplot(1,4,3)
+subplot(2,4,7)
 c = 1:nPhotoClasses;
 barVec = zeros(1,nPhotoClasses);
 thisBar = barVec;
@@ -77,7 +94,7 @@ ylabel('Contrast');
 axis square
 
 % Chromaticity
-subplot(1,4,4)
+subplot(2,4,8)
 
 % Start with the Matlab chromaticity diagram
 plotChromaticity;
