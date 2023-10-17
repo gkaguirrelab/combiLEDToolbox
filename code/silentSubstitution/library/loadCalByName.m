@@ -1,4 +1,4 @@
-function cal = loadCal(calName,calIdx)
+function cal = loadCalByName(calName,calIdx)
 
 % Find the specified calibration within this project directory; load
 % it.
