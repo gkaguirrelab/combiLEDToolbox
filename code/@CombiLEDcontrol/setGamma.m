@@ -32,9 +32,9 @@ for ii=1:obj.nPrimaries
     gammaParams(ii,:) = polyfit(x,y,obj.nGammaParams-1);
     % Check the quality of the fit
     fitY = polyval(gammaParams(ii,:),x);
-    fitErr = norm(y-fitY');
+    fitErr = norm(y-fitY')/norm(y);
     if fitErr>obj.gammaFitTol
-        warning('LED%d (index 0) has gamma fit error of %2.2f (thresh %2.2f)',ii-1,fitErr,obj.gammaFitTol);
+        warning('LED%d (index 0) has gamma fit error of %2.4f (thresh %2.4f)',ii-1,fitErr,obj.gammaFitTol);
     end
 end
 

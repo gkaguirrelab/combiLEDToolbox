@@ -30,8 +30,9 @@ classdef CombiLEDcontrol < handle
         % Verbosity
         verbose = false;
 
-        % Properties of the gamma correction
-        gammaFitTol = 0.03;
+        % The polynomial fit to the gamma table data for each primary must
+        % explain 99% of the root sum squared data.
+        gammaFitTol = 0.01;
 
     end
 
