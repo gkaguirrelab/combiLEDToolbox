@@ -1,4 +1,4 @@
-function modResult = designModulation(whichDirection,photoreceptors,varargin)
+function modResult = designModulation(whichDirection,photoreceptors,cal,varargin)
 % Nominal primaries and SPDs for isolating post-receptoral mechanisms
 %
 % Syntax:
@@ -13,14 +13,12 @@ function modResult = designModulation(whichDirection,photoreceptors,varargin)
 %	whichDirection        - Char. An entry in the modDirectionDictionary.
 %	photoreceptors        - Struct. A struct returned by
 %	                        photoreceptorDictionary
+%   cal                   - Struct. A calibration result
 %
 % Outputs:
 %	modResult             - Struct. The primaries and SPDs.
 %
 % Optional key/value pairs:
-%  'calLocalData'         - Char. Path to the calibration file that
-%                           describes the device that will be used to
-%                           create the modulations.
 %  'primaryHeadRoom'      - Scalar. We can enforce a constraint that we
 %                           don't go right to the edge of the gamut.  The
 %                           head room parameter is defined in the [0-1]
@@ -32,24 +30,27 @@ function modResult = designModulation(whichDirection,photoreceptors,varargin)
 % Examples:
 %{
     % L-M modulation around a half-on background
+    cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
     whichDirection = 'LminusM_wide';
-    modResult = designModulation(whichDirection,photoreceptors);
+    modResult = designModulation(whichDirection,photoreceptors,cal);
     plotModResult(modResult);
 %}
 %{
     % Shifted background human melanopsin modulation
+    cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
     whichDirection = 'Mel_shiftBackground';
-    modResult = designModulation(whichDirection,photoreceptors);
+    modResult = designModulation(whichDirection,photoreceptors,cal);
     plotModResult(modResult);
 %}
 %{
     % A canine ML+S modulation around the half-on background.
+    cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
     photoreceptors = photoreceptorDictionaryCanine();
     whichDirection = 'MLminusS';
     modResult = designModulation(whichDirection,photoreceptors);
@@ -59,11 +60,11 @@ function modResult = designModulation(whichDirection,photoreceptors,varargin)
     % A rodent melanopsin modulation around the half-on background. We load
     % the calibration of the mouse light panel, and then modify it to
     % synthesize power spectrum of the UV light
-    cal = loadCal('fullPanel.mat');
+    cal = loadCalByName('fullPanel');
     cal = addSynthesizedUVSPDForMouseLight(cal);
     photoreceptors = photoreceptorDictionaryRodent();
     whichDirection = 'mel';
-    modResult = designModulation(whichDirection,photoreceptors,'cal',cal);
+    modResult = designModulation(whichDirection,photoreceptors,cal);
     plotModResult(modResult);
 %}
 %{
@@ -73,7 +74,7 @@ function modResult = designModulation(whichDirection,photoreceptors,varargin)
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
     whichDirection = 'Mel_RodSilent_shiftBackground';
-    modResult = designModulation(whichDirection,photoreceptors,'cal',cal);
+    modResult = designModulation(whichDirection,photoreceptors,cal);
     plotModResult(modResult);
 %}
 
@@ -82,18 +83,11 @@ function modResult = designModulation(whichDirection,photoreceptors,varargin)
 p = inputParser;
 p.addRequired('whichDirection',@ischar);
 p.addRequired('photoreceptors',@isstruct);
-p.addParameter('cal',[],@isstruct);
+p.addParameter('cal',@isstruct);
 p.addParameter('primaryHeadRoom',0.00,@isscalar)
 p.addParameter('verbose',false,@islogical)
 p.parse(whichDirection,photoreceptors,varargin{:});
 
-% If cal is empty, default to using the most recent combiLED calibration
-cal = p.Results.cal;
-if isempty(cal)
-    calName = 'CombiLED_shortLLG_classicEyePiece_ND2x5';
-    fprintf(['Using this default calibration: ' calName '\n']);
-    cal = loadCal(calName);
-end
 
 % Pull some variables out of the Results for code clarity
 primaryHeadRoom = p.Results.primaryHeadRoom;
@@ -231,13 +225,14 @@ settingsBackground = backgroundPrimary;
 
 % Create a structure to return the results
 modResult.meta.whichDirection = whichDirection;
+modResult.meta.photoreceptors = photoreceptors;
+modResult.meta.cal = cal;
 modResult.meta.x0Background = x0Background;
 modResult.meta.matchConstraint = matchConstraint;
 modResult.meta.searchBackground = searchBackground;
 modResult.meta.xyBound = xyBound;
 modResult.meta.B_primary = B_primary;
 modResult.meta.T_receptors = T_receptors;
-modResult.meta.photoreceptors = photoreceptors;
 modResult.meta.whichReceptorsToTarget = whichReceptorsToTarget;
 modResult.meta.whichReceptorsToIgnore = whichReceptorsToIgnore;
 modResult.meta.desiredContrast = desiredContrast;
