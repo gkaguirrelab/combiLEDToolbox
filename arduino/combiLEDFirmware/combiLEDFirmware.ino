@@ -259,7 +259,7 @@ void setup() {
     // Use the built-in LED
     pinMode(LED_BUILTIN, OUTPUT);
   } else {
-    // USe the wired LEDs
+    // Use the wired LEDs
     Wire.begin();
     Wire.setClock(400000);
   }
@@ -624,6 +624,11 @@ void getRun() {
     if (strncmp(inputString, "FQ", 2) == 0) {
       // Carrier modulation frequency (float Hz)
       fmCycleDur = 1e6 / atof(inputString + 2);
+      Serial.println(atof(inputString + 2));
+    }
+    if (strncmp(inputString, "CN", 2) == 0) {
+      // fmContrast (0-1 float)
+      fmContrast = atof(inputString + 2);
       Serial.println(atof(inputString + 2));
     }
     if (strncmp(inputString, "BG", 2) == 0) {
