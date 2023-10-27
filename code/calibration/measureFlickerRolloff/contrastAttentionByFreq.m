@@ -1,8 +1,13 @@
 function contrastScale = contrastAttentionByFreq(frequencies)
 
+% Make these persistent so we don't need to keep re-loading the file
+persistent contrastRollOff frequencySupport
+
 % Load the frequency roll of empirical measurements
-dataFileName = fullfile(fileparts(mfilename("fullpath")),'freqRollOffMeasure.mat');
-load(dataFileName,'contrastRollOff','frequencySupport');
+if isempty(contrastRollOff)
+    dataFileName = fullfile(fileparts(mfilename("fullpath")),'freqRollOffMeasure.mat');
+    load(dataFileName,'contrastRollOff','frequencySupport');
+end
 
 % Sanity check the input. We can't extrapolate above highest measurement
 mustBeInRange(frequencies,1e-6,max(frequencySupport));
