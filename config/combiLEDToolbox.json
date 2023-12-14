@@ -11,7 +11,7 @@
         "toolboxRoot": "",
         "type": "git",
         "update": "",
-        "url": ""
+        "url": "https:\/\/github.com\/gkaguirrelab\/combiLEDToolbox.git"
     },
     {
         "flavor": "",
@@ -39,32 +39,6 @@
         "update": "",
         "url": ""
     },
-    {
-        "flavor": "",
-        "hook": "",
-        "importance": "",
-        "localHookTemplate": "",
-        "name": "forwardModel",
-        "pathPlacement": "append",
-        "subfolder": "forwardModel",
-        "toolboxRoot": "",
-        "type": "include",
-        "update": "",
-        "url": ""
-    },
- 	{
-		"flavor": "",
-		"hook": "",
-		"importance": "",
-		"localHookTemplate": "",
-		"name": "transparentTrack",
-		"pathPlacement": "append",
-		"subfolder": "",
-		"toolboxRoot": "",
-		"type": "include",
-		"update": "",
-		"url": ""
-	},
     {
         "flavor": "",
         "hook": "",
