@@ -11,7 +11,7 @@ end
 
 % Select a cals file
 charSet = [97:97+25, 65:65+25];
-fprintf('\nSelect a modDemos:\n')
+fprintf('\nSelect a calibration:\n')
 for pp=1:length(calFileNames)
     optionName=['\t' char(charSet(pp)) '. ' calFileNames{pp} '\n'];
     fprintf(optionName);
