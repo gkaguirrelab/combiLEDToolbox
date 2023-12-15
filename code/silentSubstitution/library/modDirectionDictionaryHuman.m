@@ -42,7 +42,6 @@ switch whichDirection
         whichReceptorsToSilence = {};
         whichReceptorsToIgnore = {};
         desiredContrast = ones(1,8);
-        matchConstraint = 3;
     case 'LMS'
         whichReceptorsToTarget = {'L_10deg','M_10deg','S_10deg'};
         whichReceptorsToSilence = {'Mel'};
@@ -53,6 +52,8 @@ switch whichDirection
         whichReceptorsToSilence = {'L_10deg','M_10deg','S_10deg'};
         whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg','Rod'};
         desiredContrast = 1;
+    otherwise
+        error('Not a recognized human modulation direction')
 end
 
 % Check that no receptor is listed more than once in the target, silence,
