@@ -97,7 +97,7 @@ if includeDiffuserFlag
 
     % Load a file that contains the specifications of the transmittance
     % spectrum of the diffuser material
-    suvtFileName = fullfile(tbLocateProjectSilent('cgrpAnalysis'),'data','SUVT_Acryilic_transmittance.csv');
+    suvtFileName = fullfile(tbLocateToolbox('cgrpAnalysis'),'data','SUVT_Acryilic_transmittance.csv');
     suvtTable = readtable(suvtFileName);
 
     % Create a transmittance vector from this information

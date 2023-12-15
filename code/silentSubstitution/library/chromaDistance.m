@@ -1,4 +1,4 @@
-function xy_distance = chromaDistance(spdA,spdB,wavelengthsNm)
+function [xy_distance,x_and_y_distance] = chromaDistance(spdA,spdB,wavelengthsNm)
 
 % Load the XYZ fundamentals
 load('T_xyz1931.mat','T_xyz1931','S_xyz1931');
@@ -10,6 +10,7 @@ spdB_xy = (T_xyz(1:2,:)*spdB/sum(T_xyz*spdB));
 for ii = 1:size(spdA,2)
     spdA_xy = (T_xyz(1:2,:)*spdA(:,ii)/sum(T_xyz*spdA(:,ii)));
     xy_distance(1,ii) = norm(spdA_xy-spdB_xy);
+    x_and_y_distance(1:2,ii) = spdA_xy-spdB_xy;
 end
 
 end

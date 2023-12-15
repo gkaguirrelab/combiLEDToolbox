@@ -1,5 +1,5 @@
-function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast,...
-    x0Background, matchConstraint, searchBackground, xyBound] = modDirectionDictionaryCanine(whichDirection,photoreceptors,nPrimaries)
+function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast] = ...
+    modDirectionDictionaryCanine(whichDirection,photoreceptors)
 %
 %
 %
@@ -8,10 +8,6 @@ function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast,..
 %                                   photoreceptors is multiplied by the log
 %                                   of this value
 
-x0Background = repmat(0.5,nPrimaries,1);
-matchConstraint = 5;
-searchBackground = false;
-xyBound = 0.1;
 
 switch whichDirection
     case 'LightFlux'
@@ -19,25 +15,21 @@ switch whichDirection
         whichReceptorsToSilence = {};
         whichReceptorsToIgnore = {'canineRod'};
         desiredContrast = [1 1 1];
-        matchConstraint = 1;
     case 'mel'
         whichReceptorsToTarget = {'canineMel'};
         whichReceptorsToSilence = {'canineS','canineML'};
         whichReceptorsToIgnore = {'canineRod'};
         desiredContrast = [1];
-        matchConstraint = 1;
     case 'MLplusS'
         whichReceptorsToTarget = {'canineS','canineML'};
         whichReceptorsToSilence = {'canineMel'};
         whichReceptorsToIgnore = {'canineRod'};
         desiredContrast = [1.0 1.0];
-        matchConstraint = 8;
     case 'MLminusS'
         whichReceptorsToTarget = {'canineS','canineML'};
         whichReceptorsToSilence = {'canineMel'};
         whichReceptorsToIgnore = {};
         desiredContrast = [-0.99 1.0];
-        matchConstraint = 5;
     otherwise
         error('Not a defined modulation')
 end

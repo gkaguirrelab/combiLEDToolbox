@@ -27,7 +27,7 @@ fprintf('Press any key when ready.\n\n')
 pause
 
 % Set the save location for calibration files
-calLocalData = fullfile(tbLocateProjectSilent('combiLEDToolbox'),'cal');
+calLocalData = fullfile(tbLocateToolbox('combiLEDToolbox'),'cal');
 setpref('BrainardLabToolbox','CalDataFolder',calLocalData);
 
 % Ask the user about the measurement conditions

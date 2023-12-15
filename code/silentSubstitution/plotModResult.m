@@ -123,4 +123,12 @@ ylabel('y chromaticity');
 title(sprintf('Luminance %2.1f cd/m2',bg_photopicLuminanceCdM2_Y))
 axis square
 
+% Show a square of color at the background location
+subplot(2,4,4)
+rgb=xyz2rgb([bg_chromaticity_xy; 0]');
+im = zeros(10,10,3);
+im(:,:,1)=rgb(1); im(:,:,2)=rgb(2); im(:,:,3)=rgb(3);
+imagesc(im)
+axis off
+
 end

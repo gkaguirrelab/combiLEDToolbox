@@ -25,6 +25,39 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %                           device primary space. Using a little head room
 %                           keeps us a bit away from the hard edge of the
 %                           device.
+%  'contrastMatchConstraint' - Scalar. The difference between the desired 
+%                           and obtained contrast on the photoreceptors is
+%                           multiplied by the log of this value in
+%                           calculating the error for the modulation search
+%  'searchBackground'     - Logical. If set to true, a search will be 
+%                           conducted over different background settings
+%                           to maximize contrast on targeted photoreceptors
+%  'xyTarget'             - 1x2 vector. The xy chromaticity desired for the
+%                           background. If left empty, this value will be
+%                           set to the chromaticity value of the the passed
+%                           background primary, or (if a background is not
+%                           specified) the value of the half-on background.
+%  'xyTol'                - Scalar. In the search across backgrounds, a
+%                           nonlinear constraint is used to keep the
+%                           background within this range of the target
+%                           chromaticity. If set to a large number, the
+%                           search will consider any possible background.
+%                           If set to zero, then the departure from the
+%                           xyTarget will be used not as a linear
+%                           constraint, but as a shrinkage parameter upon
+%                           the search.
+%  'xyTolMetric'          - Scalar. The Minkowski metric used to combine
+%                           the x and y differences between the target and
+%                           achieved background chromaticity. A value of 2
+%                           is the Euclidean (L2) norm. A value of -Inf
+%                           would constrain the minimum departure for x or
+%                           y.
+%  'xyTolWeight'          - How the nonlinear chromaticity constraint is
+%                           weighted.
+%  'backgroundPrimary'    - 1xnPrimaries vector. A vector of primary
+%                           settings in the range of 0-1 that describe the
+%                           background around which the modulation will be
+%                           set.
 %  'verbose'              - Logical. Verbosity.
 %
 % Examples:
@@ -44,8 +77,8 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
-    whichDirection = 'Mel_shiftBackground';
-    modResult = designModulation(whichDirection,photoreceptors,cal);
+    whichDirection = 'Mel';
+    modResult = designModulation(whichDirection,photoreceptors,cal,'searchBackground',true);
     plotModResult(modResult);
 %}
 %{
@@ -53,7 +86,7 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
     cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
     photoreceptors = photoreceptorDictionaryCanine();
     whichDirection = 'MLminusS';
-    modResult = designModulation(whichDirection,photoreceptors);
+    modResult = designModulation(whichDirection,photoreceptors,cal);
     plotModResult(modResult);
 %}
 %{
@@ -85,12 +118,26 @@ p.addRequired('whichDirection',@ischar);
 p.addRequired('photoreceptors',@isstruct);
 p.addParameter('cal',@isstruct);
 p.addParameter('primaryHeadRoom',0.00,@isscalar)
+p.addParameter('contrastMatchConstraint',5,@isscalar)
+p.addParameter('searchBackground',false,@islogical)
+p.addParameter('xyTarget',[],@isnumeric)
+p.addParameter('xyTol',1,@isnumeric)
+p.addParameter('xyTolMetric',-Inf,@isnumeric)
+p.addParameter('xyTolWeight',1e3,@isnumeric)
+p.addParameter('backgroundPrimary',[],@isnumeric)
 p.addParameter('verbose',false,@islogical)
 p.parse(whichDirection,photoreceptors,varargin{:});
 
 
 % Pull some variables out of the Results for code clarity
 primaryHeadRoom = p.Results.primaryHeadRoom;
+contrastMatchConstraint = p.Results.contrastMatchConstraint;
+searchBackground = p.Results.searchBackground;
+xyTarget = p.Results.xyTarget;
+xyTol = p.Results.xyTol;
+xyTolMetric = p.Results.xyTolMetric;
+xyTolWeight = p.Results.xyTolWeight;
+backgroundPrimary = p.Results.backgroundPrimary;
 verbose = p.Results.verbose;
 
 % Pull out some information from the calibration
@@ -132,23 +179,20 @@ end
 % above that all receptors are from the same species.
 switch photoreceptors(1).species
     case 'human'
-        [whichReceptorsToTarget,whichReceptorsToIgnore,...
-            desiredContrast,x0Background,matchConstraint,searchBackground,xyBound] = ...
-            modDirectionDictionaryHuman(whichDirection,photoreceptors,nPrimaries);
+        [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast] = ...
+            modDirectionDictionaryHuman(whichDirection,photoreceptors);
     case 'rodent'
-        [whichReceptorsToTarget,whichReceptorsToIgnore,...
-            desiredContrast,x0Background,matchConstraint,searchBackground,xyBound] = ...
-            modDirectionDictionaryRodent(whichDirection,photoreceptors,nPrimaries);
+        [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast] = ...
+            modDirectionDictionaryRodent(whichDirection,photoreceptors);
     case 'canine'
-        [whichReceptorsToTarget,whichReceptorsToIgnore,...
-            desiredContrast,x0Background,matchConstraint,searchBackground,xyBound] = ...
-            modDirectionDictionaryCanine(whichDirection,photoreceptors,nPrimaries);
+        [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast] = ...
+            modDirectionDictionaryCanine(whichDirection,photoreceptors);
 end
 
 % Define the isolation operation as a function of the background.
 modulationPrimaryFunc = @(backgroundPrimary) isolateReceptors(...
     whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,...
-    T_receptors,B_primary,ambientSpd,backgroundPrimary,primaryHeadRoom,matchConstraint);
+    T_receptors,B_primary,ambientSpd,backgroundPrimary,primaryHeadRoom,contrastMatchConstraint);
 
 % Define a function that returns the contrast on all photoreceptors
 contrastReceptorsFunc = @(modulationPrimary,backgroundPrimary) ...
@@ -179,6 +223,11 @@ if ~any(strcmp({V.Name}, 'Optimization Toolbox'))
     optionsBADS.OptimToolbox = 0;
 end
 
+% If not passed, define the settings for the background as half-on to start
+if isempty(backgroundPrimary)
+    backgroundPrimary = repmat(0.5,nPrimaries,1);
+end
+
 % Handle searching over backgrounds
 if searchBackground
     % Alert the user if requested
@@ -190,20 +239,24 @@ if searchBackground
     % desired contrast
     myObj = @(x) -mean(contrastOnTargeted(contrastReceptorsFunc(modulationPrimaryFunc(x'),x')).*(desiredContrast'));
     % A non-linear constraint that keeps the background within a certain
-    % chromaticity distance of the initial background. We only use this if
-    % there is in fact a specified value for the xyBound
-    if xyBound <= 1
-        myNonlcon = @(x) nonlcon(x',repmat(0.5,nPrimaries,1),B_primary,wavelengthsNm,xyBound);
-    else
-        myNonlcon = [];
+    % chromaticity range. If the xyTarget is not specified, then the
+    % xyValue of the half-on background is used.
+    if isempty(xyTarget)
+        xyTarget = chromaValue(B_primary*backgroundPrimary,wavelengthsNm);
     end
-    backgroundPrimary = bads(myObj,x0Background',lb,ub,plb,pub,myNonlcon,optionsBADS)';
+    myNonlcon = @(x) nonlcon(x',B_primary,wavelengthsNm,xyTarget,xyTol,xyTolMetric,xyTolWeight);
+    % If xyTol is zero, we will use the nonlinear constraint as a shrinkage
+    % penalty instead of as a constraint.
+    if xyTol == 0
+        myShrinkObj = @(x) myObj(x)+myNonlcon(x);
+        backgroundPrimary = bads(myShrinkObj,backgroundPrimary',lb,ub,plb,pub,[],optionsBADS)';
+    else
+        backgroundPrimary = bads(myObj,backgroundPrimary',lb,ub,plb,pub,myNonlcon,optionsBADS)';
+    end
 else
     if verbose
         fprintf(['Searching for ' whichDirection ' modulation\n'])
     end
-    % If we are not searching across backgrounds, use the half-on
-    backgroundPrimary = repmat(0.5,nPrimaries,1);
 end
 
 % Perform the search with resulting background background
@@ -227,10 +280,12 @@ settingsBackground = backgroundPrimary;
 modResult.meta.whichDirection = whichDirection;
 modResult.meta.photoreceptors = photoreceptors;
 modResult.meta.cal = cal;
-modResult.meta.x0Background = x0Background;
-modResult.meta.matchConstraint = matchConstraint;
+modResult.meta.passedBackgroundPrimary = p.Results.backgroundPrimary;
+modResult.meta.contrastMatchConstraint = contrastMatchConstraint;
 modResult.meta.searchBackground = searchBackground;
-modResult.meta.xyBound = xyBound;
+modResult.meta.xyTarget = xyTarget;
+modResult.meta.xyTol = xyTol;
+modResult.meta.xyTolMetric = xyTolMetric;
 modResult.meta.B_primary = B_primary;
 modResult.meta.T_receptors = T_receptors;
 modResult.meta.whichReceptorsToTarget = whichReceptorsToTarget;
@@ -253,12 +308,21 @@ end
 
 %% LOCAL FUNCTIONS
 
-function c = nonlcon(x,x0,B_primary,wavelengthsNm,xyBound)
+function c = nonlcon(x,B_primary,wavelengthsNm,xyTarget,xyTol,xyTolMetric,xyTolWeight)
 
-% Expand x0 to have the same number of columns as x
-xy_distance = chromaDistance(B_primary*x,B_primary*x0,wavelengthsNm);
+% Get the chroma values for the x spd
+xyVal = chromaValue(B_primary*x,wavelengthsNm);
 
-c = double(xy_distance>xyBound)';
-c(isnan(xy_distance)) = 1;
+% We combine the x and y dimensions following the passed xyMetric
+for ii=1:size(xyVal,2)
+    xy_distance(ii) = norm(xyVal(:,ii)-xyTarget,xyTolMetric);
+end
+
+% Set the constraint value to the value by which the tolerance is exceeded,
+% times the tolWeight
+c = ((xy_distance-xyTol).*double(xy_distance>xyTol))'*xyTolWeight;
+
+% Handle the case of nan values
+c(isnan(xy_distance)) = xyTolWeight;
 
 end

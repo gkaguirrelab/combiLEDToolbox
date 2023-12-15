@@ -1,17 +1,5 @@
-function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast,...
-    x0Background, matchConstraint, searchBackground, xyBound] = modDirectionDictionaryHuman(whichDirection,photoreceptors,nPrimaries)
-%
-%
-%
-%
-% matchConstraint                 - Scalar. The difference in contrast on
-%                                   photoreceptors is multiplied by the log
-%                                   of this value
-
-x0Background = repmat(0.5,nPrimaries,1);
-matchConstraint = 5;
-searchBackground = false;
-xyBound = Inf;
+function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast] = ...
+    modDirectionDictionaryHuman(whichDirection,photoreceptors)
 
 switch whichDirection
     case 'LminusM_foveal'
@@ -19,7 +7,6 @@ switch whichDirection
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
         whichReceptorsToIgnore = {'L_10deg','M_10deg','Mel','Rod'};
         desiredContrast = [1 -1];
-        matchConstraint = 3;
     case 'LminusM_wide'
         % Attempt to achieve equivalent differential contrast on the L and
         % M cones in the center and the periphery. Need to alos try and
@@ -32,13 +19,11 @@ switch whichDirection
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
         whichReceptorsToIgnore = {'Mel','Rod'};
         desiredContrast = [1 -1 0.9 -0.9 1 -1];
-        matchConstraint = 3;
     case 'LplusM_wide'
         whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg'};
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
         whichReceptorsToIgnore = {'Mel','Rod'};
         desiredContrast = [1 1 1 1];
-        matchConstraint = 10;
     case 'S_wide'
         % Attempt to achieve equivalent contrast on the S cones in the
         % center and the periphery. Need to also silence the penumbral L
@@ -48,57 +33,26 @@ switch whichDirection
         % and we are unable to find a good solution. Instead, we list the
         % penumbral cones as modulation targets, but set their desired
         % contrast to zero.
-        whichReceptorsToTarget = {'S_2deg','S_10deg','L_penum','M_penum'};
+        whichReceptorsToTarget = {'S_2deg','S_10deg','L_penum10','M_penum10'};
         whichReceptorsToSilence = {'L_2deg','M_2deg','L_10deg','M_10deg'};
         whichReceptorsToIgnore = {'Mel','Rod'};
         desiredContrast = [1 1 0 0];
-        matchConstraint = 3;
     case 'LightFlux'
         whichReceptorsToTarget = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel','Rod'};
         whichReceptorsToSilence = {};
         whichReceptorsToIgnore = {};
         desiredContrast = ones(1,8);
         matchConstraint = 3;
-    case 'LMS_shiftBackground'
+    case 'LMS'
         whichReceptorsToTarget = {'L_10deg','M_10deg','S_10deg'};
         whichReceptorsToSilence = {'Mel'};
         whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg','Rod'};
         desiredContrast = [1 1 1];
-        switch nPrimaries
-            case 8
-                x0Background = [ 0.5000    0.4338    0.1108    0.2574    0.2381    0.5000    0.3777    0.5000 ]';
-        end
-        searchBackground = true;
-    case 'Mel_shiftBackground'
+    case 'Mel'
         whichReceptorsToTarget = {'Mel'};
         whichReceptorsToSilence = {'L_10deg','M_10deg','S_10deg'};
         whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg','Rod'};
         desiredContrast = 1;
-        switch nPrimaries
-            case 8
-                x0Background = [ 0.4545         0    0.0365    0.3306    0.0650    0.4999    0.0036    0.5093 ]';
-        end
-        searchBackground = true;
-    case 'Mel_RodSilent_shiftBackground'
-        whichReceptorsToTarget = {'Mel'};
-        whichReceptorsToSilence = {'Rod','L_10deg','M_10deg','S_10deg'};
-        whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg'};
-        desiredContrast = 1;
-        switch nPrimaries
-            case 8
-                x0Background = [ 0.1289    0.0000    0.0196    0.0184    0.0239    0.4409    0.1856    0.4993 ]';
-        end
-        searchBackground = true;
-    case 'Rod_shiftBackground'
-        whichReceptorsToTarget = {'Rod'};
-        whichReceptorsToSilence = {'Mel','L_10deg','M_10deg','S_10deg'};
-        whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg'};
-        desiredContrast = 1;
-        switch nPrimaries
-            case 8
-                x0Background = [ 0.1056         0    0.0130         0    0.0199    0.4851    0.1445    0.4959 ]';
-        end
-        searchBackground = true;
 end
 
 % Check that no receptor is listed more than once in the target, silence,

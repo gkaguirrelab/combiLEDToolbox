@@ -1,5 +1,5 @@
-function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast,...
-    x0Background, matchConstraint, searchBackground, xyBound] = modDirectionDictionaryRodent(whichDirection,photoreceptors,nPrimaries)
+function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast] = ...
+    modDirectionDictionaryRodent(whichDirection,photoreceptors)
 %
 %
 %
@@ -8,48 +8,37 @@ function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast,..
 %                                   photoreceptors is multiplied by the log
 %                                   of this value
 
-x0Background = repmat(0.5,nPrimaries,1);
-matchConstraint = 5;
-searchBackground = false;
-xyBound = 0.1;
-
 switch whichDirection
     case 'LightFlux'
         whichReceptorsToTarget = {'rodentS','rodentMel','humanL'};
         whichReceptorsToSilence = {};
         whichReceptorsToIgnore = {'rodentRod','rodentML'};
         desiredContrast = [1 1 1];
-        matchConstraint = 1;
     case 'S'
         whichReceptorsToTarget = {'rodentS'};
         whichReceptorsToSilence = {'rodentMel','humanL'};
         whichReceptorsToIgnore = {'rodentRod','rodentML'};
         desiredContrast = [1];
-        matchConstraint = 1;
     case 'L'
         whichReceptorsToTarget = {'humanL'};
         whichReceptorsToSilence = {'rodentMel','rodentS',};
         whichReceptorsToIgnore = {'rodentRod','rodentML'};
         desiredContrast = [1];
-        matchConstraint = 1;
     case 'mel'
         whichReceptorsToTarget = {'rodentMel'};
         whichReceptorsToSilence = {'rodentS','humanL'};
         whichReceptorsToIgnore = {'rodentRod','rodentML'};
         desiredContrast = [1];
-        matchConstraint = 1;
     case 'LplusS'
         whichReceptorsToTarget = {'rodentS','humanL'};
         whichReceptorsToSilence = {'rodentMel'};
         whichReceptorsToIgnore = {'rodentRod','rodentML'};
         desiredContrast = [1.0 1.0];
-        matchConstraint = 8;
     case 'SplusMel'
         whichReceptorsToTarget = {'rodentS','rodentMel'};
         whichReceptorsToSilence = {'humanL'};
         whichReceptorsToIgnore = {'rodentRod','rodentML'};
         desiredContrast = [1.0 0.5];
-        matchConstraint = 8;
     otherwise
         error('Not a defined modulation')
 end
