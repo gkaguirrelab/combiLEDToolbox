@@ -3,7 +3,7 @@
 cal = selectCal();
 
 % Open a CombiLEDcontrol object
-obj = CombiLEDcontrol();
+obj = CombiLEDcontrol('verbose',false);
 
 % Update the gamma table
 obj.setGamma(cal.processedData.gammaTable);
@@ -22,6 +22,7 @@ modDemos = {...
     'SConeDistortion', ...
     'lightFluxFlicker', ...
     'slowLminusM' ...
+    'lightFluxShifted'
     };
 
 % Present the options
@@ -33,7 +34,7 @@ for pp=1:length(modDemos)
 end
 choice = input('\nYour choice (return for done): ','s');
 
-% Obtain the mod result 
+% Obtain the mod result
 if ~isempty(choice)
     choice = int32(choice);
     idx = find(charSet == choice);
@@ -84,7 +85,7 @@ clear
 function modResult = melPulses(obj,photoreceptors,cal)
 modResult = designModulation('Mel_shiftBackground',photoreceptors,cal);
 obj.setSettings(modResult);
-obj.setBackground(modResult.settingsLow);
+obj.setUnimodal();
 obj.setWaveformIndex(2); % square-wave
 obj.setFrequency(0.1);
 obj.setAMIndex(2); % half-cosine windowing
@@ -95,7 +96,6 @@ end
 function modResult = lightFluxFlicker(obj,photoreceptors,cal)
 modResult = designModulation('LightFlux',photoreceptors,cal);
 obj.setSettings(modResult);
-obj.setBackground(modResult.settingsBackground);
 obj.setWaveformIndex(1);
 obj.setFrequency(16);
 obj.setContrast(1);
@@ -106,7 +106,6 @@ end
 function modResult = SConeDistortion(obj,photoreceptors,cal)
 modResult = designModulation('S_foveal',photoreceptors,cal);
 obj.setSettings(modResult);
-obj.setBackground(modResult.settingsBackground);
 obj.setWaveformIndex(1);
 obj.setFrequency(30);
 obj.setAMIndex(1);
@@ -117,7 +116,6 @@ function modResult = riderStockmanDistortion(obj,photoreceptors,cal)
 % A compound L-cone modulation described in Rider & Stockman 2018 PNAS
 modResult = designModulation('L_foveal',photoreceptors,cal);
 obj.setSettings(modResult);
-obj.setBackground(modResult.settingsBackground);
 obj.setWaveformIndex(5);
 obj.setFrequency(5);
 obj.setAMIndex(1);
@@ -134,8 +132,24 @@ end
 function modResult = slowLminusM(obj,photoreceptors,cal)
 modResult = designModulation('LminusM_wide',photoreceptors,cal);
 obj.setSettings(modResult);
-obj.setBackground(modResult.settingsBackground);
 obj.setWaveformIndex(1);
 obj.setFrequency(1);
 obj.setAMIndex(0);
 end
+
+function modResult = lightFluxShifted(obj,photoreceptors,cal)
+backgroundPrimary = [0.5222    0.4528    0.1896    0.5264    0.2302    0.3250    0.4875    0.4882]';
+
+modResult = designModulation('LightFlux',photoreceptors,cal,...
+    'searchBackground',false,...
+    'contrastMatchConstraint',4,...
+    'backgroundPrimary',backgroundPrimary);
+obj.setSettings(modResult);
+obj.setWaveformIndex(1);
+obj.setAMIndex(2); % half-cosine windowing
+obj.setAMFrequency(1/24);
+obj.setAMValues([1.5,0]); % duration half-cosine ramp; second value unused
+obj.setDuration(15);
+obj.setFrequency(4);
+end
+
