@@ -124,6 +124,18 @@ if returnPenumbralFlag
     T_quantalIsomerizations = T_quantalIsomerizations .* trans_Hemoglobin';
 end
 
+% Handle a passed extra filter. This may be the transmittance of a
+% spectacle or contact lens worn by the observer
+if isfield(photoreceptorStruct,'ef')
+    % Pull the values out of the photoreceptorStruct
+    efS = photoreceptorStruct.ef.S;
+    efTrans = photoreceptorStruct.ef.trans;
+    % Fit a spline to the extra filter transmittance spectrum
+    efTransSpline = spline(SToWls(efS),efTrans,SToWls(S));
+    % Apply the filter
+    T_quantalIsomerizations = T_quantalIsomerizations .* efTransSpline';
+end
+
 % Convert to energy fundamentals
 T_energy = EnergyToQuanta(S,T_quantalIsomerizations')';
 
