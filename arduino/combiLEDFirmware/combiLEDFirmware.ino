@@ -75,6 +75,10 @@
 //                      prior to being passed to the LED.
 //  background          8x1 int array of value 0-1e4. Specifies the
 //                      background level for each LED.
+//  modSymmetryFlag     Boolean. If set to true, the modulation is bimodal around
+//                      the mid-point between the high and low settings. If set
+//                      to false, the modulation is unimodal against the
+//                      background of the low settings.
 //  fmContrast          Float, between 0 and 1. Defines the contrast of the
 //                      modulation relative to its maximum.
 //  gammaParams         8x6 float matrix. Defines the parameters of a 5th order
@@ -169,10 +173,11 @@ bool modulationState = false;       // When we are running, are we modulating?
 // Define settings and modulations
 const uint8_t nLEDs = 8;  // the number of LEDs
 
-// A default setting, which is 100% Light Flux. 0-1e4 precision
+// A default setting, which is bimodal, 100% Light Flux. 0-1e4 precision
 int settingsLow[nLEDs] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 int settingsHigh[nLEDs] = { 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000 };
 int background[nLEDs] = { 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000 };
+bool modSymmetryFlag = true;
 
 // A frequency modulation look-up table. 0-1e4 precision
 int fmModTable[nFmModLevels];
@@ -510,7 +515,9 @@ void getConfig() {
       Serial.println(level);
       clearInputString();
     }
+    updateBackgroundSettings();
     identifyActiveLEDs();
+    setToBackground();
   }
   if (strncmp(inputString, "GP", 2) == 0) {
     Serial.println("GP:");
@@ -518,19 +525,33 @@ void getConfig() {
     updateGammaTable();
     setToBackground();
   }
-  if (strncmp(inputString, "BG", 2) == 0) {
-    // Matrix of background settings int, 0-1e4
-    Serial.println("BG:");
+  if (strncmp(inputString, "UM", 2) == 0) {
+    // Uni-modal modulation state
+    Serial.println("UM");
     clearInputString();
-    for (int ii = 0; ii < nLEDs; ii++) {
-      waitForNewString();
-      int level = atoi(inputString);
-      background[ii] = level;
-      Serial.println(level);
-      clearInputString();
-    }
+    modSymmetryFlag = false;
+    Serial.println("unimodal mod");
+    updateBackgroundSettings();
     identifyActiveLEDs();
     setToBackground();
+  }
+  if (strncmp(inputString, "BM", 2) == 0) {
+    // Bi-modal modulation state
+    Serial.println("BM");
+    clearInputString();
+    modSymmetryFlag = true;
+    Serial.println("bimodal mod");
+    updateBackgroundSettings();
+    identifyActiveLEDs();
+    setToBackground();
+  }
+    if (strncmp(inputString, "BD", 2) == 0) {
+    // Blink duration (int msecs)
+    Serial.println("BD:");
+    clearInputString();
+    waitForNewString();
+    blinkDurationMSecs = atoi(inputString);
+    Serial.println(blinkDurationMSecs);
   }
   if (strncmp(inputString, "RM", 2) == 0) {
     // Switch to run mode
@@ -619,7 +640,6 @@ void getRun() {
       Serial.println(".");
       setToOff();
       delay(blinkDurationMSecs);
-      setToBackground();
     }
     if (strncmp(inputString, "FQ", 2) == 0) {
       // Carrier modulation frequency (float Hz)
@@ -689,6 +709,16 @@ void identifyActiveLEDs() {
   }
 }
 
+void updateBackgroundSettings() {
+  for (int ii = 0; ii < nLEDs; ii++) {
+    if (modSymmetryFlag) {
+      background[ii] = round( (settingsHigh[ii]+settingsLow[ii])/2 );
+    } else {
+      background[ii] = settingsLow[ii];
+    }
+  }
+}
+
 void setToBackground() {
   for (int ii = 0; ii < nLEDs; ii++) {
     // Get the setting for this LED
@@ -725,17 +755,25 @@ void updateLED(float fmCyclePhase, float amCyclePhase, int ledIndex) {
   // Adjust the fmCyclePhase for the fmPhaseOffset
   fmCyclePhase = fmCyclePhase + fmPhaseOffset;
   fmCyclePhase = fmCyclePhase - floor(fmCyclePhase);
-  // Get the level for the current fmCyclePhase
-  float floatLevel = returnFrequencyModulation(fmCyclePhase);
-  // Get the background level for this LED
-  float offset = float(background[ledIndex]) / float(settingScale);
-  // Scale according to the fmContrast value
-  floatLevel = fmContrast * (floatLevel - offset) + offset;
   // Adjust the amCyclePhase for the amPhaseOffset
   amCyclePhase = amCyclePhase + amPhaseOffset;
   amCyclePhase = amCyclePhase - floor(amCyclePhase);
+  // Get the level for the current fmCyclePhase (0-1)
+  float floatLevel = returnFrequencyModulation(fmCyclePhase);
+  // If we have a symmetric, bimodal modulation, then we will
+  // work with levels and contrasts centered around 0 [-0.5 0.5]
+  if (modSymmetryFlag) {
+    floatLevel = floatLevel - 0.5;
+  }
+  // Scale according to the fmContrast value
+  floatLevel = fmContrast * floatLevel;
   // Apply any amplitude modulation
-  floatLevel = applyAmplitudeModulation(amCyclePhase, floatLevel, offset);
+  floatLevel = returnAmplitudeModulation(amCyclePhase) * floatLevel;
+  // If we have a symmetric, bimodal modulation, restore to the [0 1]
+  // range
+  if (modSymmetryFlag) {
+    floatLevel = floatLevel + 0.5;
+  }
   // ensure that level is within the 0-1 range
   floatLevel = max(floatLevel, 0);
   floatLevel = min(floatLevel, 1);
@@ -825,7 +863,7 @@ float calFrequencyModulation(float fmCyclePhase) {
   return level;
 }
 
-float applyAmplitudeModulation(float amCyclePhase, float level, float offset) {
+float returnAmplitudeModulation(float amCyclePhase) {
   float modLevel = 1;
   // Linear interpolation between values in the amModTable
   float floatCell = amCyclePhase * (nAmModLevels - 1);
@@ -836,10 +874,7 @@ float applyAmplitudeModulation(float amCyclePhase, float level, float offset) {
     float mantissa = (floatCell)-lowCell;
     modLevel = (float(amModTable[lowCell]) + mantissa * float(amModTable[lowCell + 1] - amModTable[lowCell])) / settingScale;
   }
-  // center the level around the background, apply the modulation, and
-  // re-apply the offset
-  level = (level - offset) * modLevel + offset;
-  return level;
+  return modLevel;
 }
 
 
