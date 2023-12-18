@@ -17,7 +17,7 @@
 //  LED7 --   561          15            470
 //
 // The "settings" vectors specify the highest and lowest intensity levels
-// of each LED between 0 and 1 with 1e-4 precision. Over time, a waveform
+// of each LED between 0 and 1 with 1e-4 precision. A temporal waveform
 // defines a linear transition between the high and the low state,
 // producing (for example) a change in luminance or L–M contrast. Gamma
 // correction is performed on device, and the resulting floating value
@@ -268,6 +268,8 @@ void setup() {
     Wire.begin();
     Wire.setClock(400000);
   }
+  // Calculate the background settings
+  updateBackgroundSettings();
   // Check which LEDs are "active"
   identifyActiveLEDs();
   // Populate the amplitude modulation table
@@ -690,7 +692,7 @@ void updateCompoundRange() {
   float level = 0;
   for (int ii = 0; ii < 1000; ii++) {
     phase = float(ii) / 1000;
-    level = calFrequencyModulation(phase);
+    level = calcFrequencyModulation(phase);
     newRange[0] = min(newRange[0], level);
     newRange[1] = max(newRange[1], level);
   }
@@ -814,7 +816,7 @@ float returnFrequencyModulation(float fmCyclePhase) {
 void updateFmModTable() {
   for (int ii = 0; ii < nFmModLevels; ii++) {
     float fmCyclePhase = float(ii) / (nFmModLevels - 1);
-    float modLevel = calFrequencyModulation(fmCyclePhase);
+    float modLevel = calcFrequencyModulation(fmCyclePhase);
     fmModTable[ii] = round(modLevel * settingScale);
   }
   // Set the interpolateWaveform state
@@ -825,7 +827,7 @@ void updateFmModTable() {
   }
 }
 
-float calFrequencyModulation(float fmCyclePhase) {
+float calcFrequencyModulation(float fmCyclePhase) {
   // Provides a continuous level, between 0-1, for a given waveform
   // at the specified phase position. We default to a half-on level
   // if not otherwise specified
