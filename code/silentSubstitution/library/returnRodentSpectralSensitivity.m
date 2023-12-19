@@ -90,8 +90,26 @@ switch photoreceptorStruct.whichReceptor
         % Fill in the values
         photoreceptors = FillInPhotoreceptors(photoreceptors);
 
+        % Pull out the isomerization expression of sensitivity
+        T_quantalIsomerizations = photoreceptors.quantalFundamentals;
+
+        % Handle a passed extra filter. This may be the transmittance of a
+        % spectacle or contact lens worn by the observer
+        if isfield(photoreceptorStruct,'ef')
+            % Pull the values out of the photoreceptorStruct
+            efS = photoreceptorStruct.ef.S;
+            efTrans = photoreceptorStruct.ef.trans;
+            % Extend the filter if necessary to cover the range of S
+
+            % Fit a spline to the extra filter transmittance spectrum
+            efTransSpline = spline(SToWls(efS),efTrans,SToWls(S));
+            % Apply the filter
+            T_quantalIsomerizations = T_quantalIsomerizations .* efTransSpline';
+        end
+
+
         % Convert to energy fundamentals
-        T_energy = EnergyToQuanta(S,photoreceptors.quantalFundamentals')';
+        T_energy = EnergyToQuanta(S,T_quantalIsomerizations')';
 
         % And normalize the energy fundamentals
         T_energyNormalized = bsxfun(@rdivide,T_energy,max(T_energy, [], 2));

@@ -118,7 +118,7 @@ p.addRequired('whichDirection',@ischar);
 p.addRequired('photoreceptors',@isstruct);
 p.addParameter('cal',@isstruct);
 p.addParameter('primaryHeadRoom',0.00,@isscalar)
-p.addParameter('contrastMatchConstraint',5,@isscalar)
+p.addParameter('contrastMatchConstraint',3,@isscalar)
 p.addParameter('searchBackground',false,@islogical)
 p.addParameter('xyTarget',[],@isnumeric)
 p.addParameter('xyTol',1,@isnumeric)
@@ -140,6 +140,9 @@ xyTolWeight = p.Results.xyTolWeight;
 backgroundPrimary = p.Results.backgroundPrimary;
 verbose = p.Results.verbose;
 
+% The species defined in the photoreceptors
+species = photoreceptors(1).species;
+
 % Pull out some information from the calibration
 S = cal.rawData.S;
 B_primary = cal.processedData.P_device;
@@ -156,7 +159,7 @@ end
 % Create the spectral sensitivities in the photoreceptor structure for our
 % given set of wavelengths (S). Also assemble the T_receptors matrix.
 for ii = 1:length(photoreceptors)
-    switch photoreceptors(ii).species
+    switch species
         case 'human'
             [photoreceptors(ii).T_energyNormalized,...
                 photoreceptors(ii).T_energy,...
@@ -177,7 +180,7 @@ end
 % Get the design parameters from the modulation dictionary. This varies by
 % species. Just use the species of the first photoreceptor, as we require
 % above that all receptors are from the same species.
-switch photoreceptors(1).species
+switch species
     case 'human'
         [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast] = ...
             modDirectionDictionaryHuman(whichDirection,photoreceptors);

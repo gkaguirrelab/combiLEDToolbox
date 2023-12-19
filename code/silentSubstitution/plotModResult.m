@@ -22,7 +22,7 @@ nPrimaries = length(settingsBackground);
 nPhotoClasses = length(photoreceptorClassNames);
 
 % Create a figure with an appropriate title
-figName = sprintf([whichDirection ': contrast = %2.2f'],contrastReceptorsBipolar(whichReceptorsToTarget(1)));
+figName = sprintf([modResult.meta.photoreceptors(1).species ' ' whichDirection ': contrast = %2.2f'],contrastReceptorsBipolar(whichReceptorsToTarget(1)));
 figHandle = figure('Visible',visible,'Name',figName);
 figuresize(900, 400,'pt');
 

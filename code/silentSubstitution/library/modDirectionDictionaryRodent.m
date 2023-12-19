@@ -1,12 +1,5 @@
 function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast] = ...
     modDirectionDictionaryRodent(whichDirection,photoreceptors)
-%
-%
-%
-%
-% matchConstraint                 - Scalar. The difference in contrast on
-%                                   photoreceptors is multiplied by the log
-%                                   of this value
 
 switch whichDirection
     case 'LightFlux'
