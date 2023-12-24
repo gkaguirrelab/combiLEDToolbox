@@ -62,13 +62,23 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %
 % Examples:
 %{
-    % L-M modulation around a half-on background
+    % Foveal L-M modulation around a half-on background
+    cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
+    observerAgeInYears = 53;
+    pupilDiameterMm = 3;
+    photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
+    whichDirection = 'LminusM_foveal';
+    modResult = designModulation(whichDirection,photoreceptors,cal);
+    plotModResult(modResult);
+%}
+%{
+    % Wide-field L-M modulation around a shifted background
     cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
     whichDirection = 'LminusM_wide';
-    modResult = designModulation(whichDirection,photoreceptors,cal);
+    modResult = designModulation(whichDirection,photoreceptors,cal,'searchBackground',true);
     plotModResult(modResult);
 %}
 %{
@@ -82,11 +92,19 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
     plotModResult(modResult);
 %}
 %{
-    % A canine ML+S modulation around the half-on background.
+    % A canine ML minus S modulation around the half-on background.
     cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
     photoreceptors = photoreceptorDictionaryCanine();
     whichDirection = 'MLminusS';
-    modResult = designModulation(whichDirection,photoreceptors,cal);
+    modResult = designModulation(whichDirection,photoreceptors,cal,'contrastMatchConstraint',2);
+    plotModResult(modResult);
+%}
+%{
+    % A canine ML plus S modulation around the half-on background.
+    cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
+    photoreceptors = photoreceptorDictionaryCanine();
+    whichDirection = 'MLplusS';
+    modResult = designModulation(whichDirection,photoreceptors,cal,'contrastMatchConstraint',2.15);
     plotModResult(modResult);
 %}
 %{
@@ -140,9 +158,6 @@ xyTolWeight = p.Results.xyTolWeight;
 backgroundPrimary = p.Results.backgroundPrimary;
 verbose = p.Results.verbose;
 
-% The species defined in the photoreceptors
-species = photoreceptors(1).species;
-
 % Pull out some information from the calibration
 S = cal.rawData.S;
 B_primary = cal.processedData.P_device;
@@ -155,6 +170,9 @@ wavelengthsNm = SToWls(S);
 if length(unique({photoreceptors.species}))~=1
     error('The set of photoreceptors must all be from the same species')
 end
+
+% The species defined in the photoreceptors
+species = photoreceptors(1).species;
 
 % Create the spectral sensitivities in the photoreceptor structure for our
 % given set of wavelengths (S). Also assemble the T_receptors matrix.
@@ -240,10 +258,10 @@ if searchBackground
     % Set up an objective, which is just the negative of the mean contrast
     % on the targeted photoreceptors, accounting for the sign of the
     % desired contrast
-    myObj = @(x) -mean(contrastOnTargeted(contrastReceptorsFunc(modulationPrimaryFunc(x'),x')).*(desiredContrast'));
+    myObj = @(x) -mean(contrastOnTargeted(contrastReceptorsFunc(modulationPrimaryFunc(x'),x')).*sign(desiredContrast'));
     % A non-linear constraint that keeps the background within a certain
     % chromaticity range. If the xyTarget is not specified, then the
-    % xyValue of the half-on background is used.
+    % xyValue of the background is used.
     if isempty(xyTarget)
         xyTarget = chromaValue(B_primary*backgroundPrimary,wavelengthsNm);
     end

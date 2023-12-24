@@ -103,7 +103,7 @@ for ii = 1:length(vub)
     end
 end
 
-% We will start the search from the background
+% We will start the search from the passed background
 x0 = backgroundPrimary;
 
 % fmincon options. Not sure all these settings are necessary
@@ -115,6 +115,7 @@ options = optimset(options,'Diagnostics','off','Display','off',...
 % Turn off a warning that can occur within the optimization function
 warningState = warning;
 warning('off','MATLAB:rankDeficientMatrix');
+warning('off','MATLAB:nearlySingularMatrix');
 
 % Set up the objective
 myObj = @(x) isolateObjective(x,B_primary,backgroundPrimary,ambientSpd,...
@@ -126,8 +127,8 @@ modulationPrimary = fmincon(myObj,x0,[],[],Aeq,beq,vlb,vub,[],options);
 % Restore the warning state
 warning(warningState);
 
-% Extract the output arguments to be passed back.
-% This enforces a sanity check on the primaries.
+% Extract the output arguments to be returned. This enforces a sanity check
+% on the primaries.
 primaryTolerance = 2*vlbTolerance;
 modulationPrimary(modulationPrimary > 1 - primaryHeadRoom & modulationPrimary < 1 - primaryHeadRoom + primaryTolerance) = 1 - primaryHeadRoom ;
 modulationPrimary(modulationPrimary < primaryHeadRoom & modulationPrimary > primaryHeadRoom-primaryTolerance) = primaryHeadRoom;
@@ -135,7 +136,7 @@ if (any(modulationPrimary > 1 - primaryHeadRoom))
     error('Primary greater than 1 minus headroom');
 end
 if (any(modulationPrimary < primaryHeadRoom))
-    error('Primeary less than primary headroom');
+    error('Primary less than primary headroom');
 end
 
 end
@@ -159,7 +160,7 @@ isolateContrasts = T_receptors(whichReceptorsToTarget,:)*modulationSpd ./ (T_rec
 % targeted photoreceptors. Note that we multiple this vector by the desired
 % contrast vector to correct for differences in the sign of the desired
 % contrasts
-fVal = -mean(isolateContrasts.*desiredContrasts');
+fVal = -mean(isolateContrasts.*sign(desiredContrasts'));
 
 % Now calculate how much the set of contrasts differs from one another, and
 % adjust this regularization penalty by the matchConstraint
