@@ -1,7 +1,8 @@
-% SACC_calibrateMonitor
+% calibrateCombiLED
 %
-% Executive script for object-oriented-based monitor calibration.
-
+% Executive script for object-oriented-based monitor calibration. Modified
+% from code developed by npc and npo.
+%
 % History:
 %    03/27/2014  npc   Wrote it.
 %    08/05/2014  npc   Added option to conduct PsychImaging - based calibration
@@ -22,7 +23,7 @@
 function calibrateCombiLED
 
 % Offer a recommendation regarding connecting devices
-fprintf('Connect and start the PR670; do not yet connect the CombiLED.\n')
+fprintf('Connect and start the PR670; do not connect the CombiLED yet.\n')
 fprintf('Press any key when ready.\n\n')
 pause
 
