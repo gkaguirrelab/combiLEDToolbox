@@ -27,7 +27,7 @@ switch whichDirection
         whichReceptorsToTarget = {'canineS','canineML','canineRod'};
         whichReceptorsToSilence = {'canineMel'};
         whichReceptorsToIgnore = {};
-        desiredContrast = [-0.99 1.1 0.02];
+        desiredContrast = [0.99 -1.1 -0.02];
     otherwise
         error('Not a defined modulation')
 end
