@@ -52,6 +52,11 @@ switch whichDirection
         whichReceptorsToSilence = {'L_10deg','M_10deg','S_10deg'};
         whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg','Rod'};
         desiredContrast = 1;
+    case 'SminusMel'
+        whichReceptorsToTarget = {'S_10deg','M_2deg','Mel'};
+        whichReceptorsToSilence = {'L_2deg','L_10deg','M_10deg'};
+        whichReceptorsToIgnore = {'S_2deg','Rod'};
+        desiredContrast = [1,-0.1,-1];
     otherwise
         error('Not a recognized human modulation direction')
 end

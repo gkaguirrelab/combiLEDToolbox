@@ -54,7 +54,7 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %                           y.
 %  'xyTolWeight'          - How the nonlinear chromaticity constraint is
 %                           weighted.
-%  'backgroundPrimary'    - 1xnPrimaries vector. A vector of primary
+%  'backgroundPrimary'    - nPrimaries x 1 vector. A vector of primary
 %                           settings in the range of 0-1 that describe the
 %                           background around which the modulation will be
 %                           set.
