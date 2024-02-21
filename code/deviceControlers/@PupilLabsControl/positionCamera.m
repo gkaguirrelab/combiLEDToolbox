@@ -26,6 +26,7 @@ while stillRecording
     vidCommand = strrep(vidCommand,'trialDurationSecs','0.33');
     vidCommand = strrep(vidCommand,'videoFileOut',tmpVid);
     [~,~] = system(vidCommand);
+    tmpVid = [tmpVid '.mkv'];
 
     % Extact the mid time point of that snippet
     tmpIm = [tempname '.jpg'];

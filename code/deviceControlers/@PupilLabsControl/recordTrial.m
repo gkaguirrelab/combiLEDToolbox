@@ -1,18 +1,18 @@
 function recordTrial(obj)
 
-% Record the start time with msec precision
-obj.trialData(obj.trialIdx).recordCommandStartTime = datetime(now,'ConvertFrom','datenum','Format','dd-MM-yyyy HH:mm:ss.SSS');
+% Record the start time
+obj.trialData(obj.trialIdx).recordCommandStartTime = datetime();
 
 % Define the video recording command
 vidOutFile = fullfile(obj.dataOutDir,sprintf([obj.filePrefix 'trial_%02d'],obj.trialIdx));
 vidCommand = obj.recordCommand;
-vidCommand = strrep(vidCommand,'cameraIdx',num2str(obj.cameraIdx));
+% vidCommand = strrep(vidCommand,'cameraIdx',num2str(obj.cameraIdx));
 vidCommand = strrep(vidCommand,'trialDurationSecs',num2str(obj.trialDurationSecs));
 vidCommand = strrep(vidCommand,'videoFileOut',vidOutFile);
 
 % Determine if we are recording in the background
 if obj.backgroundRecording
-    vidCommand = [vidCommand ' &'];
+    vidCommand = strcat(vidCommand," &");
 end
 
 % Alert the user
