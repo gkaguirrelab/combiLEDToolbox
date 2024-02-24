@@ -9,7 +9,7 @@ switch whichDirection
         desiredContrast = [1 -1];
     case 'LminusM_wide'
         % Attempt to achieve equivalent differential contrast on the L and
-        % M cones in the center and the periphery. Need to alos try and
+        % M cones in the center and the periphery. Need to also try and
         % equate the differential contrast on the penumbral variants of
         % these, otherwise we get Purkinje tree entopic effects in the
         % rapid flicker. After some fussing around, setting the desired
@@ -52,11 +52,17 @@ switch whichDirection
         whichReceptorsToSilence = {'L_10deg','M_10deg','S_10deg'};
         whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg','Rod'};
         desiredContrast = 1;
+    case 'SnoMel'
+        % Wide-field S modulation while silencing Mel
+        whichReceptorsToTarget = {'S_2deg','S_10deg'};
+        whichReceptorsToSilence = {'L_2deg','M_2deg','L_10deg','M_10deg','Mel'};
+        whichReceptorsToIgnore = {'Rod','L_penum10','M_penum10'};
+        desiredContrast = [1 1];
     case 'SminusMel'
-        whichReceptorsToTarget = {'S_10deg','M_2deg','Mel'};
-        whichReceptorsToSilence = {'L_2deg','L_10deg','M_10deg'};
+        whichReceptorsToTarget = {'S_10deg','Mel'};
+        whichReceptorsToSilence = {'L_2deg','M_2deg','L_10deg','M_10deg'};
         whichReceptorsToIgnore = {'S_2deg','Rod'};
-        desiredContrast = [1,-0.1,-1];
+        desiredContrast = [1,-1];
     otherwise
         error('Not a recognized human modulation direction')
 end

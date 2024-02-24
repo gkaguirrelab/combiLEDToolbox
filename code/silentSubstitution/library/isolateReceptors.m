@@ -1,6 +1,7 @@
 function modulationPrimary = isolateReceptors(...
     whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,...
-    T_receptors,B_primary,ambientSpd,backgroundPrimary,primaryHeadRoom,matchConstraint)
+    T_receptors,B_primary,ambientSpd,backgroundPrimary,primaryHeadRoom,...
+    matchConstraint,primariesToMaximize)
 % Non-linear search to identify a modulation that isolates photoreceptors
 %
 % Syntax:
@@ -54,6 +55,9 @@ function modulationPrimary = isolateReceptors(...
 %                           photoreceptors. Differences in contrast are
 %                           multiplied by the log of this value and added
 %                           to the optimization fVal.
+%  primariesToMaximize    - Vector. Identifies the indicies of the
+%                           primaries that we wish to have a large
+%                           modulation in the solution.
 %
 % Outputs:
 %   none
@@ -119,10 +123,20 @@ warning('off','MATLAB:nearlySingularMatrix');
 
 % Set up the objective
 myObj = @(x) isolateObjective(x,B_primary,backgroundPrimary,ambientSpd,...
-    T_receptors,whichReceptorsToTarget,desiredContrast,matchConstraint);
+    T_receptors,whichReceptorsToTarget,desiredContrast,matchConstraint,...
+    primariesToMaximize);
+
+% We could use a non linear constraint to force the contrast output to
+% match the sign of the desired contrast, but this seems to mess up the
+% search. Not used currently
+%{
+mynonlcon = @(x) matchSignConstraint(x,B_primary,backgroundPrimary,...
+    ambientSpd,T_receptors,whichReceptorsToTarget,desiredContrast);
+%}
+mynonlcon = [];
 
 % Perform the search
-modulationPrimary = fmincon(myObj,x0,[],[],Aeq,beq,vlb,vub,[],options);
+modulationPrimary = fmincon(myObj,x0,[],[],Aeq,beq,vlb,vub,mynonlcon,options);
 
 % Restore the warning state
 warning(warningState);
@@ -147,7 +161,7 @@ end
 % Maximize the mean contrast on the targeted receptors, while imposing a
 % regularization that reflects the deviation of contrasts from the desired
 % contrasts.
-function [fVal,isolateContrasts] = isolateObjective(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToTarget,desiredContrasts,matchConstraint)
+function [fVal,isolateContrasts] = isolateObjective(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToTarget,desiredContrast,matchConstraint,primariesToMaximize)
 
 % Compute background including ambient
 backgroundSpd = B_primary*backgroundPrimary + ambientSpd;
@@ -160,15 +174,37 @@ isolateContrasts = T_receptors(whichReceptorsToTarget,:)*modulationSpd ./ (T_rec
 % targeted photoreceptors. Note that we multiple this vector by the desired
 % contrast vector to correct for differences in the sign of the desired
 % contrasts
-fVal = -mean(isolateContrasts.*sign(desiredContrasts'));
+fVal = -mean(isolateContrasts.*sign(desiredContrast'));
 
 % Now calculate how much the set of contrasts differs from one another, and
 % adjust this regularization penalty by the matchConstraint
-beta = isolateContrasts\desiredContrasts';
+beta = isolateContrasts\desiredContrast';
 if ~isinf(beta)
     scaledContrasts = beta*isolateContrasts;
-    fVal = fVal + (10^matchConstraint)*sum((scaledContrasts-desiredContrasts').^4);
+    fVal = fVal + (10^matchConstraint)*sum((scaledContrasts-desiredContrast').^4);
+end
+
+% If we have defined primariesToMaximize, then we add a penalty if the
+% modulation of the primaries is not unity
+if ~isempty(primariesToMaximize)
+    maxModulatePenalty = sum(1 - abs(x(primariesToMaximize)));
+    fVal = fVal + maxModulatePenalty;
 end
 
 end
 
+
+function [c, ceq] = matchSignConstraint(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToTarget,desiredContrast)
+
+c = [];
+
+% Compute background including ambient
+backgroundSpd = B_primary*backgroundPrimary + ambientSpd;
+
+% Compute contrasts for receptors we want to isolate
+modulationSpd = B_primary*(x-backgroundPrimary);
+isolateContrasts = T_receptors(whichReceptorsToTarget,:)*modulationSpd ./ (T_receptors(whichReceptorsToTarget,:)*backgroundSpd);
+
+ceq = sum(sign(isolateContrasts)~=sign(desiredContrast'));
+
+end

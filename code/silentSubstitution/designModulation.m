@@ -82,13 +82,14 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
     plotModResult(modResult);
 %}
 %{
-    % Shifted background human melanopsin modulation
+    % Shifted background human melanopsin modulation that maximizes the 
+    % modulation of primaries that are close to 481 nm.
     cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
     whichDirection = 'Mel';
-    modResult = designModulation(whichDirection,photoreceptors,cal,'searchBackground',true);
+    modResult = designModulation(whichDirection,photoreceptors,cal,'searchBackground',true,'primariesToMaximize',[3,4]);
     plotModResult(modResult);
 %}
 %{
@@ -119,7 +120,8 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
     plotModResult(modResult);
 %}
 %{
-    % modulations for a theoretically perfect device
+    % Using a theoretically perfect device, determine the maximum
+    % contrast we could obtain on melanopsin while silencing the rods
     cal = loadCal('perfectDevice.mat');
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
@@ -142,6 +144,7 @@ p.addParameter('xyTarget',[],@isnumeric)
 p.addParameter('xyTol',1,@isnumeric)
 p.addParameter('xyTolMetric',-Inf,@isnumeric)
 p.addParameter('xyTolWeight',1e3,@isnumeric)
+p.addParameter('primariesToMaximize',[],@isnumeric)
 p.addParameter('backgroundPrimary',[],@isnumeric)
 p.addParameter('verbose',false,@islogical)
 p.parse(whichDirection,photoreceptors,varargin{:});
@@ -155,6 +158,7 @@ xyTarget = p.Results.xyTarget;
 xyTol = p.Results.xyTol;
 xyTolMetric = p.Results.xyTolMetric;
 xyTolWeight = p.Results.xyTolWeight;
+primariesToMaximize = p.Results.primariesToMaximize;
 backgroundPrimary = p.Results.backgroundPrimary;
 verbose = p.Results.verbose;
 
@@ -213,7 +217,8 @@ end
 % Define the isolation operation as a function of the background.
 modulationPrimaryFunc = @(backgroundPrimary) isolateReceptors(...
     whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,...
-    T_receptors,B_primary,ambientSpd,backgroundPrimary,primaryHeadRoom,contrastMatchConstraint);
+    T_receptors,B_primary,ambientSpd,backgroundPrimary,primaryHeadRoom,...
+    contrastMatchConstraint,primariesToMaximize);
 
 % Define a function that returns the contrast on all photoreceptors
 contrastReceptorsFunc = @(modulationPrimary,backgroundPrimary) ...
@@ -228,6 +233,11 @@ lb = zeros(1,nPrimaries)+primaryHeadRoom;
 plb = zeros(1,nPrimaries)+primaryHeadRoom;
 pub = ones(1,nPrimaries)-primaryHeadRoom;
 ub = ones(1,nPrimaries)-primaryHeadRoom;
+
+% If there are primariesToMaximize, we want to lock their background values
+% at the half-on value
+lb(primariesToMaximize) = 0.5; plb(primariesToMaximize) = 0.5; 
+ub(primariesToMaximize) = 0.5; pub(primariesToMaximize) = 0.5; 
 
 % Set BADS verbosity
 if p.Results.verbose
@@ -265,7 +275,7 @@ if searchBackground
     if isempty(xyTarget)
         xyTarget = chromaValue(B_primary*backgroundPrimary,wavelengthsNm);
     end
-    myNonlcon = @(x) nonlcon(x',B_primary,wavelengthsNm,xyTarget,xyTol,xyTolMetric,xyTolWeight);
+    myNonlcon = @(x) xy_nonlcon(x',B_primary,wavelengthsNm,xyTarget,xyTol,xyTolMetric,xyTolWeight);
     % If xyTol is zero, we will use the nonlinear constraint as a shrinkage
     % penalty instead of as a constraint.
     if xyTol == 0
@@ -329,7 +339,7 @@ end
 
 %% LOCAL FUNCTIONS
 
-function c = nonlcon(x,B_primary,wavelengthsNm,xyTarget,xyTol,xyTolMetric,xyTolWeight)
+function c = xy_nonlcon(x,B_primary,wavelengthsNm,xyTarget,xyTol,xyTolMetric,xyTolWeight)
 
 % Get the chroma values for the x spd
 xyVal = chromaValue(B_primary*x,wavelengthsNm);

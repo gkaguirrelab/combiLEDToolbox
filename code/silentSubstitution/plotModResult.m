@@ -53,7 +53,7 @@ ylabel('Power');
 
 % Primaries
 subplot(2,4,3)
-c = 0:nPrimaries-1;
+c = 1:nPrimaries;
 hold on
 plot(c,settingsHigh,'*k');
 plot(c,settingsLow,'*r');
@@ -64,7 +64,8 @@ if isfield(modResult.meta,'primaryLabels')
     a = gca;
     a.XTickLabel = modResult.meta.primaryLabels;
 end
-ylim([0 1]);
+ylim([-0.1 1.1]);
+xlim([0.5 nPrimaries+0.5])
 xlabel('Primary');
 ylabel('Setting');
 axis square
