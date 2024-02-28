@@ -1,1 +1,1 @@
-Shadowed so I can silence some fprintfs
+Shadowed the LabJack object so I can silence some fprintfs therein

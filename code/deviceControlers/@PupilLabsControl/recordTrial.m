@@ -4,11 +4,10 @@ function recordTrial(obj)
 obj.trialData(obj.trialIdx).recordCommandStartTime = datetime();
 
 % Define the video recording command
-vidOutFile = fullfile(obj.dataOutDir,sprintf([obj.filePrefix 'trial_%02d'],obj.trialIdx));
+vidOutFile = fullfile(obj.dataOutDir,sprintf([obj.filePrefix 'trial_%02d.mov'],obj.trialIdx));
 vidCommand = obj.recordCommand;
-% vidCommand = strrep(vidCommand,'cameraIdx',num2str(obj.cameraIdx));
 vidCommand = strrep(vidCommand,'trialDurationSecs',num2str(obj.trialDurationSecs));
-vidCommand = strrep(vidCommand,'videoFileOut',vidOutFile);
+vidCommand = strrep(vidCommand,'videoFileOut',escapeFileCharacters(vidOutFile));
 
 % Determine if we are recording in the background
 if obj.backgroundRecording

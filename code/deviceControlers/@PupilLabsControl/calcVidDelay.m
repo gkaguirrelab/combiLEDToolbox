@@ -1,9 +1,10 @@
 function vidDelaySecs = calcVidDelay(obj,trialIdx)
 
 % Path to the video file
-vidOutFile = fullfile(obj.dataOutDir,sprintf([obj.filePrefix 'trial_%02d.mkv'],trialIdx));
+vidOutFile = fullfile(obj.dataOutDir,sprintf([obj.filePrefix 'trial_%02d.mov'],trialIdx));
 
-% Check that the file exists
+% Check that the file exists. Note that we cannot escape the bad file
+% characters, as this will cause the subsequent operations to fail.
 if ~isfile(vidOutFile)
     vidDelaySecs = nan;
 else
@@ -14,7 +15,7 @@ else
     d1 = d1+dt;
     % Store the difference in time between trial onset and file recording
     % onset
-    vidDelaySecs = milliseconds(d1 - obj.trialData(trialIdx).recordCommandStartTime)/1000;
+    vidDelaySecs = seconds(d1 - obj.trialData(trialIdx).recordCommandStartTime);
 end
 
 obj.trialData(trialIdx).vidDelaySecs = vidDelaySecs;

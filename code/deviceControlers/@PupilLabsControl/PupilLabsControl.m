@@ -8,13 +8,15 @@ classdef PupilLabsControl < handle
     % Private properties
     properties (GetAccess=private)
 
-        % A record command suitable for the pupilLabs camera
-        recordCommand = 'ffmpeg -y -f avfoundation -s 800x600 -framerate 20 -pix_fmt uyvy422 -t trialDurationSecs -i "Pupil" "videoFileOut.mkv"';
-
-        % A record command for the FaceTime camera
+        % A record command suitable for the pupilLabs camera using ffmpeg
         %{
-        recordCommand = 'ffmpeg -hide_banner -video_size 640x480 -framerate 30.0 -f avfoundation -i "cameraIdx" -t trialDurationSecs "videoFileOut.mp4"';
+        recordCommand = 'ffmpeg -y -f avfoundation -s 800x600 -framerate 20 -pix_fmt uyvy422 -t trialDurationSecs -i "Pupil" "videoFileOut.mkv"';
         %}
+
+        % Record command using osascript control of the quicktime player
+        recordCommand = ['osascript ' ...
+            escapeFileCharacters(fullfile(tbLocateToolbox('combiLEDToolbox'),'code','deviceControlers','library','quickTimeRecord.scpt')) ...
+            ' videoFileOut trialDurationSecs'];
     end
 
     % Calling function can see, but not modify
