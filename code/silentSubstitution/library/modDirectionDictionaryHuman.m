@@ -58,6 +58,11 @@ switch whichDirection
         whichReceptorsToSilence = {'L_2deg','M_2deg','L_10deg','M_10deg','Mel'};
         whichReceptorsToIgnore = {'Rod','L_penum10','M_penum10'};
         desiredContrast = [1 1];
+    case 'LplusMnoMel'
+        whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg'};
+        whichReceptorsToSilence = {'S_2deg','S_10deg','Mel',};
+        whichReceptorsToIgnore = {'Rod'};
+        desiredContrast = [1 1 1 1];        
     case 'SminusMel'
         whichReceptorsToTarget = {'S_10deg','Mel'};
         whichReceptorsToSilence = {'L_2deg','M_2deg','L_10deg','M_10deg'};
