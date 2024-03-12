@@ -77,6 +77,6 @@ classdef PupilLabsControl < handle
         % Required methds
         positionCamera(obj)
         recordTrial(obj)
-        vidDelaySecs = calcVidDelay(obj,trialIdx)
+        [vidDelaySecs, recordStartTime] = calcVidDelay(obj,trialIdx)
     end
 end
