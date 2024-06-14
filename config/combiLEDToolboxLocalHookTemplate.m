@@ -40,4 +40,33 @@ end
 % Set preferences for project output
 setpref(projectName,'dropboxBaseDir',dropboxBaseDir); % main directory path 
 
+
+%% Check for required Matlab toolboxes
+% The set of Matlab add-on toolboxes being used can be determined by
+% running the ExampleTest code, followed by the license function.
+%{
+    RunExamples(fullfile(userpath(),'toolboxes','gkaModelEye'));
+    license('inuse')
+%}
+% This provides a list of toolbox license names. In the following
+% assignment, the license name is given in the comment string after the
+% matching version name for each toolbox.
+requiredAddOns = {...
+    'Optimization Toolbox',...                  % optimization_toolbox
+    'Image Processing Toolbox',...               % image_toolbox
+    };
+% Given this hard-coded list of add-on toolboxes, we then check for the
+% presence of each and issue a warning if absent.
+V = ver;
+VName = {V.Name};
+warnState = warning();
+warning off backtrace
+for ii=1:length(requiredAddOns)
+    if ~any(strcmp(VName, requiredAddOns{ii}))
+        warnString = ['The Matlab ' requiredAddOns{ii} ' is missing. ' toolboxName ' may not function properly.'];
+        warning('localHook:requiredMatlabToolboxCheck',warnString);
+    end
+end
+warning(warnState);
+
 end
