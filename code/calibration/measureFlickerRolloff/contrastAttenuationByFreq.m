@@ -1,4 +1,4 @@
-function contrastScale = contrastAttentionByFreq(frequencies)
+function contrastScale = contrastAttenuationByFreq(frequencies)
 
 % Make these persistent so we don't need to keep re-loading the file
 persistent contrastRollOff frequencySupport
