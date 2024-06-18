@@ -34,20 +34,24 @@ setpref('BrainardLabToolbox','CalDataFolder',calLocalData);
 % Ask the user about the measurement conditions
 fprintf('Information regarding the device configuration:\n')
 cableType = GetWithDefault('Fiber optic cable type','shortLLG');
-eyePieceType = GetWithDefault('Eye piece type','classic');
+eyePieceType = GetWithDefault('Display type','classicEyePiece');
 ndfValue = GetWithDefault('NDF','0');
 
 % Replace any decimal points in the ndfValue with "x"
 ndfValue = strrep(ndfValue,'.','x');
 
 % Create a default calibration file name
-defaultName = ['CombiLED_' cableType '_' eyePieceType 'EyePiece_ND' ndfValue ];
+defaultName = ['CombiLED_' cableType '_' eyePieceType '_ND' ndfValue ];
 
 % Ask the user to provide a name for the calibration file
 calFileName = GetWithDefault('Name for the cal file',defaultName);
 
 % Generate calibration options and settings
 [displaySettings, calibratorOptions] = generateConfigurationForCombiLED(calFileName);
+
+% Get the email address to report the results
+emailAddress = GetWithDefault('Email address for notification','myname@upenn.edu');
+calibratorOptions.emailAddressForDoneNotification = emailAddress;
 
 % Open the spectroradiometer
 OpenSpectroradiometer('measurementOption',false);
@@ -109,7 +113,7 @@ calibratorOptions = CalibratorOptions( ...
     'bgColor',                          zeros(1,displayPrimariesNum), ...                 % color of the background
     'fgColor',                          zeros(1,displayPrimariesNum), ...                 % color of the foreground
     'meterDistance',                    0.1, ...                        % distance between radiometer and screen in meters
-    'leaveRoomTime',                    1, ...                          % seconds allowed to leave room
+    'leaveRoomTime',                    30, ...                          % seconds allowed to leave room
     'nAverage',                         3, ...                          % number of repeated measurements for averaging
     'nMeas',                            15, ...                         % samples along gamma curve
     'nDevices',                         displayPrimariesNum, ...        % number of primaries
