@@ -40,6 +40,9 @@ end
 % Set preferences for project output
 setpref(projectName,'dropboxBaseDir',dropboxBaseDir); % main directory path 
 
+% Set up a default directory for the saving cal files
+calLocalData = fullfile(tbLocateToolbox('combiLEDToolbox'),'cal');
+setpref('combiLEDToolbox','CalDataFolder',calLocalData);
 
 %% Check for required Matlab toolboxes
 % The set of Matlab add-on toolboxes being used can be determined by

@@ -1,7 +1,7 @@
 function [cal, calFileName, calDir] = selectCal()
 
 % Figure out where the cal files are located
-calDir = fullfile(tbLocateToolbox('combiLEDToolbox'),'cal');
+calDir = getpref('combiLEDToolbox','CalDataFolder');
 calsList = dir(fullfile(calDir,'*mat'));
 
 % Extract the cal names
