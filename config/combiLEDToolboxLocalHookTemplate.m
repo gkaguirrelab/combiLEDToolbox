@@ -18,9 +18,20 @@ function combiLEDToolboxLocalHook
 % Say hello.
 projectName = 'combiLEDToolbox';
 
+% Save the setting for the cal directory
+priorCalDirFlag = false;
+if ispref(projectName,'CalDataFolder')
+    calLocalData = getpref(projectName,'CalDataFolder');
+    priorCalDirFlag = true;
+end
+
 % Delete any old prefs
 if (ispref(projectName))
     rmpref(projectName);
+end
+
+if priorCalDirFlag
+    setpref(projectName,'CalDataFolder',calLocalData);
 end
 
 % Handle hosts with custom dropbox locations
@@ -40,9 +51,19 @@ end
 % Set preferences for project output
 setpref(projectName,'dropboxBaseDir',dropboxBaseDir); % main directory path 
 
-% Set up a default directory for the saving cal files
-calLocalData = fullfile(tbLocateToolbox('combiLEDToolbox'),'cal');
-setpref('combiLEDToolbox','CalDataFolder',calLocalData);
+% Set up a default directory for the saving cal files. Only set the pref if
+% it is not yet defined, or is defined but is empty, or is defined, is not
+% empty, but is not a valid dir
+if ~ispref('combiLEDToolbox','CalDataFolder')
+    calLocalData = fullfile(tbLocateToolbox('combiLEDToolbox'),'cal');
+    setpref('combiLEDToolbox','CalDataFolder',calLocalData);
+else
+    if isempty(getpref('combiLEDToolbox','CalDataFolder')) || ~isfolder(getpref('combiLEDToolbox','CalDataFolder'))
+        calLocalData = fullfile(tbLocateToolbox('combiLEDToolbox'),'cal');
+        setpref('combiLEDToolbox','CalDataFolder',calLocalData);
+    end
+end
+
 
 %% Check for required Matlab toolboxes
 % The set of Matlab add-on toolboxes being used can be determined by
