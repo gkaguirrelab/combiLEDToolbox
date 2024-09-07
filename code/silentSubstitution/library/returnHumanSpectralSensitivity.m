@@ -101,8 +101,11 @@ switch photoreceptorStruct.whichReceptor
         idx = 1;
         indDiffParams.dphotopigment = photoreceptorStruct.dphotopigment;
         indDiffParams.lambdaMaxShift = photoreceptorStruct.lambdaMaxShiftNm;
+        lambdaMax = photoreceptorStruct.lambdaMax;
+        DORODS = true;
         % Call out to ComputeCIEConeFundamentals
-        [~,~,T_quantalIsomerizations,adjIndDiffParams] = ComputeCIERodFundamental(S,fieldSizeDegrees,observerAgeInYears,pupilDiameterMm,indDiffParams);
+        [~,~,T_quantalIsomerizations,adjIndDiffParams] = ...
+            ComputeCIEConeFundamentals(S,fieldSizeDegrees,observerAgeInYears,pupilDiameterMm,lambdaMax,[],[],DORODS,[],[],indDiffParams);
 end
 
 % Retain just the requested photoreceptor (the cone routine returns all 3)
