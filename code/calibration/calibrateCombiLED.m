@@ -51,12 +51,18 @@ defaultName = ['CombiLED_' cableType '_' eyePieceType '_ND' ndfValue ];
 % Ask the user to provide a name for the calibration file
 calFileName = GetWithDefault('Name for the cal file',defaultName);
 
+% Ask how many averages are to obtained
+nAverage = GetWithDefault('How many averages to obtain',3);
+
 % Generate calibration options and settings
 [displaySettings, calibratorOptions] = generateConfigurationForCombiLED(calFileName);
 
 % Get the email address to report the results
 emailAddress = GetWithDefault('Email address for notification','myname@upenn.edu');
 calibratorOptions.emailAddressForDoneNotification = emailAddress;
+
+% Update the number of averages
+calibratorOptions.nAverage = nAverage;
 
 % Open the spectroradiometer
 OpenSpectroradiometer('measurementOption',false);
