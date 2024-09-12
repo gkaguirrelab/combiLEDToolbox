@@ -22,6 +22,8 @@ pause
 
 % Ask the user about the measurement conditions
 fprintf('Information regarding the device configuration:\n')
+cableType = GetWithDefault('Fiber optic cable type','shortLLG');
+eyePieceType = GetWithDefault('Display type','classicEyePiece');
 ndfValue = GetWithDefault('NDF','0');
 
 % Replace any decimal points in the ndfValue with "x"
