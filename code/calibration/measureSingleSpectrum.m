@@ -113,7 +113,7 @@ calibratorOptions = CalibratorOptions( ...
     'meterDistance',                    0.1, ...                        % distance between radiometer and screen in meters
     'leaveRoomTime',                    30, ...                         % seconds allowed to leave room
     'nAverage',                         25, ...                         % number of repeated measurements for averaging
-    'nMeas',                            2, ...                          % samples along gamma curve
+    'nMeas',                            1, ...                          % samples along gamma curve
     'nDevices',                         displayPrimariesNum, ...        % number of primaries
     'boxSize',                          1, ...                          % size of calibration stimulus in pixels
     'boxOffsetX',                       0, ...                          % x-offset from center of screen (neg: leftwards, pos:rightwards)
