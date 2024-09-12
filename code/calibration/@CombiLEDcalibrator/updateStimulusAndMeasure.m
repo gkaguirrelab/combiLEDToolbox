@@ -10,7 +10,11 @@ end
 displayObj = obj.displayObj;
 
 % Update the primaries
-displayObj.setPrimaries(targetSettings);
+if isscalar(targetSettings)   
+    displayObj.setPrimaries(repmat(targetSettings,1,8));
+else
+    displayObj.setPrimaries(targetSettings);
+end
 
 % Measure
 obj.radiometerObj.measure();
