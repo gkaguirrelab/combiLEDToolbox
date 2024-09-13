@@ -9,8 +9,8 @@ function measureSingleSpectrum
 % Set the save location for cal files. To do so, we need to make sure that
 % the BrainardLabToolbox preference 'CalDataFolder' is empty, so that the
 % OOC calibrator code uses the path that we provide instead
-setpref('BrainardLabToolbox','CalDataFolder','');
 calLocalData = getpref('combiLEDToolbox','CalDataFolder');
+setpref('BrainardLabToolbox','CalDataFolder',calLocalData);
 fprintf('\n****************\nCal files will be saved in:\n')
 fprintf(['\t' calLocalData '\n']);
 fprintf('If a different location is desired, quit this routine and set the CalDataFolder preference for combiLEDToolbox.\n****************\n\n')
