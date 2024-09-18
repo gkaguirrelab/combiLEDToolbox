@@ -527,6 +527,20 @@ void getConfig() {
     updateGammaTable();
     setToBackground();
   }
+  if (strncmp(inputString, "GT", 2) == 0) {
+    Serial.println("GT:");
+    clearInputString();
+    gammaCorrectInDirectMode = true;
+    Serial.println("Gamma correct in direct mode = TRUE");
+    setToBackground();
+  }
+  if (strncmp(inputString, "GF", 2) == 0) {
+    Serial.println("GF:");
+    clearInputString();
+    gammaCorrectInDirectMode = false;
+    Serial.println("Gamma correct in direct mode = FALSE");
+    setToBackground();
+  }
   if (strncmp(inputString, "UM", 2) == 0) {
     // Uni-modal modulation state
     Serial.println("UM");
@@ -547,7 +561,7 @@ void getConfig() {
     identifyActiveLEDs();
     setToBackground();
   }
-    if (strncmp(inputString, "BD", 2) == 0) {
+  if (strncmp(inputString, "BD", 2) == 0) {
     // Blink duration (int msecs)
     Serial.println("BD:");
     clearInputString();
@@ -714,7 +728,7 @@ void identifyActiveLEDs() {
 void updateBackgroundSettings() {
   for (int ii = 0; ii < nLEDs; ii++) {
     if (modSymmetryFlag) {
-      background[ii] = round( (settingsHigh[ii]+settingsLow[ii])/2 );
+      background[ii] = round((settingsHigh[ii] + settingsLow[ii]) / 2);
     } else {
       background[ii] = settingsLow[ii];
     }

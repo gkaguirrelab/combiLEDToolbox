@@ -82,6 +82,7 @@ classdef CombiLEDcontrol < handle
         setWaveformIndex(obj,waveformIndex)
         setBlinkDuration(obj,blinkDurSecs)
         setGamma(obj,gammaTable)
+        setDirectModeGamma(obj,boolGammaCorrect)
         setLEDUpdateOrder(obj,ledUpdateOrder)
 
     end
