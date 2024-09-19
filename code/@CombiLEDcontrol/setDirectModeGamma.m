@@ -12,11 +12,11 @@ end
 
 % Place the CombiLED in Config Mode
 switch obj.deviceState
-    case 'CONFIG'
-    case {'RUN','DIRECT'}
-        writeline(obj.serialObj,'CM');
+    case 'DIRECT'
+    case {'RUN','CONFIG'}
+        writeline(obj.serialObj,'DM');
         readline(obj.serialObj);
-        obj.deviceState = 'CONFIG';
+        obj.deviceState = 'DIRECT';
 end
 
 % Send state
@@ -24,13 +24,13 @@ if boolGammaCorrect
     writeline(obj.serialObj,'GT');
     readline(obj.serialObj);
     if obj.verbose
-        fprintf('Gamma correct in direct mode = TRUE');
+        fprintf('Gamma correct in direct mode = TRUE\n');
     end
 else
     writeline(obj.serialObj,'GF');
     readline(obj.serialObj);
     if obj.verbose
-        fprintf('Gamma correct in direct mode = TRUE');
+        fprintf('Gamma correct in direct mode = FALSE\n');
     end
 end
 

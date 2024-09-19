@@ -73,6 +73,8 @@
 //                      The specified value is divided by 1e4 to yield a floaat
 //                      between 0 and 1. This value is subject to gamma correction
 //                      prior to being passed to the LED.
+//  settingsDirect      8x1 int matrix, all between 0 and 1e4. This stores the
+//                      settings values when in direct mode.
 //  background          8x1 int array of value 0-1e4. Specifies the
 //                      background level for each LED.
 //  modSymmetryFlag     Boolean. If set to true, the modulation is bimodal around
@@ -178,6 +180,9 @@ int settingsLow[nLEDs] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 int settingsHigh[nLEDs] = { 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000 };
 int background[nLEDs] = { 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000 };
 bool modSymmetryFlag = true;
+
+// The vector of settings used in direct mode
+int settingsDirect[nLEDs] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 // A frequency modulation look-up table. 0-1e4 precision
 int fmModTable[nFmModLevels];
@@ -527,20 +532,6 @@ void getConfig() {
     updateGammaTable();
     setToBackground();
   }
-  if (strncmp(inputString, "GT", 2) == 0) {
-    Serial.println("GT:");
-    clearInputString();
-    gammaCorrectInDirectMode = true;
-    Serial.println("Gamma correct in direct mode = TRUE");
-    setToBackground();
-  }
-  if (strncmp(inputString, "GF", 2) == 0) {
-    Serial.println("GF:");
-    clearInputString();
-    gammaCorrectInDirectMode = false;
-    Serial.println("Gamma correct in direct mode = FALSE");
-    setToBackground();
-  }
   if (strncmp(inputString, "UM", 2) == 0) {
     // Uni-modal modulation state
     Serial.println("UM");
@@ -599,18 +590,23 @@ void getDirect() {
       int level = atoi(inputString);
       Serial.println(level);
       clearInputString();
-      // Convert 1e4 level to a 0-1 float level
-      float floatSettingLED = float(level) / float(settingScale);
-      // gamma correct floatSettingLED
-      if (gammaCorrectInDirectMode) floatSettingLED = applyGammaCorrect(floatSettingLED, ii);
-      // Convert the floatSettingLED to a 12 bit integer
-      int settingLED = round(floatSettingLED * maxLevelVal);
-      if (simulatePrizmatix) {
-        pulseWidthModulate(settingLED);
-      } else {
-        writeToOneCombiLED(settingLED, ii);
-      }
+      settingsDirect[ii] = level;
     }
+    setToDirectSettings();
+  }
+  if (strncmp(inputString, "GT", 2) == 0) {
+    Serial.println("GT:");
+    clearInputString();
+    gammaCorrectInDirectMode = true;
+    Serial.println("Gamma correct in direct mode = TRUE");
+    setToDirectSettings();
+  }
+  if (strncmp(inputString, "GF", 2) == 0) {
+    Serial.println("GF:");
+    clearInputString();
+    gammaCorrectInDirectMode = false;
+    Serial.println("Gamma correct in direct mode = FALSE");
+    setToDirectSettings();
   }
   if (strncmp(inputString, "DK", 2) == 0) {
     setToOff();
@@ -731,6 +727,28 @@ void updateBackgroundSettings() {
       background[ii] = round((settingsHigh[ii] + settingsLow[ii]) / 2);
     } else {
       background[ii] = settingsLow[ii];
+    }
+  }
+}
+
+void setToDirectSettings() {
+  for (int ii = 0; ii < nLEDs; ii++) {
+    // Get the setting for this LED
+    float floatSettingLED = float(settingsDirect[ii]) / float(settingScale);
+    // gamma correct floatSettingLED if requested
+    if (gammaCorrectInDirectMode) {
+      floatSettingLED = applyGammaCorrect(floatSettingLED, ii);
+    }
+    // Convert the floatSettingLED to a 12 bit integer
+    int settingLED = round(floatSettingLED * maxLevelVal);
+    if (simulatePrizmatix) {
+      if (settingLED > (maxLevelVal / 2)) {
+        digitalWrite(LED_BUILTIN, HIGH);
+      } else {
+        digitalWrite(LED_BUILTIN, LOW);
+      }
+    } else {
+      writeToOneCombiLED(settingLED, ii);
     }
   }
 }
@@ -955,7 +973,7 @@ void updateGammaTable() {
       for (int kk = 0; kk < nGammaParams; kk++) {
         corrected = corrected + gammaParams[kk] * pow(input, (nGammaParams - 1) - kk);
       }
-      gammaTable[ii][jj] = min(round(corrected * settingScale),settingScale);
+      gammaTable[ii][jj] = min(round(corrected * settingScale), settingScale);
     }
     gammaTable[ii][nGammaLevels-1] = settingScale;
   }
