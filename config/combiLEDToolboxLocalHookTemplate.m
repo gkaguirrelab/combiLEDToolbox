@@ -67,9 +67,8 @@ end
 
 %% Check for required Matlab toolboxes
 % The set of Matlab add-on toolboxes being used can be determined by
-% running the ExampleTest code, followed by the license function.
+% running various functions, followed by the license function.
 %{
-    RunExamples(fullfile(userpath(),'toolboxes','gkaModelEye'));
     license('inuse')
 %}
 % This provides a list of toolbox license names. In the following
