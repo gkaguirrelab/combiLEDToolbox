@@ -41,7 +41,7 @@ switch whichDirection
         whichReceptorsToTarget = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel','Rod_2deg','Rod_10deg'};
         whichReceptorsToSilence = {};
         whichReceptorsToIgnore = {};
-        desiredContrast = ones(1,8);
+        desiredContrast = ones(1,length(whichReceptorsToTarget));
     case 'LMS'
         whichReceptorsToTarget = {'L_10deg','M_10deg','S_10deg'};
         whichReceptorsToSilence = {'Mel'};
