@@ -898,7 +898,7 @@ float calcFrequencyModulation(float fmCyclePhase) {
   }
   // White noise; note that the frequency and phase values are not relevant in this case
   if (waveformIndex == 6) {
-    level = random(settingScale) / settingScale;
+    level = float(random(settingScale)) / settingScale;
   }
   return level;
 }
