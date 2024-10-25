@@ -95,6 +95,7 @@
 //                        3 - saw-tooth on
 //                        4 - saw-tooth off
 //                        5 - compound modulation
+//                        6 - white noise (frequency not relevant here)
 //  fmCycleDur          Scalar. The duration in microseconds of the fm waveform.
 //  fmPhaseOffset       Float, 0-1. Used to shift the phase of the fm waveform.
 //  amplitudeIndex      Scalar. Defines the amplitude modulation profile:
@@ -369,6 +370,7 @@ void getConfig() {
       Serial.println("compound");
       updateCompoundRange();
     }
+    if (waveformIndex == 6) Serial.println("whitenoise");
     updateFmModTable();
   }
   if (strncmp(inputString, "FQ", 2) == 0) {
@@ -893,6 +895,10 @@ float calcFrequencyModulation(float fmCyclePhase) {
     }
     // Use the pre-computed "compoundRange" to place level in the 0-1 range
     level = (level - compoundRange[0]) / (compoundRange[1] - compoundRange[0]);
+  }
+  // White noise; note that the frequency and phase values are not relevant in this case
+  if (waveformIndex == 6) {
+    level = random(settingScale) / settingScale;
   }
   return level;
 }
