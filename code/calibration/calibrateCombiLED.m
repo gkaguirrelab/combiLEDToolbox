@@ -38,6 +38,7 @@ pause
 
 % Ask the user about the measurement conditions
 fprintf('Information regarding the device configuration:\n')
+boxID = GetWithDefault('Box ID','A');
 cableType = GetWithDefault('Fiber optic cable type','shortLLG');
 eyePieceType = GetWithDefault('Display type','classicEyePiece');
 ndfValue = GetWithDefault('NDF','0');
@@ -46,7 +47,7 @@ ndfValue = GetWithDefault('NDF','0');
 ndfValue = strrep(ndfValue,'.','x');
 
 % Create a default calibration file name
-defaultName = ['CombiLED_' cableType '_' eyePieceType '_ND' ndfValue ];
+defaultName = ['CombiLED-' boxID '_' cableType '_' eyePieceType '_ND' ndfValue ];
 
 % Ask the user to provide a name for the calibration file
 calFileName = GetWithDefault('Name for the cal file',defaultName);
