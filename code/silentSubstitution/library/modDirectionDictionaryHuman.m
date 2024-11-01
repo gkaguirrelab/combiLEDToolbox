@@ -7,6 +7,11 @@ switch whichDirection
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
         whichReceptorsToIgnore = {'L_10deg','M_10deg','Mel','Rod_2deg','Rod_10deg'};
         desiredContrast = [1 -1];
+    case 'LminusM_peripheral'
+        whichReceptorsToTarget = {'L_10deg','M_10deg'};
+        whichReceptorsToSilence = {'S_2deg','S_10deg'};
+        whichReceptorsToIgnore = {'L_2deg','M_2deg','Mel','Rod_2deg','Rod_10deg'};
+        desiredContrast = [1 -1];
     case 'LminusM_wide'
         % Attempt to achieve equivalent differential contrast on the L and
         % M cones in the center and the periphery. Need to also try and
@@ -15,10 +20,10 @@ switch whichDirection
         % rapid flicker. After some fussing around, setting the desired
         % contrast of the peripheral field to be slightly lower than the
         % fovea result in a better search outcome.
-        whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg','L_penum10','M_penum10'};
+        whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg'};
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
-        whichReceptorsToIgnore = {'Mel','Rod_2deg','Rod_10deg'};
-        desiredContrast = [1 -1 0.9 -0.9 1 -1];
+        whichReceptorsToIgnore = {'Mel','Rod_2deg','Rod_10deg','L_penum10','M_penum10'};
+        desiredContrast = [1 -1 0.9 -0.9];
     case 'LplusM_wide'
         whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg'};
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
@@ -41,6 +46,11 @@ switch whichDirection
         whichReceptorsToTarget = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg','Mel','Rod_2deg','Rod_10deg'};
         whichReceptorsToSilence = {};
         whichReceptorsToIgnore = {};
+        desiredContrast = ones(1,length(whichReceptorsToTarget));
+    case 'LightFlux_reduced'
+        whichReceptorsToTarget = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg'};
+        whichReceptorsToSilence = {};
+        whichReceptorsToIgnore = {'Mel','Rod_2deg','Rod_10deg'};
         desiredContrast = ones(1,length(whichReceptorsToTarget));
     case 'LMS'
         whichReceptorsToTarget = {'L_10deg','M_10deg','S_10deg'};
@@ -78,11 +88,11 @@ switch whichDirection
         whichReceptorsToSilence = {'Rod_10deg'};
         whichReceptorsToIgnore = {'L_10deg','M_10deg','S_10deg','Rod_2deg','Mel','S_2deg'};
         desiredContrast = [1 0.9];
-    case 'L_simple'
-        whichReceptorsToTarget = {'L_2deg','M_2deg'};
-        whichReceptorsToSilence = {'Rod_10deg'};
-        whichReceptorsToIgnore = {'L_10deg','M_10deg','S_10deg','S_2deg','Rod_10deg','Rod_2deg','Mel'};
-        desiredContrast = [1 1];
+    case 'M_simple'
+        whichReceptorsToTarget = {'M_2deg'};
+        whichReceptorsToSilence = {'L_2deg','S_2deg'};
+        whichReceptorsToIgnore = {'L_10deg','M_10deg','S_10deg','Rod_10deg','Rod_2deg','Mel'};
+        desiredContrast = [1];
 
     otherwise
         error('Not a recognized human modulation direction')
