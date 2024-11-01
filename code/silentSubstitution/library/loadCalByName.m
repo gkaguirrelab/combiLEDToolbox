@@ -2,7 +2,7 @@ function cal = loadCalByName(calName,calIdx)
 
 % Find the specified calibration within this project directory; load
 % it.
-calPath = fullfile(tbLocateToolbox('combiLEDToolbox'),'cal',calName);
+calPath = fullfile(getpref('combiLEDToolbox','CalDataFolder'),calName);
 load(calPath,'cals');
 
 % If not otherwise specified, use the most recent calibration
