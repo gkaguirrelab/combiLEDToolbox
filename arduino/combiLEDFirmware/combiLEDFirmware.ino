@@ -77,10 +77,9 @@
 //                      settings values when in direct mode.
 //  background          8x1 int array of value 0-1e4. Specifies the
 //                      background level for each LED.
-//  modSymmetryFlag     Boolean. If set to true, the modulation is bimodal around
-//                      the mid-point between the high and low settings. If set
-//                      to false, the modulation is unimodal against the
-//                      background of the low settings.
+//  bimodalModFlag      Boolean. If set to true, the modulation is bimodal around
+//                      a background. If set to false, the modulation is unimodal
+//                      against the background of the low settings.
 //  fmContrast          Float, between 0 and 1. Defines the contrast of the
 //                      modulation relative to its maximum.
 //  gammaParams         8x6 float matrix. Defines the parameters of a 5th order
@@ -180,7 +179,7 @@ const uint8_t nLEDs = 8;  // the number of LEDs
 int settingsLow[nLEDs] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 int settingsHigh[nLEDs] = { 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000 };
 int background[nLEDs] = { 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000 };
-bool modSymmetryFlag = true;
+bool bimodalModFlag = true;
 
 // The vector of settings used in direct mode
 int settingsDirect[nLEDs] = { 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -220,7 +219,7 @@ uint8_t amplitudeIndex = 0;  // Default to no amplitude modulation
 float amplitudeVals[3][2] = {
   { 0.0, 0.0 },  // no amplitude modulation;  0) unusued; 1) unusued
   { 0.0, 0.0 },  // sinusoidal modulation; 0) unusued; 1) unusued
-  { 1.5, 0.0 },  // half-cosine window: 0) Window duration seconds; 1) unusued
+  { 1.5, 0.0 },  // half-cosine window: 0) window duration seconds; 1) unusued
 };
 
 // An amplitude modulation look-up table. 0-1e4 precision
@@ -538,7 +537,7 @@ void getConfig() {
     // Uni-modal modulation state
     Serial.println("UM");
     clearInputString();
-    modSymmetryFlag = false;
+    bimodalModFlag = false;
     Serial.println("unimodal mod");
     updateBackgroundSettings();
     identifyActiveLEDs();
@@ -548,7 +547,7 @@ void getConfig() {
     // Bi-modal modulation state
     Serial.println("BM");
     clearInputString();
-    modSymmetryFlag = true;
+    bimodalModFlag = true;
     Serial.println("bimodal mod");
     updateBackgroundSettings();
     identifyActiveLEDs();
@@ -725,7 +724,7 @@ void identifyActiveLEDs() {
 
 void updateBackgroundSettings() {
   for (int ii = 0; ii < nLEDs; ii++) {
-    if (modSymmetryFlag) {
+    if (bimodalModFlag) {
       background[ii] = round((settingsHigh[ii] + settingsLow[ii]) / 2);
     } else {
       background[ii] = settingsLow[ii];
@@ -798,24 +797,36 @@ void updateLED(float fmCyclePhase, float amCyclePhase, int ledIndex) {
   float floatLevel = returnFrequencyModulation(fmCyclePhase);
   // If we have a symmetric, bimodal modulation, then we will
   // work with levels and contrasts centered around 0 [-0.5 0.5]
-  if (modSymmetryFlag) {
+  if (bimodalModFlag) {
     floatLevel = floatLevel - 0.5;
   }
   // Scale according to the fmContrast value
   floatLevel = fmContrast * floatLevel;
   // Apply any amplitude modulation
   floatLevel = returnAmplitudeModulation(amCyclePhase) * floatLevel;
-  // If we have a symmetric, bimodal modulation, restore to the [0 1]
-  // range
-  if (modSymmetryFlag) {
-    floatLevel = floatLevel + 0.5;
+  // Calculate the LED setting differently for a unimodal or a
+  // bimodal modulation
+  if (bimodalModFlag) {
+    // Get the floatSettingLED as the proportional distance between
+    // the background and the low or high setting value for this
+    // LED as appropriate.
+    if (floatLevel < 0) {
+      floatLevel = min(floatLevel, -0.5);
+      floatLevel = abs(floatLevel * 2);
+      float floatSettingLED = (background[ledIndex] - floatLevel * (background[ledIndex] - settingsLow[ledIndex]) / float(settingScale);
+    } else {
+      floatLevel = max(floatLevel, 0.5);
+      floatLevel = floatLevel * 2;
+      float floatSettingLED = (background[ledIndex] + floatLevel * (settingsHigh[ledIndex] - background[ledIndex]) / float(settingScale);
+    }
+  } else {
+    // ensure that level is within the 0-1 range
+    floatLevel = max(floatLevel, 0);
+    floatLevel = min(floatLevel, 1);
+    // Get the floatSettingLED as the proportional
+    // distance between the low and high setting value for this LED
+    float floatSettingLED = (floatLevel * (settingsHigh[ledIndex] - settingsLow[ledIndex]) + settingsLow[ledIndex]) / float(settingScale);
   }
-  // ensure that level is within the 0-1 range
-  floatLevel = max(floatLevel, 0);
-  floatLevel = min(floatLevel, 1);
-  // Get the floatSettingLED as the proportional
-  // distance between the low and high setting value for this LED
-  float floatSettingLED = (floatLevel * (settingsHigh[ledIndex] - settingsLow[ledIndex]) + settingsLow[ledIndex]) / float(settingScale);
   // gamma correct floatSettingLED (about 80 microseconds)
   floatSettingLED = applyGammaCorrect(floatSettingLED, ledIndex);
   // Convert the floatSettingLED to a 12 bit integer
@@ -897,6 +908,8 @@ float calcFrequencyModulation(float fmCyclePhase) {
     level = (level - compoundRange[0]) / (compoundRange[1] - compoundRange[0]);
   }
   // White noise; note that the frequency and phase values are not relevant in this case
+  // Need to improve this so that the set of 8 LEDs receive the same float level to avoid
+  // creating a chromatic scintillation
   if (waveformIndex == 6) {
     level = float(random(settingScale)) / settingScale;
   }
@@ -973,7 +986,7 @@ void updateGammaTable() {
     // Use this set of gammaParams to populate the gammaTable
     // Note we skip the first entry as this has an obligatory
     // value of zero.
-    for (int jj = 1; jj < nGammaLevels-1; jj++) {
+    for (int jj = 1; jj < nGammaLevels - 1; jj++) {
       float input = float(jj) / (nGammaLevels - 1);
       float corrected = 0;
       for (int kk = 0; kk < nGammaParams; kk++) {
@@ -981,7 +994,7 @@ void updateGammaTable() {
       }
       gammaTable[ii][jj] = min(round(corrected * settingScale), settingScale);
     }
-    gammaTable[ii][nGammaLevels-1] = settingScale;
+    gammaTable[ii][nGammaLevels - 1] = settingScale;
   }
 }
 
