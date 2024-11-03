@@ -19,12 +19,12 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %	modResult             - Struct. The primaries and SPDs.
 %
 % Optional key/value pairs:
-%  'primaryHeadRoom'      - Scalar. We can enforce a constraint that we
-%                           don't go right to the edge of the gamut.  The
-%                           head room parameter is defined in the [0-1]
-%                           device primary space. Using a little head room
-%                           keeps us a bit away from the hard edge of the
-%                           device.
+%  'primaryHeadRoom'      - Scalar, or 1xnPrimaries vector. We can enforce
+%                           a constraint that we don't go right to the edge
+%                           of the gamut.  The head room parameter is
+%                           defined in the [0-1] device primary space.
+%                           Using a little head room keeps us a bit away
+%                           from the hard edge of the device.
 %  'contrastMatchConstraint' - Scalar. The difference between the desired 
 %                           and obtained contrast on the photoreceptors is
 %                           multiplied by the log of this value in
@@ -63,7 +63,7 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 % Examples:
 %{
     % Foveal L-M modulation around a half-on background
-    cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
+    cal = loadCalByName('CombiLED-B_shortLLG_classicEyePiece_irFilter_Cassette-ND0');
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
@@ -73,7 +73,7 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %}
 %{
     % Wide-field L-M modulation around a shifted background
-    cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
+    cal = loadCalByName('CombiLED-B_shortLLG_classicEyePiece_irFilter_Cassette-ND0');
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
@@ -84,7 +84,7 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %{
     % Shifted background human melanopsin modulation that maximizes the 
     % modulation of primaries that are close to 481 nm.
-    cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
+    cal = loadCalByName('CombiLED-B_shortLLG_classicEyePiece_irFilter_Cassette-ND0');
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
@@ -94,7 +94,7 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %}
 %{
     % A canine ML minus S modulation around the half-on background.
-    cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
+    cal = loadCalByName('CombiLED-B_shortLLG_classicEyePiece_irFilter_Cassette-ND0');
     photoreceptors = photoreceptorDictionaryCanine();
     whichDirection = 'MLminusS';
     modResult = designModulation(whichDirection,photoreceptors,cal,'contrastMatchConstraint',2);
@@ -102,7 +102,7 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %}
 %{
     % A canine ML plus S modulation around the half-on background.
-    cal = loadCalByName('CombiLED_shortLLG_classicEyePiece_ND2x5');
+    cal = loadCalByName('CombiLED-B_shortLLG_classicEyePiece_irFilter_Cassette-ND0');
     photoreceptors = photoreceptorDictionaryCanine();
     whichDirection = 'MLplusS';
     modResult = designModulation(whichDirection,photoreceptors,cal,'contrastMatchConstraint',2.15);
@@ -137,7 +137,7 @@ p = inputParser;
 p.addRequired('whichDirection',@ischar);
 p.addRequired('photoreceptors',@isstruct);
 p.addParameter('cal',@isstruct);
-p.addParameter('primaryHeadRoom',0.00,@isscalar)
+p.addParameter('primaryHeadRoom',0.05,@isnumeric)
 p.addParameter('contrastMatchConstraint',3,@isscalar)
 p.addParameter('searchBackground',false,@islogical)
 p.addParameter('xyTarget',[],@isnumeric)
@@ -146,6 +146,7 @@ p.addParameter('xyTolMetric',-Inf,@isnumeric)
 p.addParameter('xyTolWeight',1e3,@isnumeric)
 p.addParameter('primariesToMaximize',[],@isnumeric)
 p.addParameter('backgroundPrimary',[],@isnumeric)
+p.addParameter('backgroundPrimaryHeadroom',0.15,@isscalar)
 p.addParameter('verbose',false,@islogical)
 p.parse(whichDirection,photoreceptors,varargin{:});
 
@@ -160,6 +161,7 @@ xyTolMetric = p.Results.xyTolMetric;
 xyTolWeight = p.Results.xyTolWeight;
 primariesToMaximize = p.Results.primariesToMaximize;
 backgroundPrimary = p.Results.backgroundPrimary;
+backgroundPrimaryHeadroom = p.Results.backgroundPrimaryHeadroom;
 verbose = p.Results.verbose;
 
 % Pull out some information from the calibration
@@ -168,6 +170,13 @@ B_primary = cal.processedData.P_device;
 ambientSpd = cal.processedData.P_ambient;
 nPrimaries = size(B_primary,2);
 wavelengthsNm = SToWls(S);
+
+% Expand and / or sanity check the primaryHeadRoom value
+if isscalar(primaryHeadRoom)
+    primaryHeadRoom = repmat(primaryHeadRoom,1,nPrimaries);
+else
+    assert(length(primaryHeadRoom) == nPrimaries);
+end
 
 % Detect if there are multiple species intermixed in the photoreceptor set.
 % The code currently does not support that circumstance
@@ -204,13 +213,13 @@ end
 % above that all receptors are from the same species.
 switch species
     case 'human'
-        [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast] = ...
+        [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,lightFluxFlag] = ...
             modDirectionDictionaryHuman(whichDirection,photoreceptors);
     case 'rodent'
-        [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast] = ...
+        [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,lightFluxFlag] = ...
             modDirectionDictionaryRodent(whichDirection,photoreceptors);
     case 'canine'
-        [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast] = ...
+        [whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,lightFluxFlag] = ...
             modDirectionDictionaryCanine(whichDirection,photoreceptors);
 end
 
@@ -218,7 +227,7 @@ end
 modulationPrimaryFunc = @(backgroundPrimary) isolateReceptors(...
     whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,...
     T_receptors,B_primary,ambientSpd,backgroundPrimary,primaryHeadRoom,...
-    contrastMatchConstraint,primariesToMaximize);
+    contrastMatchConstraint,primariesToMaximize,lightFluxFlag);
 
 % Define a function that returns the contrast on all photoreceptors
 contrastReceptorsFunc = @(modulationPrimary,backgroundPrimary) ...
@@ -229,10 +238,10 @@ contrastReceptorsFunc = @(modulationPrimary,backgroundPrimary) ...
 contrastOnTargeted = @(contrastReceptors) contrastReceptors(whichReceptorsToTarget);
 
 % Set the bounds within the primary headroom
-lb = zeros(1,nPrimaries)+primaryHeadRoom;
-plb = zeros(1,nPrimaries)+primaryHeadRoom;
-pub = ones(1,nPrimaries)-primaryHeadRoom;
-ub = ones(1,nPrimaries)-primaryHeadRoom;
+lb = zeros(1,nPrimaries)+max(primaryHeadRoom,backgroundPrimaryHeadroom);
+plb = zeros(1,nPrimaries)+max(primaryHeadRoom,backgroundPrimaryHeadroom);
+pub = ones(1,nPrimaries)-max(primaryHeadRoom,backgroundPrimaryHeadroom);
+ub = ones(1,nPrimaries)-max(primaryHeadRoom,backgroundPrimaryHeadroom);
 
 % If there are primariesToMaximize, we want to lock their background values
 % at the half-on value

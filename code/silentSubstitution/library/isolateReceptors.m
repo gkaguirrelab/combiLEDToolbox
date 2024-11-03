@@ -1,7 +1,7 @@
 function modulationPrimary = isolateReceptors(...
     whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,...
     T_receptors,B_primary,ambientSpd,backgroundPrimary,primaryHeadRoom,...
-    matchConstraint,primariesToMaximize)
+    matchConstraint,primariesToMaximize,lightFluxFlag)
 % Non-linear search to identify a modulation that isolates photoreceptors
 %
 % Syntax:
@@ -43,8 +43,8 @@ function modulationPrimary = isolateReceptors(...
 %   backgroundPrimary     - Px1 vector of the settings of the primaries, 
 %                           in the range [0-1], that constitutes the
 %                           background for the modulation.
-%   primaryHeadRoom       - Scalar, in the range [0-1]. This constrains the
-%                           primary settings to be within
+%   primaryHeadRoom       - Px1, in the range [0-1]. This constrains each
+%                           primary setting to be within
 %                           [0+primaryHeadRoom,1-primaryHeadRoom]. This can
 %                           be useful for anticipating the fact that the
 %                           device may get dimmer over time, or if the
@@ -88,22 +88,14 @@ if (any(backgroundPrimary > 1-primaryHeadRoom+primaryHeadRoomTolerance))
 end
 for b = 1:size(backgroundPrimary, 1)
     if backgroundPrimary(b) > 0.5
-        vub(b) = 1-primaryHeadRoom;
-        vlb(b) = backgroundPrimary(b)-(1-primaryHeadRoom-backgroundPrimary(b));
+        vub(b) = 1-primaryHeadRoom(b);
+        vlb(b) = backgroundPrimary(b)-(1-primaryHeadRoom(b)-backgroundPrimary(b));
     elseif backgroundPrimary(b) < 0.5
-        vub(b) = backgroundPrimary(b)+(backgroundPrimary(b)-primaryHeadRoom);
-        vlb(b) = primaryHeadRoom;
+        vub(b) = backgroundPrimary(b)+(backgroundPrimary(b)-primaryHeadRoom(b));
+        vlb(b) = primaryHeadRoom(b);
     elseif backgroundPrimary(b) == 0.5
-        vub(b) = 1-primaryHeadRoom;
-        vlb(b) = primaryHeadRoom;
-    end
-end
-
-% Fix numerical issues with vlb > vub that can sometimes come up.
-vlbTolerance = 1e-6;
-for ii = 1:length(vub)
-    if (vlb(ii) > vub(ii) - vlbTolerance)
-        vlb(ii) = vub(ii) - vlbTolerance;
+        vub(b) = 1-primaryHeadRoom(b);
+        vlb(b) = primaryHeadRoom(b);
     end
 end
 
@@ -136,22 +128,14 @@ mynonlcon = @(x) matchSignConstraint(x,B_primary,backgroundPrimary,...
 mynonlcon = [];
 
 % Perform the search
-modulationPrimary = fmincon(myObj,x0,[],[],Aeq,beq,vlb,vub,mynonlcon,options);
+if lightFluxFlag
+    modulationPrimary = min(vub'./backgroundPrimary).*backgroundPrimary;
+else
+    modulationPrimary = fmincon(myObj,x0,[],[],Aeq,beq,vlb,vub,mynonlcon,options);
+end
 
 % Restore the warning state
 warning(warningState);
-
-% Extract the output arguments to be returned. This enforces a sanity check
-% on the primaries.
-primaryTolerance = 2*vlbTolerance;
-modulationPrimary(modulationPrimary > 1 - primaryHeadRoom & modulationPrimary < 1 - primaryHeadRoom + primaryTolerance) = 1 - primaryHeadRoom ;
-modulationPrimary(modulationPrimary < primaryHeadRoom & modulationPrimary > primaryHeadRoom-primaryTolerance) = primaryHeadRoom;
-if (any(modulationPrimary > 1 - primaryHeadRoom))
-    error('Primary greater than 1 minus headroom');
-end
-if (any(modulationPrimary < primaryHeadRoom))
-    error('Primary less than primary headroom');
-end
 
 end
 

@@ -1,6 +1,7 @@
-function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast] = ...
+function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast,lightFluxFlag] = ...
     modDirectionDictionaryCanine(whichDirection,photoreceptors)
 
+lightFluxFlag = false;
 
 switch whichDirection
     case 'LightFlux'
@@ -8,6 +9,7 @@ switch whichDirection
         whichReceptorsToSilence = {};
         whichReceptorsToIgnore = {'canineRod'};
         desiredContrast = [1 1 1];
+        lightFluxFlag = true;
     case 'mel'
         whichReceptorsToTarget = {'canineMel'};
         whichReceptorsToSilence = {'canineS','canineML'};

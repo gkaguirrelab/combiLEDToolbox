@@ -1,5 +1,7 @@
-function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast] = ...
+function [whichReceptorsToTargetVec,whichReceptorsToIgnoreVec,desiredContrast,lightFluxFlag] = ...
     modDirectionDictionaryHuman(whichDirection,photoreceptors)
+
+lightFluxFlag = false;
 
 switch whichDirection
     case 'LminusM_foveal'
@@ -32,7 +34,7 @@ switch whichDirection
     case 'S_wide'
         % Attempt to achieve equivalent contrast on the S cones in the
         % center and the periphery. Need to also silence the penumbral L
-        % and Mo cones, otherwise we get Purkinje tree entopic effects in
+        % and M cones, otherwise we get Purkinje tree entopic effects in
         % the rapid flicker. If we list the penumbral cones as targets to
         % be silenced, the linear constraint on the search is too strict,
         % and we are unable to find a good solution. Instead, we list the
@@ -47,11 +49,7 @@ switch whichDirection
         whichReceptorsToSilence = {};
         whichReceptorsToIgnore = {};
         desiredContrast = ones(1,length(whichReceptorsToTarget));
-    case 'LightFlux_reduced'
-        whichReceptorsToTarget = {'L_2deg','M_2deg','S_2deg','L_10deg','M_10deg','S_10deg'};
-        whichReceptorsToSilence = {};
-        whichReceptorsToIgnore = {'Mel','Rod_2deg','Rod_10deg'};
-        desiredContrast = ones(1,length(whichReceptorsToTarget));
+        lightFluxFlag = true;
     case 'LMS'
         whichReceptorsToTarget = {'L_10deg','M_10deg','S_10deg'};
         whichReceptorsToSilence = {'Mel'};
@@ -62,38 +60,11 @@ switch whichDirection
         whichReceptorsToSilence = {'L_10deg','M_10deg','S_10deg'};
         whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg','Rod_2deg','Rod_10deg'};
         desiredContrast = 1;
-    case 'SnoMel'
-        % Wide-field S modulation while silencing Mel
-        whichReceptorsToTarget = {'S_2deg','S_10deg'};
-        whichReceptorsToSilence = {'L_2deg','M_2deg','L_10deg','M_10deg','Mel'};
-        whichReceptorsToIgnore = {'Rod_2deg','Rod_10deg','L_penum10','M_penum10'};
-        desiredContrast = [1 1];
     case 'Rod_wide'
         whichReceptorsToTarget = {'Rod_10deg'};
         whichReceptorsToSilence = {'L_10deg','M_10deg','S_10deg'};
         whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg','Mel','L_penum10','M_penum10','Rod_2deg'};
         desiredContrast = [1];
-    case 'LplusMnoMel'
-        whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg'};
-        whichReceptorsToSilence = {'S_2deg','S_10deg','Mel',};
-        whichReceptorsToIgnore = {'Rod_2deg','Rod_10deg'};
-        desiredContrast = [1 1 1 1];        
-    case 'SminusMel'
-        whichReceptorsToTarget = {'S_10deg','Mel'};
-        whichReceptorsToSilence = {'L_2deg','M_2deg','L_10deg','M_10deg'};
-        whichReceptorsToIgnore = {'S_2deg','Rod_2deg','Rod_10deg'};
-        desiredContrast = [1,-1];
-    case 'LM_simple'
-        whichReceptorsToTarget = {'L_2deg','M_2deg'};
-        whichReceptorsToSilence = {'Rod_10deg'};
-        whichReceptorsToIgnore = {'L_10deg','M_10deg','S_10deg','Rod_2deg','Mel','S_2deg'};
-        desiredContrast = [1 0.9];
-    case 'M_simple'
-        whichReceptorsToTarget = {'M_2deg'};
-        whichReceptorsToSilence = {'L_2deg','S_2deg'};
-        whichReceptorsToIgnore = {'L_10deg','M_10deg','S_10deg','Rod_10deg','Rod_2deg','Mel'};
-        desiredContrast = [1];
-
     otherwise
         error('Not a recognized human modulation direction')
 end
