@@ -248,7 +248,7 @@ uint8_t ledCycleIdx = 0;                       // Counter across LED updates
 float fmPhaseOffset = 0;                       // 0-1; shifts the waveform phase
 float amPhaseOffset = 0;                       // 0-1; shifts the waveform phase
 float modulationDurSecs = 0;                   // Set to 0 for continuous
-unsigned long cycleCount = 0;                  // Cycles elapsed since mod start
+unsigned long updateCount = 0;                  // Cycles elapsed since mod start
 
 
 // setup
@@ -309,7 +309,7 @@ void loop() {
     unsigned long currentTime = micros();
     if ((currentTime - lastLEDUpdateTime) > minLEDAddressTime) {
       // Collect diagnostic timing information
-      cycleCount++;
+      updateCount++;
       // Determine where we are in the fm cycle
       unsigned long fmCycleTime = ((currentTime - modulationStartTime) % fmCycleDur);
       float fmCyclePhase = float(fmCycleTime) / float(fmCycleDur);
@@ -639,14 +639,14 @@ void getRun() {
       modulationState = true;
       lastLEDUpdateTime = micros();
       modulationStartTime = micros();
-      cycleCount = 0;
+      updateCount = 0;
     }
     if (strncmp(inputString, "SP", 2) == 0) {
       setToBackground();
       modulationState = false;
       unsigned long currentTime = micros();
-      float timePerCycle = float(currentTime - modulationStartTime) / float(cycleCount);
-      Serial.print("microsecs/cycle: ");
+      float timePerCycle = float(currentTime - modulationStartTime) / float(updateCount);
+      Serial.print("microsecs/LED update: ");
       Serial.println(timePerCycle);
     }
     if (strncmp(inputString, "BL", 2) == 0) {
@@ -795,8 +795,8 @@ void updateLED(float fmCyclePhase, float amCyclePhase, int ledIndex) {
   amCyclePhase = amCyclePhase - floor(amCyclePhase);
   // Get the level for the current fmCyclePhase (0-1)
   float floatLevel = returnFrequencyModulation(fmCyclePhase);
-  // If we have a symmetric, bimodal modulation, then we will
-  // work with levels and contrasts centered around 0 [-0.5 0.5]
+  // If we have a bimodal modulation, then we will work with
+  // levels and contrasts centered around 0 [-0.5 0.5]
   if (bimodalModFlag) {
     floatLevel = floatLevel - 0.5;
   }
@@ -806,18 +806,19 @@ void updateLED(float fmCyclePhase, float amCyclePhase, int ledIndex) {
   floatLevel = returnAmplitudeModulation(amCyclePhase) * floatLevel;
   // Calculate the LED setting differently for a unimodal or a
   // bimodal modulation
+  float floatSettingLED = 0;
   if (bimodalModFlag) {
     // Get the floatSettingLED as the proportional distance between
     // the background and the low or high setting value for this
     // LED as appropriate.
     if (floatLevel < 0) {
-      floatLevel = min(floatLevel, -0.5);
+      floatLevel = max(floatLevel, -0.5);
       floatLevel = abs(floatLevel * 2);
-      float floatSettingLED = (background[ledIndex] - floatLevel * (background[ledIndex] - settingsLow[ledIndex]) / float(settingScale);
+      floatSettingLED = (background[ledIndex] - floatLevel * (background[ledIndex] - settingsLow[ledIndex])) / float(settingScale);
     } else {
-      floatLevel = max(floatLevel, 0.5);
+      floatLevel = min(floatLevel, 0.5);
       floatLevel = floatLevel * 2;
-      float floatSettingLED = (background[ledIndex] + floatLevel * (settingsHigh[ledIndex] - background[ledIndex]) / float(settingScale);
+      floatSettingLED = (background[ledIndex] + floatLevel * (settingsHigh[ledIndex] - background[ledIndex])) / float(settingScale);
     }
   } else {
     // ensure that level is within the 0-1 range
@@ -825,7 +826,7 @@ void updateLED(float fmCyclePhase, float amCyclePhase, int ledIndex) {
     floatLevel = min(floatLevel, 1);
     // Get the floatSettingLED as the proportional
     // distance between the low and high setting value for this LED
-    float floatSettingLED = (floatLevel * (settingsHigh[ledIndex] - settingsLow[ledIndex]) + settingsLow[ledIndex]) / float(settingScale);
+    floatSettingLED = (floatLevel * (settingsHigh[ledIndex] - settingsLow[ledIndex]) + settingsLow[ledIndex]) / float(settingScale);
   }
   // gamma correct floatSettingLED (about 80 microseconds)
   floatSettingLED = applyGammaCorrect(floatSettingLED, ledIndex);
