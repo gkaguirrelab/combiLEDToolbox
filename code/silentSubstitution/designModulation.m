@@ -122,7 +122,7 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %{
     % Using a theoretically perfect device, determine the maximum
     % contrast we could obtain on melanopsin while silencing the rods
-    cal = loadCal('perfectDevice.mat');
+    cal = loadCalByName('perfectDevice.mat');
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
