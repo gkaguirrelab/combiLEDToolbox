@@ -146,7 +146,7 @@ p.addParameter('xyTolMetric',-Inf,@isnumeric)
 p.addParameter('xyTolWeight',1e3,@isnumeric)
 p.addParameter('primariesToMaximize',[],@isnumeric)
 p.addParameter('backgroundPrimary',[],@isnumeric)
-p.addParameter('backgroundPrimaryHeadroom',0.15,@isscalar)
+p.addParameter('backgroundPrimaryHeadroom',0.2,@isscalar)
 p.addParameter('verbose',false,@islogical)
 p.parse(whichDirection,photoreceptors,varargin{:});
 
