@@ -31,6 +31,10 @@ configureTerminator(obj.serialObj,"CR/LF");
 % Set the initial device state
 obj.deviceState = 'RUN';
 
+% Extract and set the identifier string
+splitPort = strsplit(arduinoPort(1), '-');
+obj.identifierString = splitPort{2};
+
 % Need to read and thus clear the first line of command output
 readline(obj.serialObj);
 
