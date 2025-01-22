@@ -8,8 +8,6 @@ classdef CombiLEDcalibrator < Calibrator
     % Public properties (specific to the @CombiLEDCalibrator class)
     properties
 
-        % Unique identifier for the arduino in a CombiLED device
-        identifierString
     end
 
     % --- PRIVATE PROPERTIES ----------------------------------------------
