@@ -9,6 +9,9 @@ function setDisplaysInitialState(obj, userPrompt)
     % Tell the CombiLED to NOT gamma correct
     displayObj.setDirectModeGamma(false);
 
+    % Store the identifierString for this combiLED
+    obj.identifierString = displayObj.identifierString;
+
     % Give it 5 seconds for the firmware to boot
     pause(5);
 

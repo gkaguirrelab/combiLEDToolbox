@@ -21,7 +21,7 @@ classdef CombiLEDcontrol < handle
 
         serialObj
         deviceState
-        identifierString
+        identifierString % String returned by Arduino that uniquely identifies a given CombiLED
 
     end
 
