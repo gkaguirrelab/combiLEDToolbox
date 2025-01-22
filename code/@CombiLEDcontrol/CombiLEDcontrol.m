@@ -21,6 +21,7 @@ classdef CombiLEDcontrol < handle
 
         serialObj
         deviceState
+        identifierString
 
     end
 
