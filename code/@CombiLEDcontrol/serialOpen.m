@@ -22,6 +22,9 @@ if isempty(arduinoPort)
     error('Unable to find a connected and available arduino board');
 end
 
+% Take the first port in the list
+arduinoPort = arduinoPort(1);
+
 % Open the serial port
 obj.serialObj = serialport(arduinoPort,obj.baudrate);
 
