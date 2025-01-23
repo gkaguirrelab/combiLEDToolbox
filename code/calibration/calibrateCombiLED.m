@@ -107,7 +107,7 @@ displaySettings = { ...
     'desiredRefreshRate',       120, ...                        % refresh rate in Hz
     'displayPrimariesNum',      displayPrimariesNum, ...        % for regular displays this is always 3 (RGB)
     'displayDeviceType',        'monitor', ...                  % this should always be set to 'monitor' for now
-    'displayDeviceName',        'CombiLED', ...                 % This is the name stem; we will add the Arduino identifier string when we intialize the display
+    'displayDeviceName',        'CombiLED', ...                 % Default name; we replace this with the Arduino identifier string when we intialize the display
     'calibrationFile',          calFileName, ...                % name of calibration file to be generated
     'comment',                  'The CombiLED light engine' ... % some comment, could be anything
     };

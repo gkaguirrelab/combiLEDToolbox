@@ -9,8 +9,8 @@ function setDisplaysInitialState(obj, userPrompt)
     % Tell the CombiLED to NOT gamma correct
     displayObj.setDirectModeGamma(false);
 
-    % Add the identifierString to the displayDeviceName
-    obj.displayDeviceName = strcat(obj.displayDeviceName,'-',displayObj.identifierString);
+    % Set the displayDeviceName to the identifierString
+    obj.displayDeviceName = displayObj.identifierString;
 
     % Set the primaries to off
     displayObj.setPrimaries([0 0 0 0 0 0 0 0]);
