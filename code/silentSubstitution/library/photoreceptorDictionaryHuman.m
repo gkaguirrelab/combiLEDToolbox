@@ -13,7 +13,7 @@ for ii = 1:length(photoreceptorClassNames)
     photoreceptors(ii).name = photoreceptorClassNames{ii};
 
     % The youngest age defined for the lens transmitance is 20 years old
-    photoreceptors(ii).observerAgeInYears = min([20, p.Results.observerAgeInYears]);
+    photoreceptors(ii).observerAgeInYears = max([20, p.Results.observerAgeInYears]);
     photoreceptors(ii).pupilDiameterMm = p.Results.pupilDiameterMm;
     photoreceptors(ii).dlens = 0;
     photoreceptors(ii).dmac = 0;
