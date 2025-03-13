@@ -22,10 +22,10 @@ switch whichDirection
         % rapid flicker. After some fussing around, setting the desired
         % contrast of the peripheral field to be slightly lower than the
         % fovea result in a better search outcome.
-        whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg'};
+        whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg','L_penum10','M_penum10'};
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
-        whichReceptorsToIgnore = {'Mel','Rod_2deg','Rod_10deg','L_penum10','M_penum10'};
-        desiredContrast = [1 -1 0.9 -0.9];
+        whichReceptorsToIgnore = {'Mel','Rod_2deg','Rod_10deg'};
+        desiredContrast = [1 -1 0.9 -0.9 1 -1];
     case 'LplusM_wide'
         whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg'};
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
