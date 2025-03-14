@@ -1,7 +1,7 @@
 function [cal, calFileName, calDir] = selectCal()
 
 % Figure out where the cal files are located
-calDir = getpref('combiLEDToolbox','CalDataFolder');
+calDir = string(getpref('combiLEDToolbox','CalDataFolder'));
 calsList = dir(fullfile(calDir,'*mat'));
 
 % Extract the cal names
@@ -25,7 +25,7 @@ else
 end
 
 % Load the selected cals file
-calFileName = calFileNames{idx};
+calFileName = string(calFileNames{idx});
 load(fullfile(calDir,calFileName),'cals')
 
 % Ask which calibration to use
@@ -34,6 +34,6 @@ if length(cals)>1
 else
     whichCal = 1;
 end
-cal = cals{whichCal};
+cal = cals(whichCal);
 
 end
