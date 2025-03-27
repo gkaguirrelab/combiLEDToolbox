@@ -20,6 +20,7 @@ settingsBackground = modResult.settingsBackground;
 photoreceptorClassNames = {modResult.meta.photoreceptors.name};
 nPrimaries = length(settingsBackground);
 nPhotoClasses = length(photoreceptorClassNames);
+samplingNm = unique(diff(modResult.wavelengthsNm));
 
 % Create a figure with an appropriate title
 figName = sprintf([modResult.meta.photoreceptors(1).species ' ' whichDirection ': contrast = %2.2f'],contrastReceptorsBipolar(whichReceptorsToTarget(1)));
@@ -37,22 +38,22 @@ hold on
 end
 title('Receptor spectra');
 xlim([300 800]);
-xlabel('Wavelength');
+xlabel('Wavelength [nm]');
 ylabel('Relative sensitivity');
 
 % Modulation spectra
 subplot(2,4,1:2)
 hold on
-plot(wavelengthsNm,positiveModulationSPD,'k','LineWidth',2);
-plot(wavelengthsNm,negativeModulationSPD,'r','LineWidth',2);
-plot(wavelengthsNm,backgroundSPD,'Color',[0.5 0.5 0.5],'LineWidth',2);
+plot(wavelengthsNm,positiveModulationSPD/samplingNm,'k','LineWidth',2);
+plot(wavelengthsNm,negativeModulationSPD/samplingNm,'r','LineWidth',2);
+plot(wavelengthsNm,backgroundSPD/samplingNm,'Color',[0.5 0.5 0.5],'LineWidth',2);
 title('Modulation spectra');
 xlim([300 800]);
-xlabel('Wavelength');
-ylabel('Power');
+xlabel('Wavelength [nm]');
+ylabel('Power [W/m^2/sr/nm]');
 
 % Primaries
-subplot(2,4,3)
+subplot(2,4,7)
 c = 1:nPrimaries;
 hold on
 plot(c,settingsHigh,'*k');
@@ -71,7 +72,7 @@ ylabel('Setting');
 axis square
 
 % Contrasts
-subplot(2,4,7)
+subplot(2,4,[3 4])
 c = 1:nPhotoClasses;
 barVec = zeros(1,nPhotoClasses);
 thisBar = barVec;
@@ -87,12 +88,14 @@ thisBar(whichReceptorsToIgnore) = nan;
 bar(c,thisBar,'FaceColor','none','EdgeColor','r');
 set(gca,'TickLabelInterpreter','none');
 a = gca;
+if length(unique(sign(contrastReceptorsBipolar))) > 1
+    ylim(max(abs(ylim)).*[-1 1]);
+end
 a.XTick=1:nPhotoClasses;
 a.XTickLabel = photoreceptorClassNames;
 xlim([0.5 nPhotoClasses+0.5]);
 title('Contrast');
 ylabel('Contrast');
-axis square
 
 % Chromaticity
 subplot(2,4,8)
@@ -121,15 +124,8 @@ plot(modNeg_chromaticity_xy(1), modNeg_chromaticity_xy(2), 'o','MarkerEdgeColor'
 % Labels
 xlabel('x chromaticity');
 ylabel('y chromaticity');
-title(sprintf('Luminance %2.1f cd/m2',bg_photopicLuminanceCdM2_Y))
+title(sprintf('Luminance %2.1f cd/m^2',bg_photopicLuminanceCdM2_Y))
 axis square
 
-% Show a square of color at the background location
-subplot(2,4,4)
-rgb=xyz2rgb([bg_chromaticity_xy; 0]');
-im = zeros(10,10,3);
-im(:,:,1)=rgb(1); im(:,:,2)=rgb(2); im(:,:,3)=rgb(3);
-imagesc(im)
-axis off
 
 end
