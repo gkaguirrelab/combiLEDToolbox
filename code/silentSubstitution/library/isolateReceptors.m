@@ -1,7 +1,7 @@
 function modulationPrimary = isolateReceptors(...
     whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,...
     T_receptors,B_primary,ambientSpd,backgroundPrimary,primaryHeadRoom,...
-    matchConstraint,primariesToMaximize,lightFluxFlag)
+    matchConstraint,primariesToMaximize,lightFluxFlag,sparsityFlag)
 % Non-linear search to identify a modulation that isolates photoreceptors
 %
 % Syntax:
@@ -55,9 +55,16 @@ function modulationPrimary = isolateReceptors(...
 %                           photoreceptors. Differences in contrast are
 %                           multiplied by the log of this value and added
 %                           to the optimization fVal.
-%  primariesToMaximize    - Vector. Identifies the indicies of the
+%   primariesToMaximize   - Vector. Identifies the indicies of the
 %                           primaries that we wish to have a large
 %                           modulation in the solution.
+%   lightFluxFlag         - Logical. When set to true, the routine will
+%                           return scaled versions of the background,
+%                           instead of performing a non-linear search.
+%   sparsityFlag          - Logical. When set to true the search will
+%                           incorporate a regularization and non-linear
+%                           constraint that attempts to make non-zero
+%                           primary modulation weights large.
 %
 % Outputs:
 %   none
@@ -116,16 +123,14 @@ warning('off','MATLAB:nearlySingularMatrix');
 % Set up the objective
 myObj = @(x) isolateObjective(x,B_primary,backgroundPrimary,ambientSpd,...
     T_receptors,whichReceptorsToTarget,desiredContrast,matchConstraint,...
-    primariesToMaximize);
+    primariesToMaximize,sparsityFlag);
 
-% We could use a non linear constraint to force the contrast output to
-% match the sign of the desired contrast, but this seems to mess up the
-% search. Not used currently
-%{
-mynonlcon = @(x) matchSignConstraint(x,B_primary,backgroundPrimary,...
-    ambientSpd,T_receptors,whichReceptorsToTarget,desiredContrast);
-%}
-mynonlcon = [];
+% Optional non-linear constraint to encourage sparsity
+if sparsityFlag
+    mynonlcon = @(x) sparsityConstraint(x,backgroundPrimary);
+else
+    mynonlcon = [];
+end
 
 % Perform the search
 if lightFluxFlag
@@ -145,7 +150,9 @@ end
 % Maximize the mean contrast on the targeted receptors, while imposing a
 % regularization that reflects the deviation of contrasts from the desired
 % contrasts.
-function [fVal,isolateContrasts] = isolateObjective(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToTarget,desiredContrast,matchConstraint,primariesToMaximize)
+function [fVal,isolateContrasts] = isolateObjective(x,B_primary,...
+    backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToTarget,...
+    desiredContrast,matchConstraint,primariesToMaximize,sparsityFlag)
 
 % Compute background including ambient
 backgroundSpd = B_primary*backgroundPrimary + ambientSpd;
@@ -175,20 +182,25 @@ if ~isempty(primariesToMaximize)
     fVal = fVal + maxModulatePenalty;
 end
 
+% If requested, add regularization to encourage sparsity. This is designed
+% to encourage any non-zero primary modulation to be large.
+if sparsityFlag
+    modVals = abs(x-backgroundPrimary);
+    densityPenalty = 1e-2*sum(gampdf(modVals*50,2,2));
+    fVal = fVal + densityPenalty;
+end
+
 end
 
 
-function [c, ceq] = matchSignConstraint(x,B_primary,backgroundPrimary,ambientSpd,T_receptors,whichReceptorsToTarget,desiredContrast)
+% A local function to implement an non-linear sparsity constraint
+function [c, ceq] = sparsityConstraint(x,backgroundPrimary)
 
 c = [];
 
-% Compute background including ambient
-backgroundSpd = B_primary*backgroundPrimary + ambientSpd;
-
-% Compute contrasts for receptors we want to isolate
-modulationSpd = B_primary*(x-backgroundPrimary);
-isolateContrasts = T_receptors(whichReceptorsToTarget,:)*modulationSpd ./ (T_receptors(whichReceptorsToTarget,:)*backgroundSpd);
-
-ceq = sum(sign(isolateContrasts)~=sign(desiredContrast'));
+% Make the solution unhappy about weights that differ just a little from
+% the background primary
+modVals = abs(x-backgroundPrimary);
+ceq = 1e-4*sum(and(modVals>0,modVals<0.1));
 
 end

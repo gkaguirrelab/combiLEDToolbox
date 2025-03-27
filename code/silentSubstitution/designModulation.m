@@ -29,6 +29,10 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %                           and obtained contrast on the photoreceptors is
 %                           multiplied by the log of this value in
 %                           calculating the error for the modulation search
+%  'sparsityFlag'         - Logical. When set to true the search will
+%                           incorporate a regularization and non-linear
+%                           constraint that attempts to make non-zero
+%                           primary modulation weights large.
 %  'searchBackground'     - Logical. If set to true, a search will be 
 %                           conducted over different background settings
 %                           to maximize contrast on targeted photoreceptors
@@ -139,6 +143,7 @@ p.addRequired('photoreceptors',@isstruct);
 p.addParameter('cal',@isstruct);
 p.addParameter('primaryHeadRoom',0.05,@isnumeric)
 p.addParameter('contrastMatchConstraint',3,@isscalar)
+p.addParameter('sparsityFlag',false,@islogical)
 p.addParameter('searchBackground',false,@islogical)
 p.addParameter('xyTarget',[],@isnumeric)
 p.addParameter('xyTol',1,@isnumeric)
@@ -154,6 +159,7 @@ p.parse(whichDirection,photoreceptors,varargin{:});
 % Pull some variables out of the Results for code clarity
 primaryHeadRoom = p.Results.primaryHeadRoom;
 contrastMatchConstraint = p.Results.contrastMatchConstraint;
+sparsityFlag = p.Results.sparsityFlag;
 searchBackground = p.Results.searchBackground;
 xyTarget = p.Results.xyTarget;
 xyTol = p.Results.xyTol;
@@ -227,7 +233,7 @@ end
 modulationPrimaryFunc = @(backgroundPrimary) isolateReceptors(...
     whichReceptorsToTarget,whichReceptorsToIgnore,desiredContrast,...
     T_receptors,B_primary,ambientSpd,backgroundPrimary,primaryHeadRoom,...
-    contrastMatchConstraint,primariesToMaximize,lightFluxFlag);
+    contrastMatchConstraint,primariesToMaximize,lightFluxFlag,sparsityFlag);
 
 % Define a function that returns the contrast on all photoreceptors
 contrastReceptorsFunc = @(modulationPrimary,backgroundPrimary) ...
