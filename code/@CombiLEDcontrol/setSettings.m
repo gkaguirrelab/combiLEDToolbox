@@ -4,6 +4,10 @@ function setSettings(obj,modResult)
 settingsLow = modResult.settingsLow;
 settingsHigh = modResult.settingsHigh;
 
+% Add these to the object
+obj.settingsLow = settingsLow;
+obj.settingsHigh = settingsHigh;
+
 % Check that the settings match the number of primaries
 if size(settingsLow,1) ~= obj.nPrimaries
     warning('First dimension of settingsLow must match number of primaries')

@@ -9,8 +9,8 @@ function quantErrorFlagByPrimary = checkForQuantizationError(obj,contrast)
 % 12-bit value. We don't attempt to capture the gamma correction step here.
 
 % Get the modulation settings
-settingsLow = modResult.settingsLow;
-settingsHigh = modResult.settingsHigh;
+settingsLow = obj.settingsLow;
+settingsHigh = obj.settingsHigh;
 
 % These settings values are transmitted to the combiLED as integers in the
 % range 0 - 1e4, and subsequently turned back into floats.
@@ -24,7 +24,7 @@ settingsDepth = contrast * (settingsHigh - settingsLow);
 % These settings are then cast into a 12 bit integer for defining LED
 % voltage levels. We will take absolute value of the settingsDepth and
 % convert to 12 bits to obtain the depth of these values.
-valsDepth = round(settingsDepth*2^12);
+valsDepth = round(abs(settingsDepth/1e4)*2^12);
 
 % We will set an error flag for any primary that has a valsDepth of less
 % than 3 bits.

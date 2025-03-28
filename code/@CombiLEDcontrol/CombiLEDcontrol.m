@@ -21,6 +21,8 @@ classdef CombiLEDcontrol < handle
 
         serialObj
         deviceState
+        settingsHigh = [1,1,1,1,1,1,1,1]
+        settingsLow = [0,0,0,0,0,0,0,0]
         identifierString % String returned by Arduino that uniquely identifies a given CombiLED
 
     end
