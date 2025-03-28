@@ -85,6 +85,7 @@ classdef CombiLEDcontrol < handle
         setGamma(obj,gammaTable)
         setDirectModeGamma(obj,boolGammaCorrect)
         setLEDUpdateOrder(obj,ledUpdateOrder)
+        quantErrorFlagByPrimary = checkForQuantizationError(obj,contrast)
 
     end
 end
