@@ -9,6 +9,7 @@ obj.verbose = 1;
 % the measured gamma table using the commands below:
 %{
     cal = selectCal();
+    cal = cal{end};
     obj.setGamma(cal.processedData.gammaTable);
 %}
 

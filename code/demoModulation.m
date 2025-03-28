@@ -1,6 +1,7 @@
 
 % Select a calibration file
 cal = selectCal();
+cal = cal{end};
 
 % Open a CombiLEDcontrol object
 obj = CombiLEDcontrol('verbose',false);
