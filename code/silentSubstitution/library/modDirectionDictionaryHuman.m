@@ -26,6 +26,14 @@ switch whichDirection
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
         whichReceptorsToIgnore = {'Mel','Rod_2deg','Rod_10deg'};
         desiredContrast = [1 -1 0.9 -0.9 1 -1];
+    case 'L_wide'
+        % An L-cone isolating, wide-field modulation. Primarily used in
+        % nulling of residual luminance in the LminusM modulation during
+        % heterochromatic flicker photometry.
+        whichReceptorsToTarget = {'L_2deg','L_10deg','L_penum10'};
+        whichReceptorsToSilence = {'M_2deg','M_10deg','M_penum10','S_2deg','S_10deg'};
+        whichReceptorsToIgnore = {'Mel','Rod_2deg','Rod_10deg'};
+        desiredContrast = [1 0.9 1];
     case 'LplusM_wide'
         whichReceptorsToTarget = {'L_2deg','M_2deg','L_10deg','M_10deg'};
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
