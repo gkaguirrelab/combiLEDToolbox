@@ -1,12 +1,18 @@
-function quantErrorFlagByPrimary = checkForQuantizationError(obj,contrast)
+function quantErrorFlagByPrimary = checkForQuantizationError(obj,contrast,bitThresh)
 % Identify primaries for which the requested contrast level could produce a
 % quantization error. We operationalize this as requiring that a given
-% primary should have available 3-bit resolution over the modulation range.
-% This is only a rough check; the actual process of converting the floating
-% point settings into the final, 12-bit primary values is complicated,
-% including casting the initial float into an integer in the range 0-1e4,
-% converting back into a float, gamma correcting, and then casting as a
-% 12-bit value. We don't attempt to capture the gamma correction step here.
+% primary should have the specified bit resolution over the modulation
+% range. This is only a rough check; the actual process of converting the
+% floating point settings into the final, 12-bit primary values is
+% complicated, including casting the initial float into an integer in the
+% range 0-1e4, converting back into a float, gamma correcting, and then
+% casting as a 12-bit value. We don't attempt to capture the gamma
+% correction step here.
+
+% Handle nargin
+if nargin == 2
+    bitThresh = 3;
+end
 
 % Get the modulation settings
 settingsLow = obj.settingsLow;
@@ -28,6 +34,6 @@ valsDepth = round(abs(settingsDepth/1e4)*2^12);
 
 % We will set an error flag for any primary that has a valsDepth of less
 % than 3 bits.
-quantErrorFlagByPrimary = valsDepth < 2^3;
+quantErrorFlagByPrimary = valsDepth < 2^bitThresh;
 
 end
