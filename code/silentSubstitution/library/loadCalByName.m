@@ -1,9 +1,13 @@
-function cal = loadCalByName(calName,calIdx)
+function cal = loadCalByName(calName,calIdx,calSubDir)
+
+if nargin == 2
+    calSubDir = [];
+end
 
 % Find the specified calibration within this project directory; load
 % it.
 calPath = fullfile(getpref('combiLEDToolbox','CalDataFolder'),calName);
-load(calPath,'cals');
+load(calPath,calSubDir,'cals');
 
 % If not otherwise specified, use the most recent calibration
 if nargin>1
