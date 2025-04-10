@@ -6,8 +6,8 @@ end
 
 % Find the specified calibration within this project directory; load
 % it.
-calPath = fullfile(getpref('combiLEDToolbox','CalDataFolder'),calName);
-load(calPath,calSubDir,'cals');
+calPath = fullfile(getpref('combiLEDToolbox','CalDataFolder'),calSubDir,calName);
+load(calPath,'cals');
 
 % If not otherwise specified, use the most recent calibration
 if nargin<3
