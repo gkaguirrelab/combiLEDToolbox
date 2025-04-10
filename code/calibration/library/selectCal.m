@@ -1,8 +1,13 @@
 function [cal, calFileName, calDir] = selectCal()
 
 % Figure out where the cal files are located
+calSubDirFlag = false;
 calDir = string(getpref('combiLEDToolbox','CalDataFolder'));
 calsList = dir(fullfile(calDir,'*mat'));
+if isempty(calsList)
+    calsList = dir(fullfile(calDir,'*','*mat'));
+    calSubDirFlag = true;
+end
 
 % Extract the cal names
 for ii=1:length(calsList)
@@ -25,6 +30,7 @@ else
 end
 
 % Load the selected cals file
+calDir = string(calsList(ii).folder);
 calFileName = string(calFileNames{idx});
 load(fullfile(calDir,calFileName),'cals')
 
