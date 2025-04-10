@@ -1,6 +1,6 @@
-function cal = loadCalByName(calName,calIdx,calSubDir)
+function cal = loadCalByName(calName,calSubDir,calIdx)
 
-if nargin == 2
+if nargin == 1
     calSubDir = [];
 end
 
@@ -10,7 +10,7 @@ calPath = fullfile(getpref('combiLEDToolbox','CalDataFolder'),calName);
 load(calPath,calSubDir,'cals');
 
 % If not otherwise specified, use the most recent calibration
-if nargin>1
+if nargin<3
     if isempty(calIdx)
         cal = cals{end};
     else
