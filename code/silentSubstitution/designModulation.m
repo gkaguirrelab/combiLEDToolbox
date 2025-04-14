@@ -151,7 +151,8 @@ p.addParameter('xyTolMetric',-Inf,@isnumeric)
 p.addParameter('xyTolWeight',1e3,@isnumeric)
 p.addParameter('primariesToMaximize',[],@isnumeric)
 p.addParameter('backgroundPrimary',[],@isnumeric)
-p.addParameter('backgroundPrimaryHeadroom',0.2,@isscalar)
+p.addParameter('backgroundPrimaryHeadroomUb',0.2,@isscalar)
+p.addParameter('backgroundPrimaryHeadroomLb',0.2,@isscalar)
 p.addParameter('verbose',false,@islogical)
 p.parse(whichDirection,photoreceptors,varargin{:});
 
@@ -167,7 +168,8 @@ xyTolMetric = p.Results.xyTolMetric;
 xyTolWeight = p.Results.xyTolWeight;
 primariesToMaximize = p.Results.primariesToMaximize;
 backgroundPrimary = p.Results.backgroundPrimary;
-backgroundPrimaryHeadroom = p.Results.backgroundPrimaryHeadroom;
+backgroundPrimaryHeadroomUb = p.Results.backgroundPrimaryHeadroomUb;
+backgroundPrimaryHeadroomLb = p.Results.backgroundPrimaryHeadroomLb;
 verbose = p.Results.verbose;
 
 % Pull out some information from the calibration
@@ -244,13 +246,14 @@ contrastReceptorsFunc = @(modulationPrimary,backgroundPrimary) ...
 contrastOnTargeted = @(contrastReceptors) contrastReceptors(whichReceptorsToTarget);
 
 % Set the bounds within the primary headroom
-lb = zeros(1,nPrimaries)+max(primaryHeadRoom,backgroundPrimaryHeadroom);
-plb = zeros(1,nPrimaries)+max(primaryHeadRoom,backgroundPrimaryHeadroom);
-pub = ones(1,nPrimaries)-max(primaryHeadRoom,backgroundPrimaryHeadroom);
-ub = ones(1,nPrimaries)-max(primaryHeadRoom,backgroundPrimaryHeadroom);
+lb = zeros(1,nPrimaries)+max(primaryHeadRoom,backgroundPrimaryHeadroomLb);
+plb = zeros(1,nPrimaries)+max(primaryHeadRoom,backgroundPrimaryHeadroomLb);
+pub = ones(1,nPrimaries)-max(primaryHeadRoom,backgroundPrimaryHeadroomUb);
+ub = ones(1,nPrimaries)-max(primaryHeadRoom,backgroundPrimaryHeadroomUb);
 
 % If there are primariesToMaximize, we want to lock their background values
-% at the half-on value
+% at the half-on value. Note that cannot maximize all primaries and
+% search for a shifted background
 lb(primariesToMaximize) = 0.5; plb(primariesToMaximize) = 0.5; 
 ub(primariesToMaximize) = 0.5; pub(primariesToMaximize) = 0.5; 
 
