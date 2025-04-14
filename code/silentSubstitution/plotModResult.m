@@ -94,7 +94,7 @@ end
 a.XTick=1:nPhotoClasses;
 a.XTickLabel = photoreceptorClassNames;
 xlim([0.5 nPhotoClasses+0.5]);
-title('Contrast');
+title(sprintf('Contrast: %2.3f',mean(abs(contrastReceptorsBipolar(whichReceptorsToTarget)))));
 ylabel('Contrast');
 
 % Chromaticity
@@ -120,6 +120,9 @@ modNeg_chromaticity_xy = (T_xyz(1:2,:)*negativeModulationSPD/sum(T_xyz*negativeM
 plot(bg_chromaticity_xy(1), bg_chromaticity_xy(2), 'o','MarkerEdgeColor','w','MarkerFaceColor', [0.5 0.5 0.5],'LineWidth', 2, 'MarkerSize', 10);
 plot(modPos_chromaticity_xy(1), modPos_chromaticity_xy(2), 'o','MarkerEdgeColor','w','MarkerFaceColor', 'k', 'LineWidth', 2,'MarkerSize', 10);
 plot(modNeg_chromaticity_xy(1), modNeg_chromaticity_xy(2), 'o','MarkerEdgeColor','w','MarkerFaceColor', 'r','LineWidth', 2, 'MarkerSize', 10);
+
+% Add text to give the xy chromaticity values
+text(bg_chromaticity_xy(1), bg_chromaticity_xy(2)+0.1,sprintf('[%2.2f, %2.2f]',bg_chromaticity_xy(1:2)))
 
 % Labels
 xlabel('x chromaticity');
