@@ -562,6 +562,14 @@ void getConfig() {
     blinkDurationMSecs = atoi(inputString);
     Serial.println(blinkDurationMSecs);
   }
+  if (strncmp(inputString, "IW", 2) == 0) {
+    // Interpolate weights
+    Serial.println("IW:");
+    clearInputString();
+    waitForNewString();
+    interpolateWaveform = atoi(inputString);
+    Serial.println(interpolateWaveform);
+  }
   if (strncmp(inputString, "RM", 2) == 0) {
     // Switch to run mode
     modulationState = false;
