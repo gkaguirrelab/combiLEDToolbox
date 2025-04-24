@@ -123,7 +123,7 @@
 // Set this variable to use the built-in LED to simulate
 // the output of the Prizmatix device
 //
-bool simulatePrizmatix = false;
+bool simulatePrizmatix = true;
 ////////////////////////////////////////////////////////////////////////////////
 
 
@@ -153,8 +153,8 @@ const int settingScale = 1e4;
 
 // The resolution with which we will define various look-up tables
 const int nGammaLevels = 25;
-const int nAmModLevels = 25;
-const int nFmModLevels = 50;
+const int nAmModLevels = 100;
+const int nFmModLevels = 100;
 
 // The number of parameters used to define the gamma polynomial function
 // (5th degree + 1)
@@ -219,7 +219,7 @@ uint8_t amplitudeIndex = 0;  // Default to no amplitude modulation
 float amplitudeVals[3][2] = {
   { 0.0, 0.0 },  // no amplitude modulation;  0) unusued; 1) unusued
   { 0.0, 0.0 },  // sinusoidal modulation; 0) unusued; 1) unusued
-  { 1.5, 0.0 },  // half-cosine window: 0) window duration seconds; 1) unusued
+  { 0.5, 0.0 },  // half-cosine window: 0) window duration seconds; 1) unusued
 };
 
 // An amplitude modulation look-up table. 0-1e4 precision
@@ -449,6 +449,7 @@ void getConfig() {
     newVal = atof(inputString);
     amplitudeVals[amplitudeIndex][1] = newVal;
     Serial.println(newVal);
+    updateAmModTable();
   }
   if (strncmp(inputString, "CH", 2) == 0) {
     // Compound modulation, 5 harmonic indices
@@ -865,7 +866,8 @@ void updateFmModTable() {
     float modLevel = calcFrequencyModulation(fmCyclePhase);
     fmModTable[ii] = round(modLevel * settingScale);
   }
-  // Set the interpolateWaveform state
+  // Set the interpolateWaveform state to false for square-wave and
+  // saw-tooth profiles.
   if ((waveformIndex == 2) || (waveformIndex == 3) || (waveformIndex == 4)) {
     interpolateWaveform = false;
   } else {
@@ -937,6 +939,7 @@ void updateAmModTable() {
     float amCyclePhase = float(ii) / (nAmModLevels - 1);
     float modLevel = calcAmplitudeModulation(amCyclePhase);
     amModTable[ii] = round(modLevel * settingScale);
+    Serial.println(amModTable[ii]);
   }
 }
 
@@ -950,7 +953,7 @@ float calcAmplitudeModulation(float amCyclePhase) {
     modLevel = (sin(2 * pi * amCyclePhase) + 1) / 2;
   }
   if (amplitudeIndex == 2) {
-    // Half-cosine window at block onset and offset
+    // Half-cosine window at block onset and offset.
     float totalDurSecs = float(amCycleDur) / 1e6;
     float rampDurSecs = amplitudeVals[amplitudeIndex][0];
     // Determine how far along the half-cosine ramp we are, relative
