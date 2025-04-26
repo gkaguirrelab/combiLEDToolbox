@@ -24,7 +24,7 @@ writeline(obj.serialObj,num2str(modulationDurSecs,'%.4f'));
 msg = readline(obj.serialObj);
 
 if obj.verbose
-    fprintf(['Modulation duration set to ' char(msg) '\n']);
+    fprintf(['Modulation duration set to ' char(msg) 'microsecs\n']);
 end
 
 

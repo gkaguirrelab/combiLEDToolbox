@@ -99,7 +99,7 @@
 //                      of the desired intensity level to the corresponding
 //                      device level for each LED. These parameters are used to
 //                      create a gamma correction look-up table.
-//  waveformIndex       Scalar. Defines the waveform profile to be used:
+//  fmWaveformIndex     Scalar. Defines the waveform profile to be used:
 //                        0 - no modulation (stay at background)
 //                        1 - sinusoid
 //                        2 - square wave (off-on)
@@ -107,17 +107,15 @@
 //                        4 - saw-tooth off
 //                        5 - compound modulation
 //                        6 - white noise (frequency not relevant here)
-//  fmCycleDurSecs      Scalar. The duration in microseconds of the fm waveform.
+//  fmCycleDurMicroSecs Scalar. The duration in microseconds of the fm waveform.
 //  fmPhaseOffset       Float, 0-1. Used to shift the phase of the fm waveform.
-//  amplitudeIndex      Scalar. Defines the amplitude modulation profile:
+//  amWaveformIndex     Scalar. Defines the amplitude modulation profile:
 //                        0 - none
 //                        1 - sinusoid modulation
-//                        2 - half-cosine window
-//  amCycleDurSecs      Scalar. The duration in microseconds of the am waveform.
+//                        2 - square wave modulation
+//  amCycleDurMicroSecs Scalar. The duration in microseconds of the am waveform.
 //  amPhaseOffset       Float, 0-1. Used to shift the phase of the am waveform.
-//  amplitudeVals       2x1 float array. Values control the amplitude modulation,
-//                      varying by the amplitudeIndex.
-//  blinkDurMSecs       Scalar. Duration of attention event in milliseconds.
+//  blinkDurMicroSecs   Scalar. Duration of attention event in milliseconds.
 //                      During run-mode, passing a "blink" command sets all LEDs
 //                      to zero for the blink duration. Default is 100 msecs.
 //  ledUpdateOrder      8x1 int array, of values 0-7. Defines the order in which
@@ -165,8 +163,9 @@ const int settingScale = 1e4;
 
 // The resolution with which we will define various look-up tables
 const int nGammaLevels = 25;
-const int nAmModLevels = 100;
 const int nFmModLevels = 100;
+const int nAmModLevels = 100;
+const int nRampModLevels = 25;
 
 // The number of parameters used to define the gamma polynomial function
 // (5th degree + 1)
@@ -199,11 +198,13 @@ int settingsDirect[nLEDs] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 // A frequency modulation look-up table. 0-1e4 precision
 int fmModTable[nFmModLevels];
 
-bool interpolateWaveform = true;  // Controls if we perform linear interpolation
-                                  // between levels of the fmModTable. Generally,
-                                  // we want to do so for continuous (e.g., sin)
-                                  // modulations, but not for discontinuous
-                                  // (e.g., square wave) modulations.
+// Controls if we attempt to perform linear interpolation between levels of the
+// fm, am and ramp mod tables. The routines set these variables to false
+// for discontinuous modulations (square wave, saw-tooth).
+bool interpolateFmWaveform = true;
+bool interpolateAmWaveform = false;
+bool interpolateRampWaveform = false;
+
 
 // Adjust the overall contrast of the modulation between 0 and 1
 float fmContrast = 1;
@@ -226,16 +227,18 @@ int gammaTable[nLEDs][nGammaLevels] = {
   { 0, 312, 675, 1065, 1473, 1892, 2315, 2738, 3161, 3580, 3996, 4410, 4822, 5235, 5650, 6069, 6493, 6923, 7360, 7803, 8251, 8701, 9147, 9585, 10000 },
 };
 
-// Variables that define an amplitude modulation
-uint8_t amplitudeIndex = 0;  // Default to no amplitude modulation
-float amplitudeVals[3][2] = {
-  { 0.0, 0.0 },  // no amplitude modulation;  0) unusued; 1) unusued
-  { 0.0, 0.0 },  // sinusoidal modulation; 0) unusued; 1) unusued
-  { 0.5, 0.0 },  // half-cosine window: 0) window duration seconds; 1) unusued
-};
+// The index that defines the form of any amplitude modulation
+uint8_t amWaveformIndex = 0;  // Default to no amplitude modulation
 
 // An amplitude modulation look-up table. 0-1e4 precision
 int amModTable[nAmModLevels];
+
+// The index that defines the form of a ramp modulation at modulation
+// onset and offset
+uint8_t rampWaveformIndex = 0;  // Default to no ramp modulation
+
+// The ramp look-up table. 0-1e4 precision
+int rampModTable[nRampModLevels];
 
 // Variables the define compound modulations. Support is provided for a compound
 // modulation composed of up to 5 sinusoids. For each sinusoid, we specify the
@@ -257,19 +260,19 @@ float compoundRange[2] = { 0, 1 };
 float clockAdjustFactor = 1;
 
 // Timing variables
-uint8_t waveformIndex = 1;                        // Default to sinusoid
-unsigned long fmCycleDurSecs = round(1e6 / 3);    // 3 Hz
-unsigned long amCycleDurSecs = round(1e6 / 0.1);  // 0.1 Hz
-float modDurSecs = 0;                             // Set to 0 for continuous
-int blinkDurMSecs = 100;                          // Blink event duration in msecs
-int rampDurMSecs = 500;                           // Dur of half-cosine ramp at mod
-                                                  // onset and offset in msecs
-unsigned long modulationStartTime = micros();     // Initialize these with the clock
-unsigned long lastLEDUpdateTime = micros();       // Initialize these with the clock
-uint8_t ledCycleIdx = 0;                          // Counter across LED updates
-float fmPhaseOffset = 0;                          // 0-1; shifts the waveform phase
-float amPhaseOffset = 0;                          // 0-1; shifts the waveform phase
-unsigned long updateCount = 0;                    // Cycles elapsed since mod start
+uint8_t fmWaveformIndex = 1;                           // Default to sinusoid
+unsigned long fmCycleDurMicroSecs = round(1e6 / 3);    // 3 Hz
+unsigned long amCycleDurMicroSecs = round(1e6 / 0.1);  // 0.1 Hz
+unsigned long modDurMicroSecs = 0;                     // Set to zero for continuous
+unsigned long blinkDurMicroSecs = round(1e6 * 0.1);    // Blink event duration in microsecs
+unsigned long rampDurMicroSecs = round(1e6 * 0.5);     // Duration of a ramp modulation at
+                                                       // the mod onset and offset in micro
+unsigned long modulationStartTime = micros();          // Initialize these with the clock
+unsigned long lastLEDUpdateTime = micros();            // Initialize these with the clock
+uint8_t ledCycleIdx = 0;                               // Counter across LED updates
+float fmPhaseOffset = 0;                               // 0-1; shifts the waveform phase
+float amPhaseOffset = 0;                               // 0-1; shifts the waveform phase
+unsigned long updateCount = 0;                         // Cycles elapsed since mod start
 
 // setup
 void setup() {
@@ -297,6 +300,8 @@ void setup() {
   updateBackgroundSettings();
   // Check which LEDs are "active"
   identifyActiveLEDs();
+  // Populate the ramp modulation table
+  updateRampModTable();
   // Populate the amplitude modulation table
   updateAmModTable();
   // Set the device to background
@@ -329,28 +334,46 @@ void loop() {
   }
   // Advance the LED settings
   if (modulationState) {
+    // Get the current time, and the time elapsed since modulation start
     unsigned long currentTime = micros();
+    unsigned long elapsedTime = currentTime - modulationStartTime;
     if ((currentTime - lastLEDUpdateTime) > minLEDAddressTime) {
       // Collect diagnostic timing information
       updateCount++;
       // Determine where we are in the fm cycle
-      unsigned long fmCycleTime = ((currentTime - modulationStartTime) % fmCycleDurSecs);
-      float fmCyclePhase = float(fmCycleTime) / float(fmCycleDurSecs);
-      // Determine where we are in the am cycle
-      unsigned long amCycleTime = ((currentTime - modulationStartTime) % amCycleDurSecs);
-      float amCyclePhase = float(amCycleTime) / float(amCycleDurSecs);
+      unsigned long fmCycleTime = (elapsedTime % fmCycleDurMicroSecs);
+      float fmCyclePhase = float(fmCycleTime) / float(fmCycleDurMicroSecs);
+      // Determine where we are in the am cycle if we have a non-zero amWaveformIndex
+      float amCyclePhase = 0;
+      if (amWaveformIndex > 0) {
+        unsigned long amCycleTime = (elapsedTime % amCycleDurMicroSecs);
+        amCyclePhase = float(amCycleTime) / float(amCycleDurMicroSecs);
+      }
+      // Determine where we are in the ramp cycle if we have a non-zero rampWaveformIndex,
+      // and a non-zero modDurMicroSecs. Default to a phase value of 1, indicating that the
+      // ramp has been fully implemented
+      float rampCyclePhase = 1;
+      if ((rampWaveformIndex > 0) && (modDurMicroSecs > 0)) {
+        // Check if we are within rampDurMicroSecs of the modulation start
+        if (elapsedTime < rampDurMicroSecs) {
+          rampCyclePhase = 1 - float(rampDurMicroSecs - elapsedTime) / float(rampDurMicroSecs);
+        }
+        // Check if we are within rampDurMicroSecs of the modulation end
+        if ((modDurMicroSecs - elapsedTime) < rampDurMicroSecs) {
+          rampCyclePhase = float(modDurMicroSecs - elapsedTime) / float(rampDurMicroSecs);
+        }
+      }
       // Update the lastTime
       lastLEDUpdateTime = currentTime;
       // Update the next LED
-      updateLED(fmCyclePhase, amCyclePhase, ledUpdateOrder[ledCycleIdx]);
+      updateLED(fmCyclePhase, amCyclePhase, rampCyclePhase, ledUpdateOrder[ledCycleIdx]);
       // Advance the ledCycleIdx
       ledCycleIdx++;
       ledCycleIdx = ledCycleIdx % nActiveLEDs;
     }
     // Check if we have exceeded the modulation duration
-    if (modDurSecs > 0) {
-      float elapsedTimeSecs = (currentTime - modulationStartTime) / 1e6;
-      if (elapsedTimeSecs > modDurSecs) {
+    if (modDurMicroSecs > 0) {
+      if (elapsedTime > modDurMicroSecs) {
         modulationState = false;
         setToBackground();
       }
@@ -378,21 +401,21 @@ void getConfig() {
   // Operate in modal state waiting for input
   waitForNewString();
   if (strncmp(inputString, "WF", 2) == 0) {
-    // waveformIndex controls the FM modulation form
+    // fmWaveformIndex controls the FM modulation form
     Serial.println("WF:");
     clearInputString();
     waitForNewString();
-    waveformIndex = atoi(inputString);
-    if (waveformIndex == 0) Serial.println("none");
-    if (waveformIndex == 1) Serial.println("sin");
-    if (waveformIndex == 2) Serial.println("square");
-    if (waveformIndex == 3) Serial.println("sawon");
-    if (waveformIndex == 4) Serial.println("sawoff");
-    if (waveformIndex == 5) {
+    fmWaveformIndex = atoi(inputString);
+    if (fmWaveformIndex == 0) Serial.println("none");
+    if (fmWaveformIndex == 1) Serial.println("sin");
+    if (fmWaveformIndex == 2) Serial.println("square");
+    if (fmWaveformIndex == 3) Serial.println("sawon");
+    if (fmWaveformIndex == 4) Serial.println("sawoff");
+    if (fmWaveformIndex == 5) {
       Serial.println("compound");
       updateCompoundRange();
     }
-    if (waveformIndex == 6) Serial.println("whitenoise");
+    if (fmWaveformIndex == 6) Serial.println("whitenoise");
     updateFmModTable();
   }
   if (strncmp(inputString, "FQ", 2) == 0) {
@@ -400,7 +423,7 @@ void getConfig() {
     Serial.println("FQ:");
     clearInputString();
     waitForNewString();
-    fmCycleDurSecs = clockAdjustFactor * 1e6 / atof(inputString);
+    fmCycleDurMicroSecs = round(clockAdjustFactor * 1e6 / atof(inputString));
     Serial.println(atof(inputString));
   }
   if (strncmp(inputString, "MD", 2) == 0) {
@@ -410,8 +433,8 @@ void getConfig() {
     Serial.println("MD:");
     clearInputString();
     waitForNewString();
-    modDurSecs = clockAdjustFactor * atof(inputString);
-    Serial.println(modDurSecs);
+    modDurMicroSecs = round(clockAdjustFactor * 1e6 * atof(inputString));
+    Serial.println(modDurMicroSecs);
   }
   if (strncmp(inputString, "CN", 2) == 0) {
     // fmContrast (0-1 float)
@@ -430,15 +453,34 @@ void getConfig() {
     fmPhaseOffset = atof(inputString) / (2 * pi);
     Serial.println(fmPhaseOffset);
   }
+  if (strncmp(inputString, "RI", 2) == 0) {
+    // Ramp modulation index
+    Serial.println("RI:");
+    clearInputString();
+    waitForNewString();
+    rampWaveformIndex = atoi(inputString);
+    if (rampWaveformIndex == 0) Serial.println("none");
+    if (rampWaveformIndex == 1) Serial.println("linear");
+    if (rampWaveformIndex == 2) Serial.println("half-cosine");
+    updateRampModTable();
+  }
+  if (strncmp(inputString, "RD", 2) == 0) {
+    // Ramp duration (float seconds)
+    Serial.println("RD:");
+    clearInputString();
+    waitForNewString();
+    rampDurMicroSecs = round(clockAdjustFactor * 1e6 * atof(inputString));
+    Serial.println(rampDurMicroSecs);
+  }
   if (strncmp(inputString, "AM", 2) == 0) {
     // Amplitude modulation index
     Serial.println("AM:");
     clearInputString();
     waitForNewString();
-    amplitudeIndex = atoi(inputString);
-    if (amplitudeIndex == 0) Serial.println("none");
-    if (amplitudeIndex == 1) Serial.println("sin");
-    if (amplitudeIndex == 2) Serial.println("half-cos");
+    amWaveformIndex = atoi(inputString);
+    if (amWaveformIndex == 0) Serial.println("none");
+    if (amWaveformIndex == 1) Serial.println("sin");
+    if (amWaveformIndex == 2) Serial.println("square");
     updateAmModTable();
   }
   if (strncmp(inputString, "AF", 2) == 0) {
@@ -446,7 +488,7 @@ void getConfig() {
     Serial.println("AF:");
     clearInputString();
     waitForNewString();
-    amCycleDurSecs = clockAdjustFactor * 1e6 / atof(inputString);
+    amCycleDurMicroSecs = round(clockAdjustFactor * 1e6 / atof(inputString));
     Serial.println(atof(inputString));
     updateAmModTable();
   }
@@ -458,21 +500,6 @@ void getConfig() {
     waitForNewString();
     amPhaseOffset = atof(inputString) / (2 * pi);
     Serial.println(amPhaseOffset);
-  }
-  if (strncmp(inputString, "AV", 2) == 0) {
-    // Amplitude modulation values for the current index
-    Serial.println("AV:");
-    clearInputString();
-    waitForNewString();
-    float newVal = atof(inputString);
-    amplitudeVals[amplitudeIndex][0] = newVal;
-    Serial.println(newVal);
-    clearInputString();
-    waitForNewString();
-    newVal = atof(inputString);
-    amplitudeVals[amplitudeIndex][1] = newVal;
-    Serial.println(newVal);
-    updateAmModTable();
   }
   if (strncmp(inputString, "CH", 2) == 0) {
     // Compound modulation, 5 harmonic indices
@@ -582,16 +609,8 @@ void getConfig() {
     Serial.println("BD:");
     clearInputString();
     waitForNewString();
-    blinkDurMSecs = round(clockAdjustFactor * float(atoi(inputString)));
-    Serial.println(blinkDurMSecs);
-  }
-  if (strncmp(inputString, "IW", 2) == 0) {
-    // Interpolate weights
-    Serial.println("IW:");
-    clearInputString();
-    waitForNewString();
-    interpolateWaveform = atoi(inputString);
-    Serial.println(interpolateWaveform);
+    blinkDurMicroSecs = round(clockAdjustFactor * 1e6 * atof(inputString));
+    Serial.println(blinkDurMicroSecs);
   }
   if (strncmp(inputString, "CT", 2) == 0) {
     // Return arduino clock time in microseconds
@@ -606,9 +625,9 @@ void getConfig() {
     float newClockAdjustFactor = atof(inputString);
     // The modified clock adjustment is applied
     // to the set of "dur" variables
-    updateDurVariables(clockAdjustFactor,newClockAdjustFactor);
+    updateDurVariables(clockAdjustFactor, newClockAdjustFactor);
     clockAdjustFactor = newClockAdjustFactor;
-    Serial.println(clockAdjustFactor,4);
+    Serial.println(clockAdjustFactor, 4);
   }
   if (strncmp(inputString, "RM", 2) == 0) {
     // Switch to run mode
@@ -701,11 +720,12 @@ void getRun() {
     if (strncmp(inputString, "BL", 2) == 0) {
       Serial.println(".");
       setToOff();
-      delay(blinkDurMSecs);
+      int delayInMs = round(float(blinkDurMicroSecs)/1e3);
+      delay(delayInMs);
     }
     if (strncmp(inputString, "FQ", 2) == 0) {
       // Carrier modulation frequency (float Hz)
-      fmCycleDurSecs = clockAdjustFactor * 1e6 / atof(inputString + 2);
+      fmCycleDurMicroSecs = round(clockAdjustFactor * 1e6 / atof(inputString));
       Serial.println(atof(inputString + 2));
     }
     if (strncmp(inputString, "CN", 2) == 0) {
@@ -744,7 +764,7 @@ void updateCompoundRange() {
   // to scale the waveform between 0 and 1. Here we examine
   // waveform across an entire cycle and store the range to be
   // used later to scale the levels to within 0 and 1.
-  if (waveformIndex < 5) return;
+  if (fmWaveformIndex < 5) return;
   compoundRange[0] = 0;
   compoundRange[1] = 1;
   float newRange[2] = { 0, 0 };
@@ -835,7 +855,7 @@ void setToOff() {
   }
 }
 
-void updateLED(float fmCyclePhase, float amCyclePhase, int ledIndex) {
+void updateLED(float fmCyclePhase, float amCyclePhase, float rampCyclePhase, int ledIndex) {
   // Adjust the fmCyclePhase for the fmPhaseOffset
   fmCyclePhase = fmCyclePhase + fmPhaseOffset;
   fmCyclePhase = fmCyclePhase - floor(fmCyclePhase);
@@ -853,6 +873,8 @@ void updateLED(float fmCyclePhase, float amCyclePhase, int ledIndex) {
   floatLevel = fmContrast * floatLevel;
   // Apply any amplitude modulation
   floatLevel = returnAmplitudeModulation(amCyclePhase) * floatLevel;
+  // Apply any ramp modulation
+  floatLevel = returnRampModulation(rampCyclePhase) * floatLevel;
   // Calculate the LED setting differently for a unimodal or a
   // bimodal modulation
   float floatSettingLED = 0;
@@ -892,7 +914,7 @@ void updateLED(float fmCyclePhase, float amCyclePhase, int ledIndex) {
 float returnFrequencyModulation(float fmCyclePhase) {
   float level = 1;
   float floatCell = fmCyclePhase * (nFmModLevels - 1);
-  if (interpolateWaveform) {
+  if (interpolateFmWaveform) {
     // Linear interpolation between values in the fmModTable
     int lowCell = floor(floatCell);
     if (lowCell == (nFmModLevels - 1)) {
@@ -914,12 +936,12 @@ void updateFmModTable() {
     float modLevel = calcFrequencyModulation(fmCyclePhase);
     fmModTable[ii] = round(modLevel * settingScale);
   }
-  // Set the interpolateWaveform state to false for square-wave and
-  // saw-tooth profiles.
-  if ((waveformIndex == 2) || (waveformIndex == 3) || (waveformIndex == 4)) {
-    interpolateWaveform = false;
+  // Set the interpolateFmWaveform state to false unless the waveform
+  // is continuous (e.g., sinusoidal)
+  if ((fmWaveformIndex == 1) || (fmWaveformIndex == 5)) {
+    interpolateFmWaveform = true;
   } else {
-    interpolateWaveform = true;
+    interpolateFmWaveform = false;
   }
 }
 
@@ -930,11 +952,11 @@ float calcFrequencyModulation(float fmCyclePhase) {
   float level = 0.5;
 
   // Sinusoid
-  if (waveformIndex == 1) {
+  if (fmWaveformIndex == 1) {
     level = ((sin(2 * pi * fmCyclePhase) + 1) / 2);
   }
   // Square wave, off then on
-  if (waveformIndex == 2) {
+  if (fmWaveformIndex == 2) {
     if (fmCyclePhase >= 0.5) {
       level = 1;
     } else {
@@ -942,15 +964,15 @@ float calcFrequencyModulation(float fmCyclePhase) {
     }
   }
   // Saw-tooth, ramping on and then sudden off
-  if (waveformIndex == 3) {
+  if (fmWaveformIndex == 3) {
     level = fmCyclePhase;
   }
   // Saw-tooth, ramping off and then sudden on
-  if (waveformIndex == 4) {  // saw off
+  if (fmWaveformIndex == 4) {  // saw off
     level = 1 - fmCyclePhase;
   }
-  // Compound modulation
-  if (waveformIndex == 5) {
+  // Compound sinusoidal modulation
+  if (fmWaveformIndex == 5) {
     level = 0;
     for (int ii = 0; ii < 5; ii++) {
       level = level + compoundAmps[ii] * sin(compoundHarmonics[ii] * 2 * pi * fmCyclePhase - compoundPhases[ii]);
@@ -961,7 +983,7 @@ float calcFrequencyModulation(float fmCyclePhase) {
   // White noise; note that the frequency and phase values are not relevant in this case
   // Need to improve this so that the set of 8 LEDs receive the same float level to avoid
   // creating a chromatic scintillation
-  if (waveformIndex == 6) {
+  if (fmWaveformIndex == 6) {
     level = float(random(settingScale)) / settingScale;
   }
   return level;
@@ -969,18 +991,22 @@ float calcFrequencyModulation(float fmCyclePhase) {
 
 float returnAmplitudeModulation(float amCyclePhase) {
   float modLevel = 1;
-  // Linear interpolation between values in the amModTable
   float floatCell = amCyclePhase * (nAmModLevels - 1);
-  int lowCell = floor(floatCell);
-  if (lowCell == (nAmModLevels - 1)) {
-    modLevel = float(amModTable[lowCell]) / settingScale;
+  if (interpolateAmWaveform) {
+    // Linear interpolation between values in the amModTable
+    int lowCell = floor(floatCell);
+    if (lowCell == (nAmModLevels - 1)) {
+      modLevel = float(amModTable[lowCell]) / settingScale;
+    } else {
+      float mantissa = (floatCell)-lowCell;
+      modLevel = (float(amModTable[lowCell]) + mantissa * float(amModTable[lowCell + 1] - amModTable[lowCell])) / settingScale;
+    }
   } else {
-    float mantissa = (floatCell)-lowCell;
-    modLevel = (float(amModTable[lowCell]) + mantissa * float(amModTable[lowCell + 1] - amModTable[lowCell])) / settingScale;
+    // Nearest-neighbor in the amModTable
+    modLevel = float(amModTable[round(floatCell)]) / settingScale;
   }
   return modLevel;
 }
-
 
 void updateAmModTable() {
   for (int ii = 0; ii < nAmModLevels; ii++) {
@@ -988,36 +1014,78 @@ void updateAmModTable() {
     float modLevel = calcAmplitudeModulation(amCyclePhase);
     amModTable[ii] = round(modLevel * settingScale);
   }
+  // Set the interpolateAmWaveform state to false unless the waveform
+  // is continuous (e.g., sinusoidal)
+  if (amWaveformIndex == 1) {
+    interpolateAmWaveform = true;
+  } else {
+    interpolateAmWaveform = false;
+  }
 }
 
 float calcAmplitudeModulation(float amCyclePhase) {
   float modLevel = 1.0;
-  if (amplitudeIndex == 0) {
+  if (amWaveformIndex == 0) {
     // No amplitude modulation
   }
-  if (amplitudeIndex == 1) {
+  if (amWaveformIndex == 1) {
     // Sinusoid amplitude modulation
     modLevel = (sin(2 * pi * amCyclePhase) + 1) / 2;
   }
-  if (amplitudeIndex == 2) {
-    // Half-cosine window at block onset and offset.
-    float totalDurSecs = float(amCycleDurSecs) / 1e6;
-    float rampDurSecs = amplitudeVals[amplitudeIndex][0];
-    // Determine how far along the half-cosine ramp we are, relative
-    // to the modulation frequency given by amplitudeVals[0]
-    float elapsedTimeSecs = amCyclePhase * totalDurSecs;
-    modLevel = 0;
-    float blockOnDurSecs = totalDurSecs / 2;
-    float plateauDurSecs = blockOnDurSecs - rampDurSecs;
-    if (elapsedTimeSecs < rampDurSecs) {
-      modLevel = (cos(pi + pi * (elapsedTimeSecs / rampDurSecs)) + 1) / 2;
+  if (amWaveformIndex == 2) {
+    // Square-wave amplitude modulation
+    if (amCyclePhase >= 0.5) {
+      modLevel = 1;
+    } else {
+      modLevel = 0;
     }
-    if ((elapsedTimeSecs > rampDurSecs) && (elapsedTimeSecs < plateauDurSecs)) {
-      modLevel = 1.0;
+  }
+  return modLevel;
+}
+
+float returnRampModulation(float rampCyclePhase) {
+  float modLevel = 1;
+  float floatCell = rampCyclePhase * (nRampModLevels - 1);
+  if (interpolateRampWaveform) {
+    // Linear interpolation between values in the rampModTable
+    int lowCell = floor(floatCell);
+    if (lowCell == (nRampModLevels - 1)) {
+      modLevel = float(rampModTable[lowCell]) / settingScale;
+    } else {
+      float mantissa = (floatCell)-lowCell;
+      modLevel = (float(rampModTable[lowCell]) + mantissa * float(rampModTable[lowCell + 1] - rampModTable[lowCell])) / settingScale;
     }
-    if ((elapsedTimeSecs > plateauDurSecs) && (elapsedTimeSecs < blockOnDurSecs)) {
-      modLevel = (cos(pi * ((elapsedTimeSecs - plateauDurSecs) / rampDurSecs)) + 1) / 2;
-    }
+  } else {
+    // Nearest-neighbor in the rampModTable
+    modLevel = float(rampModTable[round(floatCell)]) / settingScale;
+  }
+  return modLevel;
+}
+
+void updateRampModTable() {
+  for (int ii = 0; ii < nRampModLevels; ii++) {
+    float rampCyclePhase = float(ii) / (nRampModLevels - 1);
+    float modLevel = calcRampModulation(rampCyclePhase);
+    rampModTable[ii] = round(modLevel * settingScale);
+  }
+  // We always set interpolateRampWaveform state to false
+  // for speed. If speed is not an issue, all the defined
+  // ramps are continuous, thus this could be set to true
+  interpolateRampWaveform = false;
+}
+
+float calcRampModulation(float rampCyclePhase) {
+  float modLevel = 1.0;
+  if (rampWaveformIndex == 0) {
+    // No ramp
+  }
+  if (rampWaveformIndex == 1) {
+    // Linear
+    modLevel = rampCyclePhase;
+  }
+  if (rampWaveformIndex == 2) {
+    // Half-cosine
+    modLevel = (cos(pi + pi * rampCyclePhase) + 1) / 2;
   }
   return modLevel;
 }
@@ -1064,11 +1132,11 @@ float applyGammaCorrect(float floatSettingLED, int ledIndex) {
 }
 
 void updateDurVariables(float oldClockAdjustFactor, float newClockAdjustFactor) {
-  fmCycleDurSecs = (fmCycleDurSecs / oldClockAdjustFactor) * newClockAdjustFactor;
-  amCycleDurSecs = (amCycleDurSecs / oldClockAdjustFactor) * newClockAdjustFactor;
-  modDurSecs = (modDurSecs / oldClockAdjustFactor) * newClockAdjustFactor;
-  blinkDurMSecs = round((float(blinkDurMSecs) / oldClockAdjustFactor) * newClockAdjustFactor);
-  rampDurMSecs = round((float(rampDurMSecs) / oldClockAdjustFactor) * newClockAdjustFactor);
+  fmCycleDurMicroSecs = round((float(fmCycleDurMicroSecs) / oldClockAdjustFactor) * newClockAdjustFactor);
+  amCycleDurMicroSecs = round((float(amCycleDurMicroSecs) / oldClockAdjustFactor) * newClockAdjustFactor);
+  modDurMicroSecs = round((float(modDurMicroSecs) / oldClockAdjustFactor) * newClockAdjustFactor);
+  blinkDurMicroSecs = round((float(blinkDurMicroSecs) / oldClockAdjustFactor) * newClockAdjustFactor);
+  rampDurMicroSecs = round((float(rampDurMicroSecs) / oldClockAdjustFactor) * newClockAdjustFactor);
 }
 
 void pulseWidthModulate(int setting) {

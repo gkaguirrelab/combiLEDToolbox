@@ -20,12 +20,12 @@ end
 writeline(obj.serialObj,'BD');
 readline(obj.serialObj);
 
-% Send the blink duration as integer milliseconds
-writeline(obj.serialObj,num2str(round(blinkDurSecs*1000),'%d'));
+% Send the blink duration as a float in units of seconds
+writeline(obj.serialObj,num2str(blinkDurSecs,'%.4f'));
 msg = readline(obj.serialObj);
 
 if obj.verbose
-    fprintf(['Blink duration set to ' char(msg) ' msecs\n']);
+    fprintf(['Blink duration set to ' char(msg) ' microsecs\n']);
 end
 
 
