@@ -818,7 +818,7 @@ void updateBackgroundSettings() {
 void setToDirectSettings() {
   for (int ii = 0; ii < nLEDs; ii++) {
     // Get the setting for this LED
-    float floatSettingLED = float(settingsDirect[ii]) / float(settingScale);
+    float floatSettingLED = float(settingsDirect[ii]) * recip_settingScale;
     // gamma correct floatSettingLED if requested
     if (gammaCorrectInDirectMode) {
       floatSettingLED = applyGammaCorrect(floatSettingLED, ii);
