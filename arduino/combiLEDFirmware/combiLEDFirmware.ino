@@ -123,7 +123,7 @@
 // Set this variable to use the built-in LED to simulate
 // the output of the Prizmatix device
 //
-bool simulatePrizmatix = true;
+bool simulatePrizmatix = false;
 ////////////////////////////////////////////////////////////////////////////////
 
 
