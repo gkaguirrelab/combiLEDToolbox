@@ -44,18 +44,17 @@
 // updating. This allows the remaining, active LEDs to be updated more
 // frequently.
 //
-// Timing is based upon calls to the micros() function, which returns the 
+// Timing is based upon calls to the micros() function, which returns the
 // microseconds elapsed since power on for the Arduino. On a 16 MHz Arduino
 // board (such as the Uno used in the CombiLED), this value has a resolution
-// of 4 microseconds. The value will overflow and restart at zero after 
+// of 4 microseconds. The value will overflow and restart at zero after
 // approximately 70 minutes. The basis of the clock value is the Internal RC
 // Oscillator on the ATmega48A microcontroller. The timing of the RC Oscillator
 // is factory calibrated with a rated calibration accuracy of ±10% (Section 29.4.1
-// of the megaAVR Data Sheet). This is unacceptable variation amongst devices
-// in timing accuracy. Therefore, the code supports a multiplicative timing
-// adjustment that can be set in Config Mode. The timing adjustment must be
-// derived from a measurement of the device output or by reference to an external
-// timing standard.
+// of the megaAVR Data Sheet). Therefore, the code supports a multiplicative timing
+// adjustment (clockAdjustFactor) that can be set in Config Mode. The timing
+// adjustment may be informed using the "CT" call in Config Mode, which returns
+// the output of micros(). This factor is applied to the cycleDur variables.
 //
 // In addition to the frequency modulation of the waveform, a superimposed
 // amplitude modulation may be specified.
@@ -108,17 +107,17 @@
 //                        4 - saw-tooth off
 //                        5 - compound modulation
 //                        6 - white noise (frequency not relevant here)
-//  fmCycleDur          Scalar. The duration in microseconds of the fm waveform.
+//  fmCycleDurSecs      Scalar. The duration in microseconds of the fm waveform.
 //  fmPhaseOffset       Float, 0-1. Used to shift the phase of the fm waveform.
 //  amplitudeIndex      Scalar. Defines the amplitude modulation profile:
 //                        0 - none
 //                        1 - sinusoid modulation
 //                        2 - half-cosine window
-//  amCycleDur          Scalar. The duration in microseconds of the am waveform.
+//  amCycleDurSecs      Scalar. The duration in microseconds of the am waveform.
 //  amPhaseOffset       Float, 0-1. Used to shift the phase of the am waveform.
 //  amplitudeVals       2x1 float array. Values control the amplitude modulation,
 //                      varying by the amplitudeIndex.
-//  blinkDurationMSecs  Scalar. Duration of attention event in milliseconds.
+//  blinkDurMSecs       Scalar. Duration of attention event in milliseconds.
 //                      During run-mode, passing a "blink" command sets all LEDs
 //                      to zero for the blink duration. Default is 100 msecs.
 //  ledUpdateOrder      8x1 int array, of values 0-7. Defines the order in which
@@ -136,7 +135,7 @@
 // Set this variable to use the built-in LED to simulate
 // the output of the Prizmatix device
 //
-bool simulatePrizmatix = false;
+bool simulatePrizmatix = true;
 ////////////////////////////////////////////////////////////////////////////////
 
 
@@ -250,19 +249,27 @@ float compoundAmps[5] = { 0.5, 1, 1, 0, 0 };            // Relative amplitudes
 float compoundPhases[5] = { 0, 0.7854, 4.3633, 0, 0 };  // Phase delay in radians
 float compoundRange[2] = { 0, 1 };
 
-// Timing variables
-uint8_t waveformIndex = 1;                     // Default to sinusoid
-unsigned long fmCycleDur = round(1e6 / 3);     // Initialize at 3 Hz
-unsigned long amCycleDur = round(1e6 / 0.1);   // Initialize at 0.1 Hz
-unsigned long modulationStartTime = micros();  // Initialize these with the clock
-unsigned long lastLEDUpdateTime = micros();    // Initialize these with the clock
-int blinkDurationMSecs = 100;                  // Blink event duration
-uint8_t ledCycleIdx = 0;                       // Counter across LED updates
-float fmPhaseOffset = 0;                       // 0-1; shifts the waveform phase
-float amPhaseOffset = 0;                       // 0-1; shifts the waveform phase
-float modulationDurSecs = 0;                   // Set to 0 for continuous
-unsigned long updateCount = 0;                 // Cycles elapsed since mod start
+// Adjustment to the timing of the internal clock, used to correct for small
+// factory miscalibrations of the oscillator. Values greater than 1 indicate
+// that the arduino internal clock is faster than an external standard clock.
+// All "dur" variables (mod, fmCycle, amCycle, ramp, blink) are multiplied by
+// this factor to correct the achieved timing.
+float clockAdjustFactor = 1;
 
+// Timing variables
+uint8_t waveformIndex = 1;                        // Default to sinusoid
+unsigned long fmCycleDurSecs = round(1e6 / 3);    // 3 Hz
+unsigned long amCycleDurSecs = round(1e6 / 0.1);  // 0.1 Hz
+float modDurSecs = 0;                             // Set to 0 for continuous
+int blinkDurMSecs = 100;                          // Blink event duration in msecs
+int rampDurMSecs = 500;                           // Dur of half-cosine ramp at mod
+                                                  // onset and offset in msecs
+unsigned long modulationStartTime = micros();     // Initialize these with the clock
+unsigned long lastLEDUpdateTime = micros();       // Initialize these with the clock
+uint8_t ledCycleIdx = 0;                          // Counter across LED updates
+float fmPhaseOffset = 0;                          // 0-1; shifts the waveform phase
+float amPhaseOffset = 0;                          // 0-1; shifts the waveform phase
+unsigned long updateCount = 0;                    // Cycles elapsed since mod start
 
 // setup
 void setup() {
@@ -299,6 +306,9 @@ void setup() {
   updateCompoundRange();
   // Populate the frequency modulation table
   updateFmModTable();
+  // Update the "dur" variables to account for a
+  // clockAdjustFactor that is different from 1
+  updateDurVariables(1.0, clockAdjustFactor);
   // Show the console menu
   showModeMenu();
 }
@@ -324,11 +334,11 @@ void loop() {
       // Collect diagnostic timing information
       updateCount++;
       // Determine where we are in the fm cycle
-      unsigned long fmCycleTime = ((currentTime - modulationStartTime) % fmCycleDur);
-      float fmCyclePhase = float(fmCycleTime) / float(fmCycleDur);
+      unsigned long fmCycleTime = ((currentTime - modulationStartTime) % fmCycleDurSecs);
+      float fmCyclePhase = float(fmCycleTime) / float(fmCycleDurSecs);
       // Determine where we are in the am cycle
-      unsigned long amCycleTime = ((currentTime - modulationStartTime) % amCycleDur);
-      float amCyclePhase = float(amCycleTime) / float(amCycleDur);
+      unsigned long amCycleTime = ((currentTime - modulationStartTime) % amCycleDurSecs);
+      float amCyclePhase = float(amCycleTime) / float(amCycleDurSecs);
       // Update the lastTime
       lastLEDUpdateTime = currentTime;
       // Update the next LED
@@ -338,9 +348,9 @@ void loop() {
       ledCycleIdx = ledCycleIdx % nActiveLEDs;
     }
     // Check if we have exceeded the modulation duration
-    if (modulationDurSecs > 0) {
+    if (modDurSecs > 0) {
       float elapsedTimeSecs = (currentTime - modulationStartTime) / 1e6;
-      if (elapsedTimeSecs > modulationDurSecs) {
+      if (elapsedTimeSecs > modDurSecs) {
         modulationState = false;
         setToBackground();
       }
@@ -390,7 +400,7 @@ void getConfig() {
     Serial.println("FQ:");
     clearInputString();
     waitForNewString();
-    fmCycleDur = 1e6 / atof(inputString);
+    fmCycleDurSecs = clockAdjustFactor * 1e6 / atof(inputString);
     Serial.println(atof(inputString));
   }
   if (strncmp(inputString, "MD", 2) == 0) {
@@ -400,8 +410,8 @@ void getConfig() {
     Serial.println("MD:");
     clearInputString();
     waitForNewString();
-    modulationDurSecs = atof(inputString);
-    Serial.println(modulationDurSecs);
+    modDurSecs = clockAdjustFactor * atof(inputString);
+    Serial.println(modDurSecs);
   }
   if (strncmp(inputString, "CN", 2) == 0) {
     // fmContrast (0-1 float)
@@ -436,7 +446,7 @@ void getConfig() {
     Serial.println("AF:");
     clearInputString();
     waitForNewString();
-    amCycleDur = 1e6 / atof(inputString);
+    amCycleDurSecs = clockAdjustFactor * 1e6 / atof(inputString);
     Serial.println(atof(inputString));
     updateAmModTable();
   }
@@ -572,8 +582,8 @@ void getConfig() {
     Serial.println("BD:");
     clearInputString();
     waitForNewString();
-    blinkDurationMSecs = atoi(inputString);
-    Serial.println(blinkDurationMSecs);
+    blinkDurMSecs = round(clockAdjustFactor * float(atoi(inputString)));
+    Serial.println(blinkDurMSecs);
   }
   if (strncmp(inputString, "IW", 2) == 0) {
     // Interpolate weights
@@ -582,6 +592,23 @@ void getConfig() {
     waitForNewString();
     interpolateWaveform = atoi(inputString);
     Serial.println(interpolateWaveform);
+  }
+  if (strncmp(inputString, "CT", 2) == 0) {
+    // Return arduino clock time in microseconds
+    clearInputString();
+    Serial.println(micros());
+  }
+  if (strncmp(inputString, "CF", 2) == 0) {
+    // Pass a clock adjust factor
+    Serial.println("CF:");
+    clearInputString();
+    waitForNewString();
+    float newClockAdjustFactor = atof(inputString);
+    // The modified clock adjustment is applied
+    // to the set of "dur" variables
+    updateDurVariables(clockAdjustFactor,newClockAdjustFactor);
+    clockAdjustFactor = newClockAdjustFactor;
+    Serial.println(clockAdjustFactor,4);
   }
   if (strncmp(inputString, "RM", 2) == 0) {
     // Switch to run mode
@@ -674,11 +701,11 @@ void getRun() {
     if (strncmp(inputString, "BL", 2) == 0) {
       Serial.println(".");
       setToOff();
-      delay(blinkDurationMSecs);
+      delay(blinkDurMSecs);
     }
     if (strncmp(inputString, "FQ", 2) == 0) {
       // Carrier modulation frequency (float Hz)
-      fmCycleDur = 1e6 / atof(inputString + 2);
+      fmCycleDurSecs = clockAdjustFactor * 1e6 / atof(inputString + 2);
       Serial.println(atof(inputString + 2));
     }
     if (strncmp(inputString, "CN", 2) == 0) {
@@ -960,7 +987,6 @@ void updateAmModTable() {
     float amCyclePhase = float(ii) / (nAmModLevels - 1);
     float modLevel = calcAmplitudeModulation(amCyclePhase);
     amModTable[ii] = round(modLevel * settingScale);
-    Serial.println(amModTable[ii]);
   }
 }
 
@@ -975,7 +1001,7 @@ float calcAmplitudeModulation(float amCyclePhase) {
   }
   if (amplitudeIndex == 2) {
     // Half-cosine window at block onset and offset.
-    float totalDurSecs = float(amCycleDur) / 1e6;
+    float totalDurSecs = float(amCycleDurSecs) / 1e6;
     float rampDurSecs = amplitudeVals[amplitudeIndex][0];
     // Determine how far along the half-cosine ramp we are, relative
     // to the modulation frequency given by amplitudeVals[0]
@@ -1035,6 +1061,14 @@ float applyGammaCorrect(float floatSettingLED, int ledIndex) {
     corrected = (float(gammaTable[ledIndex][lowCell]) + mantissa * float(gammaTable[ledIndex][lowCell + 1] - gammaTable[ledIndex][lowCell])) / settingScale;
   }
   return corrected;
+}
+
+void updateDurVariables(float oldClockAdjustFactor, float newClockAdjustFactor) {
+  fmCycleDurSecs = (fmCycleDurSecs / oldClockAdjustFactor) * newClockAdjustFactor;
+  amCycleDurSecs = (amCycleDurSecs / oldClockAdjustFactor) * newClockAdjustFactor;
+  modDurSecs = (modDurSecs / oldClockAdjustFactor) * newClockAdjustFactor;
+  blinkDurMSecs = round((float(blinkDurMSecs) / oldClockAdjustFactor) * newClockAdjustFactor);
+  rampDurMSecs = round((float(rampDurMSecs) / oldClockAdjustFactor) * newClockAdjustFactor);
 }
 
 void pulseWidthModulate(int setting) {

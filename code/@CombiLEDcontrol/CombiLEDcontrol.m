@@ -88,6 +88,7 @@ classdef CombiLEDcontrol < handle
         setDirectModeGamma(obj,boolGammaCorrect)
         setLEDUpdateOrder(obj,ledUpdateOrder)
         quantErrorFlagByPrimary = checkForQuantizationError(obj,contrast,bitDepth)
+        clockAdjustFactor = calcClockAdjustFactor(obj)
 
     end
 end
