@@ -44,6 +44,19 @@
 // updating. This allows the remaining, active LEDs to be updated more
 // frequently.
 //
+// Timing is based upon calls to the micros() function, which returns the 
+// microseconds elapsed since power on for the Arduino. On a 16 MHz Arduino
+// board (such as the Uno used in the CombiLED), this value has a resolution
+// of 4 microseconds. The value will overflow and restart at zero after 
+// approximately 70 minutes. The basis of the clock value is the Internal RC
+// Oscillator on the ATmega48A microcontroller. The timing of the RC Oscillator
+// is factory calibrated with a rated calibration accuracy of ±10% (Section 29.4.1
+// of the megaAVR Data Sheet). This is unacceptable variation amongst devices
+// in timing accuracy. Therefore, the code supports a multiplicative timing
+// adjustment that can be set in Config Mode. The timing adjustment must be
+// derived from a measurement of the device output or by reference to an external
+// timing standard.
+//
 // In addition to the frequency modulation of the waveform, a superimposed
 // amplitude modulation may be specified.
 //
@@ -123,7 +136,7 @@
 // Set this variable to use the built-in LED to simulate
 // the output of the Prizmatix device
 //
-bool simulatePrizmatix = true;
+bool simulatePrizmatix = false;
 ////////////////////////////////////////////////////////////////////////////////
 
 
@@ -248,7 +261,7 @@ uint8_t ledCycleIdx = 0;                       // Counter across LED updates
 float fmPhaseOffset = 0;                       // 0-1; shifts the waveform phase
 float amPhaseOffset = 0;                       // 0-1; shifts the waveform phase
 float modulationDurSecs = 0;                   // Set to 0 for continuous
-unsigned long updateCount = 0;                  // Cycles elapsed since mod start
+unsigned long updateCount = 0;                 // Cycles elapsed since mod start
 
 
 // setup
