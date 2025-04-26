@@ -44,11 +44,8 @@ readline(obj.serialObj);
 % Send the settingsLow
 report = 'settingsLow: [ ';
 for ii = 1:obj.nPrimaries
-    % Each setting is sent as an integer, in the range of 0 to 1e4.
-    % This is a specification of the fractional settings with a
-    % precision to the fourth decimal place
-    valToSend = round(settingsLow(ii) * 1e4);
-    writeline(obj.serialObj,num2str(valToSend));
+    % Each setting is sent as a float
+    writeline(obj.serialObj,num2str(settingsLow(ii),'%.5f'));
     msg = readline(obj.serialObj);
     report = [report, char(msg), ' '];
 end
@@ -61,11 +58,8 @@ end
 % Send the settingsHigh
 report = 'settingsHigh: [ ';
 for ii = 1:obj.nPrimaries
-    % Each setting is sent as an integer, in the range of 0 to 1e4.
-    % This is a specification of the fractional settings with a
-    % precision to the fourth decimal place
-    valToSend = round(settingsHigh(ii) * 1e4);
-    writeline(obj.serialObj,num2str(valToSend));
+    % Each setting is sent as a float
+    writeline(obj.serialObj,num2str(settingsHigh(ii),'%.5f'));
     msg = readline(obj.serialObj);
     report = [report, char(msg), ' '];
 end

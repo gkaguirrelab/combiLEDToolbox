@@ -1,4 +1,4 @@
-function setAMValues(obj,amplitudeValues)
+function setRampIndex(obj,rampIndex)
 
 % Check that we have an open connection
 if isempty(obj.serialObj)
@@ -16,19 +16,15 @@ switch obj.deviceState
 end
 
 % Enter the amplitude values send state
-writeline(obj.serialObj,'AV');
+writeline(obj.serialObj,'RI');
 readline(obj.serialObj);
 
-% Loop over the amplitude values and send these
-report = 'amplitudeValues: [ ';
-for ii = 1:length(amplitudeValues)
-    writeline(obj.serialObj,num2str(amplitudeValues(ii),'%.4f'));
-    msg = readline(obj.serialObj);
-    report = [report, char(msg), ' '];
-end
-report = [report,']\n'];
+% Send the amplitude modulation index
+writeline(obj.serialObj,num2str(rampIndex));
+msg = readline(obj.serialObj);
+
 if obj.verbose
-    fprintf(report);
+    fprintf(['Ramp modulation index set to ' char(msg) '\n']);
 end
 
 end

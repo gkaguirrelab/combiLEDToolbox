@@ -18,10 +18,14 @@ end
 settingsLow = obj.settingsLow;
 settingsHigh = obj.settingsHigh;
 
+% This is the maxSettingsValue within the Arduino (16 bit unsigned int,
+% with a tiny bit of headroom)
+maxSettingsValue = 65535;
+
 % These settings values are transmitted to the combiLED as integers in the
-% range 0 - 1e4, and subsequently turned back into floats.
-settingsHigh = double(round(settingsHigh * 1e4));
-settingsLow = double(round(settingsLow * 1e4));
+% range 0 - maxSettingsValue, and subsequently turned back into floats.
+settingsHigh = double(round(settingsHigh * maxSettingsValue));
+settingsLow = double(round(settingsLow * maxSettingsValue));
 
 % The settingsDepth is the difference between the high and low settings,
 % scaled by the contrast
@@ -30,7 +34,7 @@ settingsDepth = contrast * (settingsHigh - settingsLow);
 % These settings are then cast into a 12 bit integer for defining LED
 % voltage levels. We will take absolute value of the settingsDepth and
 % convert to 12 bits to obtain the depth of these values.
-valsDepth = round(abs(settingsDepth/1e4)*2^12);
+valsDepth = round(abs(settingsDepth/maxSettingsValue)*2^12);
 
 % We will set an error flag for any primary that has a valsDepth of less
 % than 3 bits.
