@@ -30,7 +30,7 @@ else
 end
 
 % Load the selected cals file
-calDir = string(calsList(ii).folder);
+calDir = string(calsList(idx).folder);
 calFileName = string(calFileNames{idx});
 load(fullfile(calDir,calFileName),'cals')
 

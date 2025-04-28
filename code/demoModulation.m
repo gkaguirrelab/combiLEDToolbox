@@ -76,10 +76,10 @@ obj.setSettings(modResult);
 obj.setUnimodal();
 obj.setWaveformIndex(2); % square-wave
 obj.setFrequency(0.1);
+obj.setDuration(0.05);
 obj.setPhaseOffset(pi);
-obj.setAMIndex(2); % half-cosine windowing
-obj.setAMFrequency(0.1);
-obj.setAMValues([0.5,0]); % 0.5 second half-cosine on; second value unused
+obj.setRampIndex(2); % half-cosine windowing
+obj.setRampDuration(0.5);
 end
 
 function modResult = fastLightFluxFlicker(obj,photoreceptors,cal)
