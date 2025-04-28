@@ -21,6 +21,7 @@ classdef CombiLEDcontrol < handle
 
         serialObj
         deviceState
+        clockAdjustFactor = 1
         settingsHigh = [1,1,1,1,1,1,1,1]
         settingsLow = [0,0,0,0,0,0,0,0]
         identifierString % String returned by Arduino that uniquely identifies a given CombiLED
@@ -90,6 +91,7 @@ classdef CombiLEDcontrol < handle
         setLEDUpdateOrder(obj,ledUpdateOrder)
         quantErrorFlagByPrimary = checkForQuantizationError(obj,contrast,bitDepth)
         clockAdjustFactor = calcClockAdjustFactor(obj)
+        setClockAdjustFactor(obj,clockAdjustFactor)
 
     end
 end

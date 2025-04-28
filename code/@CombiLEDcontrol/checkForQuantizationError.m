@@ -4,8 +4,8 @@ function quantErrorFlagByPrimary = checkForQuantizationError(obj,contrast,bitThr
 % primary should have the specified bit resolution over the modulation
 % range. This is only a rough check; the actual process of converting the
 % floating point settings into the final, 12-bit primary values is
-% complicated, including casting the initial float into an integer in the
-% range 0-1e4, converting back into a float, gamma correcting, and then
+% complicated, including casting the initial float into a unsigned 16 bit
+% integer, converting back into a float, gamma correcting, and then
 % casting as a 12-bit value. We don't attempt to capture the gamma
 % correction step here.
 
@@ -18,8 +18,7 @@ end
 settingsLow = obj.settingsLow;
 settingsHigh = obj.settingsHigh;
 
-% This is the maxSettingsValue within the Arduino (16 bit unsigned int,
-% with a tiny bit of headroom)
+% This is the maxSettingsValue within the Arduino (16 bit unsigned int)
 maxSettingsValue = 65535;
 
 % These settings values are transmitted to the combiLED as integers in the
