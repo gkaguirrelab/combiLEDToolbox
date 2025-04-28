@@ -22,7 +22,8 @@ modDemos = {...
     'riderStockmanDistortion', ...
     'fastLightFluxFlicker', ...
     'slowSFlicker' ...
-    'slowLminusMFlicker' ...
+    'slowLminusMFlicker_foveal' ...
+    'slowLminusMFlicker_wideField' ...
     };
 
 notDone = true;
@@ -109,11 +110,19 @@ compoundPhases=deg2rad([0,333,226,0,0]); % Should look red
 obj.setCompoundModulation(compoundHarmonics,compoundAmplitudes,compoundPhases);
 end
 
-function modResult = slowLminusMFlicker(obj,photoreceptors,cal)
+function modResult = slowLminusMFlicker_foveal(obj,photoreceptors,cal)
+modResult = designModulation('LminusM_foveal',photoreceptors,cal);
+obj.setSettings(modResult);
+obj.setWaveformIndex(1);
+obj.setFrequency(0.5);
+obj.setAMIndex(0);
+end
+
+function modResult = slowLminusMFlicker_wideField(obj,photoreceptors,cal)
 modResult = designModulation('LminusM_wide',photoreceptors,cal);
 obj.setSettings(modResult);
 obj.setWaveformIndex(1);
-obj.setFrequency(2);
+obj.setFrequency(0.5);
 obj.setAMIndex(0);
 end
 
