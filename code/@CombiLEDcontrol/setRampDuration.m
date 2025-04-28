@@ -1,4 +1,4 @@
-function setDuration(obj,modulationDurSecs)
+function setRampDuration(obj,rampDurSecs)
 
 % Check that we have an open connection
 if isempty(obj.serialObj)
@@ -16,15 +16,15 @@ switch obj.deviceState
 end
 
 % Enter the frequency send state
-writeline(obj.serialObj,'MD');
+writeline(obj.serialObj,'RD');
 readline(obj.serialObj);
 
 % Send the duration
-writeline(obj.serialObj,num2str(modulationDurSecs,'%.4f'));
+writeline(obj.serialObj,num2str(rampDurSecs,'%.4f'));
 msg = readline(obj.serialObj);
 
 if obj.verbose
-    fprintf(['Modulation duration set to ' char(msg) ' microsecs\n']);
+    fprintf(['Ramp duration set to ' char(msg) ' microsecs\n']);
 end
 
 

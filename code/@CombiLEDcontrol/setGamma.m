@@ -51,6 +51,7 @@ end
 % generate the table and stick it in the arduino firmware as the default
 % table
 %{
+settingScale = 65535; % Max 16 bit integer value
 for ii = 1:obj.nPrimaries
     str = '{ ';
     for jj=0:24
@@ -77,7 +78,7 @@ readline(obj.serialObj);
 for ii = 1:obj.nPrimaries
     report = sprintf('gammaParams led%d: [ ',ii-1);
     for jj= 1:obj.nGammaParams
-        % Send value as 0-1e4 int
+        % Send value as a float
         val = gammaParams(ii,jj);
         writeline(obj.serialObj,num2str(val,'%.4f'));
         msg = readline(obj.serialObj);        

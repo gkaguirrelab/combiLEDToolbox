@@ -26,6 +26,16 @@ switch whichDirection
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
         whichReceptorsToIgnore = {'Mel','Rod_2deg','Rod_10deg'};
         desiredContrast = [1 -1 0.9 -0.9 1 -1];
+    case 'M_foveal'
+        whichReceptorsToTarget = {'M_2deg'};
+        whichReceptorsToSilence = {'L_2deg','S_2deg'};
+        whichReceptorsToIgnore = {'L_10deg','L_penum10','M_10deg','M_penum10','S_10deg','Mel','Rod_2deg','Rod_10deg'};
+        desiredContrast = [1];
+    case 'L_foveal'
+        whichReceptorsToTarget = {'L_2deg'};
+        whichReceptorsToSilence = {'M_2deg','S_2deg'};
+        whichReceptorsToIgnore = {'L_10deg','L_penum10','M_10deg','M_penum10','S_10deg','Mel','Rod_2deg','Rod_10deg'};
+        desiredContrast = [1];
     case 'L_wide'
         % An L-cone isolating, wide-field modulation. Primarily used in
         % nulling of residual luminance in the LminusM modulation during

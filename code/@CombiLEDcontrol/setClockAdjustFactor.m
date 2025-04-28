@@ -1,4 +1,5 @@
-function setDuration(obj,modulationDurSecs)
+function setClockAdjustFactor(obj,clockAdjustFactor)
+
 
 % Check that we have an open connection
 if isempty(obj.serialObj)
@@ -15,17 +16,18 @@ switch obj.deviceState
         obj.deviceState = 'CONFIG';
 end
 
-% Enter the frequency send state
-writeline(obj.serialObj,'MD');
+% Enter the send state
+writeline(obj.serialObj,'CF');
 readline(obj.serialObj);
 
-% Send the duration
-writeline(obj.serialObj,num2str(modulationDurSecs,'%.4f'));
+% Send the clockAdjustFactor as a float
+writeline(obj.serialObj,num2str(clockAdjustFactor,'%.5f'));
 msg = readline(obj.serialObj);
 
 if obj.verbose
-    fprintf(['Modulation duration set to ' char(msg) ' microsecs\n']);
+    fprintf(['Clock adjust factor set to ' char(msg) '\n']);
 end
 
+obj.clockAdjustFactor = clockAdjustFactor;
 
 end
