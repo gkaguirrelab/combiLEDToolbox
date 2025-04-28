@@ -571,14 +571,14 @@ void getConfig() {
       waitForNewString();
       tempFloatLevel = atof(inputString);
       settingsLow[ii] = floor(tempFloatLevel * settingScale);
-      Serial.println(tempFloatLevel);
+      Serial.println(settingsLow[ii]);
       clearInputString();
     }
     for (int ii = 0; ii < nLEDs; ii++) {
       waitForNewString();
       tempFloatLevel = atof(inputString);
       settingsHigh[ii] = floor(tempFloatLevel * settingScale);
-      Serial.println(tempFloatLevel);
+      Serial.println(settingsHigh[ii]);
       clearInputString();
     }
     updateBackgroundSettings();
@@ -665,9 +665,9 @@ void getDirect() {
     for (int ii = 0; ii < nLEDs; ii++) {
       waitForNewString();
       tempFloatLevel = atof(inputString);
-      Serial.println(tempFloatLevel);
       clearInputString();
       settingsDirect[ii] = floor(tempFloatLevel * settingScale);
+      Serial.println(settingsDirect[ii]);
     }
     setToDirectSettings();
   }
@@ -803,7 +803,7 @@ void identifyActiveLEDs() {
 void updateBackgroundSettings() {
   for (int ii = 0; ii < nLEDs; ii++) {
     if (bimodalModFlag) {
-      background[ii] = round((settingsHigh[ii] + settingsLow[ii]) / 2);
+      background[ii] = (uint16_t)round(((unsigned long)settingsHigh[ii] + (unsigned long)settingsLow[ii]) / 2);
     } else {
       background[ii] = settingsLow[ii];
     }
