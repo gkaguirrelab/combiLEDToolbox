@@ -52,7 +52,7 @@ cpuDiff = cpuEndTime - cpuStartTime;
 cpuDiff.Format = cpuDiff.Format + ".SSSSSS";
 cpuDiff = seconds(cpuDiff);
 arduinoDiff = (arduinoEndTime - arduinoStartTime)/1e6;
-clockAdjustFactor = cpuDiff / arduinoDiff;
+clockAdjustFactor = arduinoDiff / cpuDiff;
 
 % Say
 if obj.verbose
