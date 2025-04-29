@@ -1,19 +1,22 @@
 function obj = processRawData(obj)
     % reset processData property
     obj.processedData = [];
+
+    % Get some things from the object
+    rawData = obj.rawData;
+    nMeas = size(rawData.gammaCurveSortIndices,3);
     
-    % if obj.cal.describe.nMeas > 1
-    % 
-    %     % Fitting a linear model to the raw data
-    %     fprintf('Computing linear model.\n');
-    %     obj.fitLinearModel();
-    % 
-    %     % Fitting a curve through the raw data
-    %     fprintf('Fitting raw gamma data.\n');
-    %     obj.fitRawGamma(2^12);
-    % 
-    % end
-    % 
-    % % Process the ambient data
-    % obj.addAmbientData();
+    % Loop over the settings levels and create the modulation spectra
+    % across phase
+    obj.processedData.phaseVals = linspace(0,1,nMeas+1)*2*pi;
+    ambient = rawData.ambientMeasurements;
+    modSPDsByPhase(1,:) = ambient;     
+    for pp = 1:nMeas
+        repeatMeas = squeeze(rawData.gammaCurveMeasurements(:,1,pp,:));
+        modSPDsByPhase(pp+1,:) = ambient + mean(repeatMeas,1);
+    end
+
+    % Store these in the object
+    obj.processedData.modSPDsByPhase = modSPDsByPhase;
+    
 end

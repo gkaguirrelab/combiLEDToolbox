@@ -12,27 +12,31 @@ end
 
 % Validation files will be saved at the location of the modResultFile
 if isempty(modResultFilePath)
-    [modFileName,modFilePath] = uigetfile;
+    [modName,modPath] = uigetfile;
 else
-    [modFilePath,modFileName] = fileparts(modResultFilePath);
+    [modPath,modName,ext] = fileparts(modResultFilePath);
+    modName = [modName ext];
 end
 
 % This preference setting is used by the calibration code to define the
 % save location
-setpref('BrainardLabToolbox','CalDataFolder',modFilePath);
+setpref('BrainardLabToolbox','CalDataFolder',modPath);
 
 % Let the user know where files will be saved
 fprintf('\n****************\validation files will be saved in:\n')
-fprintf(['\t' modFilePath '\n']);
+fprintf(['\t' modPath '\n']);
+
+% Load the modResult
+load(fullfile(modPath,modName),'modResult');
 
 % Create a default calibration file name
-defaultName = strrep(modFileName,'.mat','_validation.mat');
+defaultName = strrep(modName,'.mat','_validation.mat');
 
 % Ask the user to provide a name for the calibration file
 valFileName = GetWithDefault('Name for the validation file',defaultName);
 
 % Ask how many averages are to obtained
-nAverage = GetWithDefault('How many averages to obtain',5);
+nAverage = GetWithDefault('How many averages to obtain',3);
 
 % Generate calibration options and settings
 [displaySettings, calibratorOptions] = generateConfigurationForCombiLED(valFileName);
@@ -103,7 +107,7 @@ customLinearitySetup.settings = zeros(3,4);
 % To see what options are available type: doc CalibratorOptions
 % Users should tailor these according to their experimental needs.
 calibratorOptions = CalibratorOptions( ...
-    'verbosity',                        0, ...
+    'verbosity',                        1, ...
     'whoIsDoingTheCalibration',         'CombiLED user', ...
     'emailAddressForDoneNotification',  '', ...
     'blankOtherScreen',                 0, ...                          % whether to blank other displays attached to the host computer (1=yes, 0 = no), ...
@@ -112,15 +116,15 @@ calibratorOptions = CalibratorOptions( ...
     'bgColor',                          zeros(1,displayPrimariesNum), ...                 % color of the background
     'fgColor',                          zeros(1,displayPrimariesNum), ...                 % color of the foreground
     'meterDistance',                    0.1, ...                        % distance between radiometer and screen in meters
-    'leaveRoomTime',                    30, ...                         % seconds allowed to leave room
-    'nAverage',                         25, ...                         % number of repeated measurements for averaging
-    'nMeas',                            1, ...                          % samples along gamma curve
+    'leaveRoomTime',                    5, ...                         % seconds allowed to leave room
+    'nAverage',                         3, ...                         % number of repeated measurements for averaging
+    'nMeas',                            16, ...                          % samples along gamma curve
     'nDevices',                         displayPrimariesNum, ...        % number of primaries
     'boxSize',                          1, ...                          % size of calibration stimulus in pixels
     'boxOffsetX',                       0, ...                          % x-offset from center of screen (neg: leftwards, pos:rightwards)
     'boxOffsetY',                       0, ...                          % y-offset from center of screen (neg: upwards, pos: downwards)
     'skipLinearityTest',                true, ...
-    'skipAmbientLightMeasurement',      true, ...
+    'skipAmbientLightMeasurement',      false, ...
     'skipBackgroundDependenceTest',     true, ...
     'customLinearitySetup',             customLinearitySetup ...
     );

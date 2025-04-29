@@ -9,6 +9,12 @@ function setDisplaysInitialState(obj, userPrompt)
     % Instantiate the CombiLED object and setup the serial connection
     displayObj = CombiLEDcontrol();
 
+    % Confirm that the modResult was generated for this particular combiLED
+    assert(strcmp(displayObj.identifierString,modResult.meta.cal.describe.displayDeviceName));
+    
+    % Set the displayDeviceName to the identifierString
+    obj.displayDeviceName = displayObj.identifierString;
+
     % Send the gamma table
     gammaTable = modResult.meta.cal.processedData.gammaTable;
     displayObj.setGamma(gammaTable);
@@ -16,18 +22,15 @@ function setDisplaysInitialState(obj, userPrompt)
     % Tell the CombiLED to gamma correct
     displayObj.setDirectModeGamma(true);
 
-    % Set the displayDeviceName to the identifierString
-    obj.displayDeviceName = displayObj.identifierString;
-
     % Sent the modResult settings
-    obj.setSettings(modResult)
+    displayObj.setSettings(modResult)
 
     % Define a "modulation" that has the property of being extremely slow
-    obj.setDuration = 1e3;
-    obj.setFrequency = 1/1e6;
-    obj.setWaveformIndex = 1;
+    displayObj.setDuration(1e3);
+    displayObj.setFrequency(1/1e6);
+    displayObj.setWaveformIndex(1);
 
-    % Store the object
+    % Store the displayObject
     obj.displayObj = displayObj;
 
     disp('Position radiometer and hit enter when ready');
