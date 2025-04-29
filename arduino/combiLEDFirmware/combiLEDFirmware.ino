@@ -882,6 +882,11 @@ void updateLED(float fmCyclePhase, float amCyclePhase, float rampCyclePhase, int
   floatLevel = returnAmplitudeModulation(amCyclePhase) * floatLevel;
   // Apply any ramp modulation
   floatLevel = returnRampModulation(rampCyclePhase) * floatLevel;
+  // Obtain the floating-point values of the background, 
+  // settings high, and settings low
+  float floatBackground = (float)background[ledIndex] * recip_settingScale;
+  float floatSettingsLow = (float)settingsLow[ledIndex] * recip_settingScale;
+  float floatSettingsHigh = (float)settingsHigh[ledIndex] * recip_settingScale;
   // Calculate the LED setting differently for a unimodal or a
   // bimodal modulation
   float floatSettingLED = 0;
@@ -892,11 +897,11 @@ void updateLED(float fmCyclePhase, float amCyclePhase, float rampCyclePhase, int
     if (floatLevel < 0) {
       floatLevel = max(floatLevel, -0.5);
       floatLevel = abs(floatLevel * 2);
-      floatSettingLED = (background[ledIndex] - floatLevel * (background[ledIndex] - settingsLow[ledIndex])) * recip_settingScale;
+      floatSettingLED = floatBackground - floatLevel * (floatBackground - floatSettingsLow);
     } else {
       floatLevel = min(floatLevel, 0.5);
       floatLevel = floatLevel * 2;
-      floatSettingLED = (background[ledIndex] + floatLevel * (settingsHigh[ledIndex] - background[ledIndex])) * recip_settingScale;
+      floatSettingLED = floatBackground + floatLevel * (floatSettingsHigh - floatBackground);
     }
   } else {
     // ensure that level is within the 0-1 range
@@ -904,8 +909,11 @@ void updateLED(float fmCyclePhase, float amCyclePhase, float rampCyclePhase, int
     floatLevel = min(floatLevel, 1);
     // Get the floatSettingLED as the proportional
     // distance between the low and high setting value for this LED
-    floatSettingLED = (floatLevel * (settingsHigh[ledIndex] - settingsLow[ledIndex]) + settingsLow[ledIndex]) * recip_settingScale;
+    floatSettingLED = floatLevel * (floatSettingsHigh - floatSettingsLow) + floatSettingsLow;
   }
+  // Clamp the result to ensure it's within the valid 0.0 to 1.0 range
+  floatSettingLED = max(floatSettingLED, 0.0f);
+  floatSettingLED = min(floatSettingLED, 1.0f);
   // gamma correct floatSettingLED
   floatSettingLED = applyGammaCorrect(floatSettingLED, ledIndex);
   // Convert the floatSettingLED to a 12 bit integer
