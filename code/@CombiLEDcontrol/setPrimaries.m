@@ -36,7 +36,7 @@ report = 'settings: [ ';
 for ii=1:length(settings)
     % Each setting is sent as a float
     writeline(obj.serialObj,num2str(settings(ii),'%.5f'));
-    readline(obj.serialObj);
+    msg = readline(obj.serialObj);
     report = [report, char(msg), ' '];
 end
 
