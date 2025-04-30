@@ -32,17 +32,17 @@ writeline(obj.serialObj,'LL');
 readline(obj.serialObj);
 
 % Loop over the primaries and write the values
+report = 'settings: [ ';
 for ii=1:length(settings)
-    % Each setting is sent as an integer, in the range of 0 to 1e4.
-    % This is a specification of the fractional settings with a
-    % precision to the fourth decimal place
-    valToSend = round(settings(ii) * 1e4);
-    writeline(obj.serialObj,num2str(valToSend));
+    % Each setting is sent as a float
+    writeline(obj.serialObj,num2str(settings(ii),'%.5f'));
     readline(obj.serialObj);
+    report = [report, char(msg), ' '];
 end
 
+report = [report,']\n'];
 if obj.verbose
-    fprintf('Primaries set\n');
+    fprintf(report);
 end
 
 end
