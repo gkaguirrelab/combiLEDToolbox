@@ -70,6 +70,7 @@ OpenSpectroradiometer('measurementOption',false);
 
 % Create the radiometer object
 radiometerOBJ = openSpectroRadiometerObj('PR-670');
+%radiometerOBJ = openSpectroRadiometerObj('CR-250');
 
 % Offer a recommendation regarding connecting devices
 fprintf('Now connect and start the CombiLED. Press any key when ready.\n')

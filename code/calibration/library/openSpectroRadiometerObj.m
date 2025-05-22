@@ -40,6 +40,29 @@ try
                 'exposureTime',     'ADAPTIVE', ... % choose between 'ADAPTIVE' (for adaptive exposure), or a value in the range [6 6000] for 'STANDARD' sensitivity mode, or a value in the range [6 30000] for the 'EXTENDED' sensitivity mode
                 'apertureSize',     '1 DEG' ...     % choose between '1 DEG', '1/2 DEG', '1/4 DEG', '1/8 DEG'
                 );
+
+        case 'CR-250'
+            radiometerOBJ = CR250dev(...
+                'verbosity',        1, ...        % 1 -> minimum verbosity
+                'devicePortString', [] ...       % empty -> automatic port detection)
+                );
+
+            % Set the sync mode to None
+            syncMode = 'None';
+            manualSyncFrequency = [];
+
+            % Or set it to manual mode with a sync Frequency of 120 Hz;
+            %syncMode = 'Manual';
+            %manualSyncFrequency = 60.0;
+
+            % Specify extra properties
+            radiometerOBJ.setOptions(...
+                    'syncMode',  syncMode, ...                % choose from 'None', 'Manual', 'NTSC', 'PAL', 'CINEMA'
+                    'manualSyncFrequency',manualSyncFrequency, ...
+                    'speedMode', 'Normal', ...                % choose from 'Slow','Normal','Fast', '2x Fast'
+                    'exposureMode', 'Auto' ...                % Choose between 'Auto', and 'Fixed'
+            );
+
         otherwise
             error('Unknown meter type');
     end
