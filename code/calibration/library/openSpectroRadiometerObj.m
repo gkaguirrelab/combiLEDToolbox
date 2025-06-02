@@ -42,7 +42,7 @@ try
                 );
 
         case 'CR-250'
-            radiometerOBJ = CR250dev(...
+            spectroRadiometerOBJ = CR250dev(...
                 'verbosity',        1, ...        % 1 -> minimum verbosity
                 'devicePortString', [] ...       % empty -> automatic port detection)
                 );
@@ -56,7 +56,7 @@ try
             %manualSyncFrequency = 60.0;
 
             % Specify extra properties
-            radiometerOBJ.setOptions(...
+            spectroRadiometerOBJ.setOptions(...
                     'syncMode',  syncMode, ...                % choose from 'None', 'Manual', 'NTSC', 'PAL', 'CINEMA'
                     'manualSyncFrequency',manualSyncFrequency, ...
                     'speedMode', 'Normal', ...                % choose from 'Slow','Normal','Fast', '2x Fast'
