@@ -76,7 +76,7 @@ classdef BiopackControl < handle
         end
 
         % Required methds
-        vepDataStruct = recordTrial(obj)
+        dataStruct = recordTrial(obj)
         storeTrial(obj,vepDataStruct,trialLabel)
         
     end
