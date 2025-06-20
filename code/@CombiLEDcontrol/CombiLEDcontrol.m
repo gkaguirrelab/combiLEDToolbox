@@ -83,6 +83,7 @@ classdef CombiLEDcontrol < handle
         setAMFrequency(obj,amplitudeFrequency)
         setRampIndex(obj,rampIndex)
         setRampDuration(obj,rampDurSecs)
+        setStartDelay(obj,startDelaySecs)
         setCompoundModulation(obj,compoundHarmonics,compoundAmplitudes,compoundPhases)
         setWaveformIndex(obj,waveformIndex)
         setBlinkDuration(obj,blinkDurSecs)

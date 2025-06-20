@@ -262,6 +262,7 @@ unsigned long modDurMicroSecs = 0;                     // Set to zero for contin
 unsigned long blinkDurMicroSecs = round(1e6 * 0.1);    // Blink event duration in microsecs
 unsigned long rampDurMicroSecs = round(1e6 * 0.5);     // Duration of a ramp modulation at
                                                        // the mod onset and offset in micro
+unsigned long startDelayMicroSecs = 0;                 // A delay after "GO" before mod start
 unsigned long modulationStartTime = micros();          // Initialize these with the clock
 unsigned long lastLEDUpdateTime = micros();            // Initialize these with the clock
 uint8_t ledCycleIdx = 0;                               // Counter across LED updates
@@ -475,6 +476,14 @@ void getConfig() {
     rampDurMicroSecs = round(clockAdjustFactor * 1e6 * atof(inputString));
     recip_rampDurMicroSecs = 1 / float(rampDurMicroSecs);
     Serial.println(rampDurMicroSecs);
+  }
+  if (strncmp(inputString, "SD", 2) == 0) {
+    // Start delay (float seconds)
+    Serial.println("SD:");
+    clearInputString();
+    waitForNewString();
+    startDelayMicroSecs = round(clockAdjustFactor * 1e6 * atof(inputString));
+    Serial.println(startDelayMicroSecs);
   }
   if (strncmp(inputString, "AM", 2) == 0) {
     // Amplitude modulation index
@@ -712,6 +721,10 @@ void getRun() {
     stringComplete = false;
     if (strncmp(inputString, "GO", 2) == 0) {
       Serial.println("Start modulation");
+      if (startDelayMicroSecs > 0) {
+        unsigned long delayStartTime = micros();
+        while (micros() < (delayStartTime+startDelayMicroSecs)) {}
+      }
       modulationState = true;
       lastLEDUpdateTime = micros();
       modulationStartTime = micros();
