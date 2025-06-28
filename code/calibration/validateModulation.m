@@ -32,7 +32,7 @@ load(fullfile(modPath,modName),'modResult');
 % Create a default calibration file name
 defaultName = strrep(modName,'.mat','_validation.mat');
 
-% Ask the user to provide a name for the calibration file
+% Ask the user to provide a name for the validation file
 valFileName = GetWithDefault('Name for the validation file',defaultName);
 
 % Ask how many averages are to obtained
