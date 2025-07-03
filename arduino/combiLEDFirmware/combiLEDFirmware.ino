@@ -438,7 +438,7 @@ void getConfig() {
     clearInputString();
     waitForNewString();
     modDurMicroSecs = round(clockAdjustFactor * 1e6 * atof(inputString));
-    Serial.println(modDurMicroSecs);
+    Serial.println(atof(inputString));
   }
   if (strncmp(inputString, "CN", 2) == 0) {
     // fmContrast (0-1 float)
@@ -475,7 +475,7 @@ void getConfig() {
     waitForNewString();
     rampDurMicroSecs = round(clockAdjustFactor * 1e6 * atof(inputString));
     recip_rampDurMicroSecs = 1 / float(rampDurMicroSecs);
-    Serial.println(rampDurMicroSecs);
+    Serial.println(atof(inputString));
   }
   if (strncmp(inputString, "SD", 2) == 0) {
     // Start delay (float seconds)
@@ -483,7 +483,7 @@ void getConfig() {
     clearInputString();
     waitForNewString();
     startDelayMicroSecs = round(clockAdjustFactor * 1e6 * atof(inputString));
-    Serial.println(startDelayMicroSecs);
+    Serial.println(atof(inputString));
   }
   if (strncmp(inputString, "AM", 2) == 0) {
     // Amplitude modulation index
@@ -626,7 +626,7 @@ void getConfig() {
     clearInputString();
     waitForNewString();
     blinkDurMicroSecs = round(clockAdjustFactor * 1e6 * atof(inputString));
-    Serial.println(blinkDurMicroSecs);
+    Serial.println(atof(inputString));
   }
   if (strncmp(inputString, "CT", 2) == 0) {
     // Return arduino clock time in microseconds

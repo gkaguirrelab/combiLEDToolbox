@@ -24,7 +24,7 @@ writeline(obj.serialObj,num2str(startDelaySecs,'%.4f'));
 msg = readline(obj.serialObj);
 
 if obj.verbose
-    fprintf(['Start delay set to ' char(msg) ' microsecs\n']);
+    fprintf(['Start delay set to ' char(msg) ' seconds\n']);
 end
 
 

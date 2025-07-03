@@ -24,7 +24,7 @@ writeline(obj.serialObj,num2str(rampDurSecs,'%.4f'));
 msg = readline(obj.serialObj);
 
 if obj.verbose
-    fprintf(['Ramp duration set to ' char(msg) ' microsecs\n']);
+    fprintf(['Ramp duration set to ' char(msg) ' seconds\n']);
 end
 
 
