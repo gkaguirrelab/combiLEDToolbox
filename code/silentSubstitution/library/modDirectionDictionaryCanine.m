@@ -16,20 +16,20 @@ switch whichDirection
         whichReceptorsToIgnore = {'canineRod'};
         desiredContrast = [1];
     case 'MLplusS'
-        whichReceptorsToTarget = {'canineS','canineML','canineRod'};
-        whichReceptorsToSilence = {'canineMel'};
+        whichReceptorsToTarget = {'canineS','canineML'};
+        whichReceptorsToSilence = {'canineMel','canineRod'};
         whichReceptorsToIgnore = {};
-        desiredContrast = [1.0 1.1 0.05];
+        desiredContrast = [1.0 1.1];
     case 'MLminusS'
         % We have to allow just a little bit of rod contrast to create a
         % modulation that has desired 25% contrast on the ML-S mechanism.
         % Additionally, there is some weird property of the search that
         % requires specification of an unequal contrast on the S and L, but
         % this results in a balanced modulation at the solution.
-        whichReceptorsToTarget = {'canineS','canineML','canineRod'};
-        whichReceptorsToSilence = {'canineMel'};
+        whichReceptorsToTarget = {'canineS','canineML'};
+        whichReceptorsToSilence = {'canineMel','canineRod'};
         whichReceptorsToIgnore = {};
-        desiredContrast = [0.99 -1.1 -0.02];
+        desiredContrast = [0.99 -1.1];
     otherwise
         error('Not a defined modulation')
 end
