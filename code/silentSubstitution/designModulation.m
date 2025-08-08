@@ -67,7 +67,7 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 % Examples:
 %{
     % Foveal L-M modulation around a half-on background
-    cal = loadCalByName('CombiLED-B_shortLLG_classicEyePiece_irFilter_Cassette-ND0');
+    cal = loadCalByName('CombiLED-C_irFilter-C_cassette-C_ND0_classicEyePiece-C.mat','DCPT');
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
@@ -77,7 +77,7 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %}
 %{
     % Wide-field L-M modulation around a shifted background
-    cal = loadCalByName('CombiLED-B_shortLLG_classicEyePiece_irFilter_Cassette-ND0');
+    cal = loadCalByName('CombiLED-C_irFilter-C_cassette-C_ND0_classicEyePiece-C.mat','DCPT');
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
@@ -88,7 +88,7 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %{
     % Shifted background human melanopsin modulation that maximizes the 
     % modulation of primaries that are close to 481 nm.
-    cal = loadCalByName('CombiLED-B_shortLLG_classicEyePiece_irFilter_Cassette-ND0');
+    cal = loadCalByName('CombiLED-C_irFilter-C_cassette-C_ND0_classicEyePiece-C.mat','DCPT');
     observerAgeInYears = 53;
     pupilDiameterMm = 3;
     photoreceptors = photoreceptorDictionaryHuman('observerAgeInYears',observerAgeInYears,'pupilDiameterMm',pupilDiameterMm);
@@ -98,7 +98,7 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %}
 %{
     % A canine ML minus S modulation around the half-on background.
-    cal = loadCalByName('CombiLED-B_shortLLG_classicEyePiece_irFilter_Cassette-ND0');
+    cal = loadCalByName('CombiLED-C_irFilter-C_cassette-C_ND0_classicEyePiece-C.mat','DCPT');
     photoreceptors = photoreceptorDictionaryCanine();
     whichDirection = 'MLminusS';
     modResult = designModulation(whichDirection,photoreceptors,cal,'contrastMatchConstraint',2);
@@ -106,7 +106,7 @@ function modResult = designModulation(whichDirection,photoreceptors,cal,varargin
 %}
 %{
     % A canine ML plus S modulation around the half-on background.
-    cal = loadCalByName('CombiLED-B_shortLLG_classicEyePiece_irFilter_Cassette-ND0');
+    cal = loadCalByName('CombiLED-C_irFilter-C_cassette-C_ND0_classicEyePiece-C.mat','DCPT');
     photoreceptors = photoreceptorDictionaryCanine();
     whichDirection = 'MLplusS';
     modResult = designModulation(whichDirection,photoreceptors,cal,'contrastMatchConstraint',2.15);
