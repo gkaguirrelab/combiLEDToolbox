@@ -681,17 +681,15 @@ void getDirect() {
     setToDirectSettings();
   }
   if (strncmp(inputString, "GT", 2) == 0) {
-    Serial.println("GT:");
     clearInputString();
     gammaCorrectInDirectMode = true;
-    Serial.println("Gamma correct in direct mode = TRUE");
+    Serial.println("DMgamma=1");
     setToDirectSettings();
   }
   if (strncmp(inputString, "GF", 2) == 0) {
-    Serial.println("GF:");
     clearInputString();
     gammaCorrectInDirectMode = false;
-    Serial.println("Gamma correct in direct mode = FALSE");
+    Serial.println("DMgamma=0");
     setToDirectSettings();
   }
   if (strncmp(inputString, "DK", 2) == 0) {

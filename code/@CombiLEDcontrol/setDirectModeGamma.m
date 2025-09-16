@@ -22,15 +22,15 @@ end
 % Send state
 if boolGammaCorrect
     writeline(obj.serialObj,'GT');
-    readline(obj.serialObj);
+    msg = readline(obj.serialObj);
     if obj.verbose
-        fprintf('Gamma correct in direct mode = TRUE\n');
+        fprintf(msg + "\n");
     end
 else
     writeline(obj.serialObj,'GF');
-    readline(obj.serialObj);
+    msg = readline(obj.serialObj);
     if obj.verbose
-        fprintf('Gamma correct in direct mode = FALSE\n');
+        fprintf(msg + "\n");
     end
 end
 
