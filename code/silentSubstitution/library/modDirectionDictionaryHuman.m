@@ -49,7 +49,14 @@ switch whichDirection
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
         whichReceptorsToIgnore = {'Mel','Rod_2deg','Rod_10deg'};
         desiredContrast = [1 1 1 1];
-    case 'S_wide'
+    case 'S_peripheral'
+        % Attempt to achieve equivalent contrast on the S cones in the
+        % periphery, while silencing the other cones and mel.
+        whichReceptorsToTarget = {'S_10deg'};
+        whichReceptorsToSilence = {'Mel','L_10deg','M_10deg'};
+        whichReceptorsToIgnore = {'L_2deg','M_2deg','S_2deg','Rod_2deg','Rod_10deg','L_penum10','M_penum10'};
+        desiredContrast = [1];
+    case 'S_wide_selective'
         % Attempt to achieve equivalent contrast on the S cones in the
         % center and the periphery. Need to also silence the penumbral L
         % and M cones, otherwise we get Purkinje tree entopic effects in
