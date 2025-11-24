@@ -25,7 +25,7 @@ function [frq, pwr] = simplePSD( signal, ScanRate)
 n = length(signal);
 t = 1:n;
 goodIdx = ~isnan(signal);
-xdft = nufft(signal, t, goodIdx);
+xdft = nufft(signal(goodIdx), t(goodIdx));
 
 % Generate the vector of frequencies
 halfn = floor(n / 2)+1;
