@@ -1,8 +1,13 @@
-function figHandle = plotModResult(modResult,visible)
+function figHandle = plotModResult(modResult,visible,differenceSpectrumFlag)
 
 % Set the figure to visible unless we say otherwise
 if nargin==1
     visible = 'on';
+    differenceSpectrumFlag = false;
+end
+
+if nargin==2
+    differenceSpectrumFlag = false;
 end
 
 % Extract some elements
@@ -34,7 +39,7 @@ for ii = 1:nReceptors
     vec = modResult.meta.T_receptors(ii,:);
     plotColor = modResult.meta.photoreceptors(ii).plotColor;
     plot(wavelengthsNm,vec,'-','Color',plotColor,'LineWidth',2);
-hold on
+    hold on
 end
 title('Receptor spectra');
 xlim([300 800]);
@@ -44,9 +49,16 @@ ylabel('Relative sensitivity');
 % Modulation spectra
 subplot(2,4,1:2)
 hold on
-plot(wavelengthsNm,positiveModulationSPD/samplingNm,'k','LineWidth',2);
-plot(wavelengthsNm,negativeModulationSPD/samplingNm,'r','LineWidth',2);
-plot(wavelengthsNm,backgroundSPD/samplingNm,'Color',[0.5 0.5 0.5],'LineWidth',2);
+if differenceSpectrumFlag
+    refSpectrum = backgroundSPD/samplingNm;
+    plot(wavelengthsNm,zeros(size(refSpectrum)),'Color',[0.5 0.5 0.5],'LineWidth',2);
+    plot(wavelengthsNm,positiveModulationSPD/samplingNm-refSpectrum,'k','LineWidth',2);
+    plot(wavelengthsNm,negativeModulationSPD/samplingNm-refSpectrum,'r','LineWidth',2);
+else
+    plot(wavelengthsNm,positiveModulationSPD/samplingNm,'k','LineWidth',2);
+    plot(wavelengthsNm,negativeModulationSPD/samplingNm,'r','LineWidth',2);
+    plot(wavelengthsNm,backgroundSPD/samplingNm,'Color',[0.5 0.5 0.5],'LineWidth',2);
+end
 title('Modulation spectra');
 xlim([300 800]);
 xlabel('Wavelength [nm]');
