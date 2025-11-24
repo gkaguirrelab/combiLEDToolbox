@@ -20,8 +20,12 @@ function [frq, pwr] = simplePSD( signal, ScanRate)
 %   phase                 - Numeric vector. Phases (in radians)
 %
 
+% Use a non-uniform, discrete FFT to handle the presence of nans in the
+% signal
 n = length(signal);
-xdft = fft(signal, n); %do the actual work
+t = 1:n;
+goodIdx = ~isnan(signal);
+xdft = nufft(signal, t, goodIdx);
 
 % Generate the vector of frequencies
 halfn = floor(n / 2)+1;
