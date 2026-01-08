@@ -65,7 +65,7 @@ else
 end
 
 % Define the serial IDs of the known CombiLED boxes
-combiLEDIDs = {'B00074337','B00074338'};
+combiLEDIDs = {'AG0K94J8','B00074337','B00074338','B000JA8P'};
 setpref(projectName,'combiLEDIDs',combiLEDIDs);
 
 
