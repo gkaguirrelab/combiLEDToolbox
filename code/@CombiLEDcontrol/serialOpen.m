@@ -1,21 +1,14 @@
 function serialOpen(obj)
 
+% Get the list of known CombiLED IDs
+combiLEDIDs = getpref('combiLEDToolbox','combiLEDIDs');
+
 % Get the list of available serial connections
 portList = serialportlist("available");
 
 % Look for the possible string patterns. This will vary by platform
-if ispc
-    arduinoPortIdx = find((contains(serialportlist("available"),'COM3')));
-    arduinoPort = portList(arduinoPortIdx);
-end
-if ismac
-    arduinoPortIdx = find((contains(serialportlist("available"),'tty.usbserial')));
-    arduinoPort = portList(arduinoPortIdx);
-    if isempty(arduinoPort)
-        arduinoPortIdx = find((contains(serialportlist("available"),'tty.usbmodem')));
-        arduinoPort = portList(arduinoPortIdx);
-    end
-end
+arduinoPortIdx = find(cellfun(@(x) contains(x,combiLEDIDs),portList),1);
+arduinoPort = portList(arduinoPortIdx);
 
 % We can't find a port
 if isempty(arduinoPort)
