@@ -7,7 +7,7 @@ function combiLEDToolboxLocalHook
 % The defalt location for this would be
 %   ~/localToolboxHooks/combiLEDToolboxLocalHook.m
 %
-% Each time you run tbUseProject('combiLEDToolbox'), ToolboxToolbox will
+% Each time you run tbUseProject(projectName), ToolboxToolbox will
 % execute your local copy of this file to do setup for prizmatixDesign.
 %
 % You should edit your local copy with values that are correct for your
@@ -54,15 +54,19 @@ setpref(projectName,'dropboxBaseDir',dropboxBaseDir); % main directory path
 % Set up a default directory for the saving cal files. Only set the pref if
 % it is not yet defined, or is defined but is empty, or is defined, is not
 % empty, but is not a valid dir
-if ~ispref('combiLEDToolbox','CalDataFolder')
-    calLocalData = fullfile(tbLocateToolbox('combiLEDToolbox'),'cal');
-    setpref('combiLEDToolbox','CalDataFolder',calLocalData);
+if ~ispref(projectName,'CalDataFolder')
+    calLocalData = fullfile(tbLocateToolbox(projectName),'cal');
+    setpref(projectName,'CalDataFolder',calLocalData);
 else
-    if isempty(getpref('combiLEDToolbox','CalDataFolder')) || ~isfolder(getpref('combiLEDToolbox','CalDataFolder'))
-        calLocalData = fullfile(tbLocateToolbox('combiLEDToolbox'),'cal');
-        setpref('combiLEDToolbox','CalDataFolder',calLocalData);
+    if isempty(getpref(projectName,'CalDataFolder')) || ~isfolder(getpref(projectName,'CalDataFolder'))
+        calLocalData = fullfile(tbLocateToolbox(projectName),'cal');
+        setpref(projectName,'CalDataFolder',calLocalData);
     end
 end
+
+% Define the serial IDs of the known CombiLED boxes
+combiLEDIDs = {'AG0K94J8','B00074337','B00074338','B000JA8P'};
+setpref(projectName,'combiLEDIDs',combiLEDIDs);
 
 
 %% Check for required Matlab toolboxes
