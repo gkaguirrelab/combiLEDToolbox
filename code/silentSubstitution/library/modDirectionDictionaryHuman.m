@@ -14,6 +14,13 @@ switch whichDirection
         whichReceptorsToSilence = {'S_2deg','S_10deg'};
         whichReceptorsToIgnore = {'L_2deg','M_2deg','Mel','Rod_2deg','Rod_10deg'};
         desiredContrast = [1 -1];
+    case 'LminusM_MelSilent_peripheral'
+        % For some mysterious reason, have to give a little difference in
+        % the desired contrast to get this to work for some subjects
+        whichReceptorsToTarget = {'L_10deg','M_10deg'};
+        whichReceptorsToSilence = {'S_2deg','S_10deg','Mel'};
+        whichReceptorsToIgnore = {'L_2deg','M_2deg','Rod_2deg','Rod_10deg'};
+        desiredContrast = [0.95 -1];
     case 'LminusM_wide'
         % Attempt to achieve equivalent differential contrast on the L and
         % M cones in the center and the periphery. Need to also try and
