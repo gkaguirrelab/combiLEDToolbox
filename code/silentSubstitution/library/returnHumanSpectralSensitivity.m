@@ -96,7 +96,7 @@ switch photoreceptorStruct.whichReceptor
         indDiffParams.dphotopigment = photoreceptorStruct.dphotopigment;
         indDiffParams.lambdaMaxShift = photoreceptorStruct.lambdaMaxShiftNm;
         % Call out to ComputeCIEConeFundamentals
-        [~,~,T_quantalIsomerizations,adjIndDiffParams] = ComputeCIEMelFundamental(S,fieldSizeDegrees,observerAgeInYears,pupilDiameterMm,indDiffParams);
+        [~,~,T_quantalIsomerizations,adjIndDiffParams,params,staticParams] = ComputeCIEMelFundamental(S,fieldSizeDegrees,observerAgeInYears,pupilDiameterMm,indDiffParams);
     case 'Rod'
         idx = 1;
         indDiffParams.dphotopigment = photoreceptorStruct.dphotopigment;
